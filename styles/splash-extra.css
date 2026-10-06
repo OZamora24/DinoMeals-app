@@ -1,0 +1,67 @@
+/* Splash: tap-to-enter gate, mute button, quick return-visit mode.
+   Kept separate from globals.css so the splash can change on its own. */
+
+/* Hold the full animation until the visitor taps "Tap to enter" */
+.splash-paused .splash-stage,
+.splash-paused .splash-glow,
+.splash-paused .splash-center,
+.splash-paused .splash-center * { animation-play-state: paused !important; }
+.splash-paused .splash-center { visibility: hidden; }
+
+.splash-gate {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; text-align: center;
+  animation: gateIn .45s ease both;
+}
+@keyframes gateIn { from { opacity: 0; transform: scale(.96); } }
+.gate-badge {
+  width: 112px; height: 112px; border-radius: 50%;
+  background: var(--cream); display: grid; place-items: center;
+  box-shadow: 0 0 0 5px #0e0d0c, 0 0 0 7px rgba(226,55,45,.55), 0 16px 44px -8px rgba(226,55,45,.65);
+  animation: gateBreathe 2.4s ease-in-out infinite;
+}
+.gate-badge img { width: 78%; height: auto; }
+@keyframes gateBreathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.gate-word { margin-top: 18px; font-family: var(--display); font-size: 2rem; letter-spacing: .06em; color: var(--cream); line-height: 1; }
+.gate-word span { color: var(--red); }
+.gate-enter {
+  margin-top: 28px; border: 0; cursor: pointer;
+  padding: 16px 34px; border-radius: 999px;
+  background: var(--red); color: #fff;
+  font-family: var(--display); font-size: 1.15rem; letter-spacing: .14em;
+  box-shadow: 0 10px 30px -8px rgba(226,55,45,.8);
+  animation: gatePulse 1.8s ease-in-out infinite;
+}
+.gate-enter:focus-visible { outline: 3px solid var(--cream); outline-offset: 3px; }
+@keyframes gatePulse {
+  0%,100% { box-shadow: 0 10px 30px -8px rgba(226,55,45,.8), 0 0 0 0 rgba(226,55,45,.5); }
+  50% { box-shadow: 0 10px 30px -8px rgba(226,55,45,.8), 0 0 0 14px rgba(226,55,45,0); }
+}
+.gate-es { margin-top: 10px; font-size: .72rem; font-weight: 800; letter-spacing: .3em; text-transform: uppercase; color: var(--muted); }
+.gate-quiet {
+  margin-top: 26px; background: none; border: 0; cursor: pointer;
+  color: var(--muted); font: inherit; font-size: .82rem; text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* Mute toggle (top-right, clear of the iPhone notch) */
+.splash-mute {
+  position: absolute; z-index: 3;
+  top: calc(env(safe-area-inset-top, 0px) + 14px); right: 14px;
+  width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.14); background: rgba(14,13,12,.55);
+  color: var(--cream); backdrop-filter: blur(6px);
+  transition: opacity .2s ease;
+}
+.splash-mute.is-off { color: var(--muted); }
+.splash-leaving .splash-mute { opacity: 0; }
+
+/* Quick, silent splash for return visits: badge stomp + claw exit only */
+.splash-quick .splash-word,
+.splash-quick .splash-tracks,
+.splash-quick .splash-label { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-badge, .gate-enter { animation: none !important; }
+}
