@@ -199,7 +199,7 @@ function OrdersTab({ orders, loading, patch, remove, repeat, week }) {
           </button>
         ))}
         <input className="input search" placeholder="Search name / phone / #" value={q} onChange={(e) => setQ(e.target.value)} />
-        <a className="btn btn-ghost btn-sm" href={`/api/export?week=${week}`}>Export CSV</a>
+        <a className="btn btn-ghost btn-sm" href={`/api/export?week=${week}`}>Export Excel</a>
       </div>
       {loading && <p className="muted">Loading…</p>}
       {!loading && shown.length === 0 && <p className="muted empty">No orders here yet.</p>}
