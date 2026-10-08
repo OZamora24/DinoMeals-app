@@ -1,5 +1,6 @@
 import { insertOrder, listOrders, updateOrder, deleteOrder, getOrder } from '../../../lib/db';
 import { isValidSession } from '../../../lib/adminSession';
+import { rateLimit } from '../../../lib/rateLimit';
 import { buildOrderRow, PAY, STATUSES, clean } from '../../../lib/orderRow';
 
 export default async function handler(req, res) {
@@ -7,6 +8,7 @@ export default async function handler(req, res) {
     const admin = isValidSession(req);
 
     if (req.method === 'POST') {
+      if (!admin && !rateLimit(req, 'order', 10, 10 * 60 * 1000)) return res.status(429).json({ error: 'rate_limited' });
       const wantAdmin = !!req.body?.as_admin;
       if (wantAdmin && !admin) return res.status(401).json({ error: 'Not logged in' });
       const built = await buildOrderRow(req.body || {}, { admin: wantAdmin });

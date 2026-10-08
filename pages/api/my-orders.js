@@ -1,4 +1,5 @@
 import { ordersByPhone } from '../../lib/db';
+import { rateLimit } from '../../lib/rateLimit';
 import { normalizePhone } from '../../lib/orderRow';
 import { linesToCart, cartKey } from '../../lib/cart';
 
@@ -7,6 +8,7 @@ import { linesToCart, cartKey } from '../../lib/cart';
 // addresses, or anything else about the order.
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
+  if (!rateLimit(req, 'my-orders', 20, 60 * 1000)) return res.status(429).json({ orders: [] });
   const digits = normalizePhone(req.query.phone);
   if (digits.length !== 10) return res.status(200).json({ orders: [] });
   try {

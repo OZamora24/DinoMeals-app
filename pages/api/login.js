@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { rateLimit } from '../../lib/rateLimit';
 import { adminPassword, makeSessionCookie } from '../../lib/adminSession';
 
 // Constant-time compare (hash both sides so lengths always match).
@@ -9,6 +10,7 @@ const safeEqual = (a, b) => {
 
 export default function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  if (!rateLimit(req, 'login', 8, 15 * 60 * 1000)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
   const correct = adminPassword();
   if (!correct) return res.status(500).json({ error: 'Server is missing ADMIN_PASSWORD.' });
   if (!safeEqual((req.body || {}).password ?? '', correct)) return res.status(401).json({ error: 'Wrong password.' });
