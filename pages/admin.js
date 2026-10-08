@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { prettyDate, addDays, money } from '../lib/menu';
+import { ORDERS_WARN, ORDERS_ACT } from '../lib/limits';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab } from '../components/AdminTabs';
 
@@ -155,6 +156,14 @@ export default function Admin() {
       {demo && <div className="demo-strip">Demo mode — sample orders, nothing is saved. Connect Supabase to go live.</div>}
       {week !== settings.cook_date && (
         <div className="week-warn">Viewing {week < settings.cook_date ? 'a past' : 'a future'} week · <button className="link" onClick={() => setWeek(settings.cook_date)}>Jump to current ({prettyDate(settings.cook_date)})</button></div>
+      )}
+
+      {orders.length >= ORDERS_WARN && (
+        <div className={`vol-warn ${orders.length >= ORDERS_ACT ? 'act' : ''}`}>
+          {orders.length >= ORDERS_ACT
+            ? `${orders.length} orders this week — the list is getting too big. Time to switch to a compact/paged order list; tell your developer.`
+            : `${orders.length} orders this week — busy! The order list will start to feel long. Worth planning a compact/paged view (at ${ORDERS_ACT}, change it).`}
+        </div>
       )}
 
       <nav className="admin-tabs">
