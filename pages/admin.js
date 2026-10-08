@@ -289,11 +289,10 @@ function OrderCard({ o, patch, remove, repeat, week }) {
         </div>
         <div className="oc-actions">
           <button className="btn btn-ghost btn-sm" title="Copy this order into next week" onClick={() => repeat([o.id], addDays(week, 7))}><Repeat size={14} /> Next week</button>
-          {o.status !== 'cancelled' ? (
-            <button className="btn btn-ghost btn-sm" onClick={() => patch(o.id, { status: 'cancelled' })}>Cancel</button>
-          ) : (
-            <button className="btn btn-ghost btn-sm" onClick={() => remove(o.id)}><X size={14} /> Delete</button>
+          {o.status !== 'cancelled' && (
+            <button className="btn btn-ghost btn-sm" title="Keep the order but mark it cancelled" onClick={() => patch(o.id, { status: 'cancelled' })}>Cancel</button>
           )}
+          <button className="btn btn-ghost btn-sm" title="Delete this order permanently" onClick={() => remove(o.id)}><X size={14} /> Delete</button>
         </div>
       </footer>
     </article>
