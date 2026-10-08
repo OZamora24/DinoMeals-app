@@ -686,3 +686,17 @@ label .input { margin-top: 6px; font-weight: 500; }
 .alerts-pop p { margin: 0; }
 .alerts-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 480px) { .alerts-label { display: none; } }
+.dm-short { display: none; }
+@media (max-width: 560px) {
+  .admin-top { gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .admin-top .nav-badge { width: 38px; height: 38px; }
+  .week-nav { gap: 4px; }
+  .week-nav .btn-sm { padding: 8px 10px; }
+  .week-label { min-width: 78px; }
+  .week-label b { font-size: 1.05rem; }
+  .alerts-btn { padding: 8px 10px; }
+  .dm-btn { padding: 8px 11px; }
+  .dm-full { display: none; }
+  .dm-short { display: inline; }
+}
+.alerts-status { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }

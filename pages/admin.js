@@ -162,7 +162,7 @@ export default function Admin() {
           <button className="btn btn-ghost btn-sm" onClick={() => setWeek(addDays(week, 7))}>›</button>
         </div>
         <AlertsButton />
-        <Link href="/order?admin=1" className="btn btn-red btn-sm"><Plus size={16} /> DM order</Link>
+        <Link href="/order?admin=1" className="btn btn-red btn-sm dm-btn" aria-label="Enter an order for a customer"><Plus size={16} /> <span className="dm-full">DM order</span><span className="dm-short">DM</span></Link>
       </header>
       {demo && <div className="demo-strip">Demo mode — sample orders, nothing is saved. Connect Supabase to go live.</div>}
       {week !== settings.cook_date && (

@@ -20,6 +20,8 @@ self.addEventListener('push', (event) => {
         badge: '/icon-192.png',
         tag: data.tag || 'dino',
         renotify: true,
+        requireInteraction: !!data.sticky,
+        vibrate: [200, 100, 200],
         data: { url: data.url || '/admin' },
       }),
       // Tell any open admin tab to refresh its list and play the chime.

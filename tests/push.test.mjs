@@ -12,6 +12,7 @@ test('orderPayload: meals order', () => {
   assert.equal(p.body, 'Marcus Reyes · 8 meals · $120 · Pickup');
   assert.equal(p.url, '/admin');
   assert.equal(p.tag, 'order-1042');
+  assert.equal(p.sticky, true); // new-order pop-ups stay until tapped
 });
 
 test('orderPayload: delivery, by-the-lb, cents', () => {
