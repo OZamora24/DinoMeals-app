@@ -153,6 +153,9 @@ export default function App({ Component, pageProps }) {
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>DinoMeals — Meal Prep</title>
+        {/* Admin gets its own install file so a home-screen icon opens /admin, not the customer home page. */}
+        <link rel="manifest" href={isAdmin ? '/admin-manifest.json' : '/manifest.json'} />
+        <meta name="apple-mobile-web-app-title" content={isAdmin ? 'Kitchen' : 'DinoMeals'} />
       </Head>
       <div className={hidden ? 'app-hidden' : 'app-shown'}>
         <Component {...pageProps} />

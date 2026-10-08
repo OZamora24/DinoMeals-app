@@ -1,0 +1,19 @@
+{
+  "id": "/admin",
+  "name": "DinoMeals Kitchen",
+  "short_name": "Kitchen",
+  "description": "DinoMeals kitchen dashboard: orders, cook sheet and alerts.",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121110",
+  "theme_color": "#121110",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
