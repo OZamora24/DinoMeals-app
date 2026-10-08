@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { prettyDate, addDays, money } from '../lib/menu';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X } from '../components/Icons';
@@ -42,16 +42,20 @@ export default function Admin() {
     }
   }, []);
 
-  const loadOrders = useCallback(async () => {
+  // silent = background refresh: no "Loading…" flash, and a toast if new orders arrived.
+  const orderCount = useRef(0);
+  const loadOrders = useCallback(async (silent = false) => {
     if (!week) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const j = await api(`/api/orders?week=${week}`);
+      if (silent && j.orders.length > orderCount.current) say('New order in!');
+      orderCount.current = j.orders.length;
       setOrders(j.orders);
     } catch (e) {
       if (e.status === 401) setAuthed(false);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [week]);
 
@@ -60,6 +64,18 @@ export default function Admin() {
   }, [loadSettings]);
   useEffect(() => {
     if (authed) loadOrders();
+  }, [authed, loadOrders]);
+
+  // Keep the order list fresh without a manual reload.
+  useEffect(() => {
+    if (!authed) return undefined;
+    const tick = () => document.visibilityState === 'visible' && loadOrders(true);
+    const id = setInterval(tick, 20000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
   }, [authed, loadOrders]);
 
   async function login(e) {
