@@ -11,3 +11,6 @@ Claude outputs/
 .vercel
 .env*
 !.env.example
+
+# large working media (not used by the app)
+Sounds/
