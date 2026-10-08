@@ -86,9 +86,9 @@ export default function AlertsButton() {
         <div className="alerts-pop" role="dialog" aria-label="Order alerts">
           <b>New-order alerts</b>
           {st.iosNeedsInstall && (
-            <p className="muted small">On iPhone: tap Share, then <b>Add to Home Screen</b>, open DinoMeals from the home screen, go to /admin and turn alerts on there.</p>
+            <p className="small"><b>iPhone steps:</b> Safari tabs cannot show notifications. Tap Share, then <b>Add to Home Screen</b>. Open <b>Kitchen</b> from your home screen, log in, and turn alerts on there.</p>
           )}
-          {!st.hasNotif && <p className="muted small">This browser does not support notifications.</p>}
+          {!st.hasNotif && !st.iosNeedsInstall && <p className="muted small">This browser does not support notifications.</p>}
           {st.permission === 'denied' && <p className="muted small">Notifications are blocked for this site. Allow them in the browser's site settings.</p>}
           <ul className="alerts-status small">
             <li>This device: <b>{st.subscribed ? 'registered for background alerts' : 'not registered (alerts only while this page is open)'}</b></li>
