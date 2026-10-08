@@ -1,5 +1,5 @@
 import { isValidSession } from '../../lib/adminSession';
-import { pushConfigured, pushPublicKey, listSubscriptions, addSubscription, removeSubscription, sendToAll } from '../../lib/push';
+import { pushConfigured, pushProblem, pushPublicKey, listSubscriptions, addSubscription, removeSubscription, sendToAll } from '../../lib/push';
 
 // Admin-only: register/unregister this device for new-order push notifications.
 export default async function handler(req, res) {
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const subs = await listSubscriptions();
-      return res.status(200).json({ configured: pushConfigured(), publicKey: pushPublicKey(), devices: subs.length });
+      return res.status(200).json({ configured: pushConfigured(), problem: pushProblem(), publicKey: pushPublicKey(), devices: subs.length });
     }
     if (!pushConfigured()) return res.status(503).json({ error: 'Push is not set up on the server yet.' });
 

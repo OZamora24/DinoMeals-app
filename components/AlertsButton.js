@@ -8,6 +8,8 @@ const REASONS = {
   denied: 'Notifications are blocked for this site. Allow them in the browser or phone settings, then try again.',
   unsupported: 'This browser cannot show notifications.',
   no_push: 'This browser cannot receive background notifications. Sound and pop-ups still work while this page is open.',
+  bad_public_key: 'The VAPID_PUBLIC_KEY saved in Vercel is not a real key (it looks like text, quotes or spaces were pasted). Re-copy the value after "VAPID_PUBLIC_KEY=" from the keys file, save it in Vercel, and redeploy.',
+  bad_private_key: 'The VAPID_PRIVATE_KEY saved in Vercel is not a real key. Re-copy the value after "VAPID_PRIVATE_KEY=" from the keys file, save it in Vercel, and redeploy.',
   server_not_configured: 'Phone/computer push is not set up on the server yet (the VAPID keys are missing in Vercel). Sound and pop-ups still work while this page is open.',
   logged_out: 'You were logged out. Log in again, then turn alerts on.',
   save_failed: 'Could not save this device on the server.',
@@ -92,7 +94,7 @@ export default function AlertsButton() {
           {st.permission === 'denied' && <p className="muted small">Notifications are blocked for this site. Allow them in the browser's site settings.</p>}
           <ul className="alerts-status small">
             <li>This device: <b>{st.subscribed ? 'registered for background alerts' : 'not registered (alerts only while this page is open)'}</b></li>
-            {server && <li>Devices the server will alert: <b>{server.devices}</b>{server.configured ? '' : ' (push not set up on server)'}</li>}
+            {server && <li>Devices the server will alert: <b>{server.devices}</b>{server.configured ? '' : ` (${server.problem === 'bad_public_key' || server.problem === 'bad_private_key' ? 'a key in Vercel is wrong' : 'push not set up on server'})`}</li>}
           </ul>
           <label className="check">
             <input

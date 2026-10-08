@@ -93,3 +93,24 @@ test('web-push can encrypt and address a notification for a real device key', ()
   assert.ok(Buffer.isBuffer(d.body) && d.body.length > 0);
   assert.ok(!d.body.toString('utf8').includes('Marcus')); // payload is encrypted, not plain text
 });
+
+// ---------- VAPID key validation ----------
+import { cleanKey, vapidProblem } from '../lib/pushPayload.js';
+
+test('vapidProblem accepts a real key pair, with stray quotes/spaces/prefix', () => {
+  const k = webpush.generateVAPIDKeys();
+  assert.equal(vapidProblem(k.publicKey, k.privateKey), null);
+  assert.equal(vapidProblem(` "${k.publicKey}" \n`, `VAPID_PRIVATE_KEY=${k.privateKey}`), null);
+  assert.equal(cleanKey(`  'VAPID_PUBLIC_KEY=${k.publicKey}'  `), k.publicKey);
+});
+
+test('vapidProblem catches the common paste mistakes', () => {
+  const k = webpush.generateVAPIDKeys();
+  assert.equal(vapidProblem('', ''), 'missing');
+  assert.equal(vapidProblem(undefined, undefined), 'missing');
+  // a description pasted instead of the key (this really happened)
+  assert.equal(vapidProblem('the long string after VAPID_PUBLIC_KEY= in the file', k.privateKey), 'bad_public_key');
+  assert.equal(vapidProblem(k.publicKey, 'the string after VAPID_PRIVATE_KEY='), 'bad_private_key');
+  assert.equal(vapidProblem(k.publicKey.slice(0, 80), k.privateKey), 'bad_public_key'); // truncated
+  assert.equal(vapidProblem(k.privateKey, k.publicKey), 'bad_public_key'); // swapped
+});
