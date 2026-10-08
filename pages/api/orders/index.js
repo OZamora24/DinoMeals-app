@@ -1,6 +1,7 @@
 import { insertOrder, listOrders, updateOrder, deleteOrder, getOrder } from '../../../lib/db';
 import { isValidSession } from '../../../lib/adminSession';
 import { rateLimit } from '../../../lib/rateLimit';
+import { notifyNewOrder } from '../../../lib/push';
 import { buildOrderRow, PAY, STATUSES, clean } from '../../../lib/orderRow';
 
 export default async function handler(req, res) {
@@ -14,6 +15,8 @@ export default async function handler(req, res) {
       const built = await buildOrderRow(req.body || {}, { admin: wantAdmin });
       if (built.error) return res.status(400).json(built);
       const order = await insertOrder(built.row);
+      // Ping the owner's devices; capped at 3s so a slow push service never delays the customer.
+      if (!wantAdmin) await Promise.race([notifyNewOrder(order), new Promise((r) => setTimeout(r, 3000))]);
       return res.status(200).json({
         order: {
           id: order.id,

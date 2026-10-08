@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { prettyDate, addDays, money } from '../lib/menu';
 import { ORDERS_WARN, ORDERS_ACT } from '../lib/limits';
+import { playChime, soundEnabled, localNotify } from '../lib/alerts';
+import AlertsButton from '../components/AlertsButton';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab } from '../components/AdminTabs';
 
@@ -50,7 +52,11 @@ export default function Admin() {
     if (!silent) setLoading(true);
     try {
       const j = await api(`/api/orders?week=${week}`);
-      if (silent && j.orders.length > orderCount.current) say('New order in!');
+      if (silent && j.orders.length > orderCount.current) {
+        say('New order in!');
+        if (soundEnabled()) playChime();
+        localNotify('New order in!', `${j.orders.length - orderCount.current} new order(s) for this cook week`);
+      }
       orderCount.current = j.orders.length;
       setOrders(j.orders);
     } catch (e) {
@@ -73,9 +79,13 @@ export default function Admin() {
     const tick = () => document.visibilityState === 'visible' && loadOrders(true);
     const id = setInterval(tick, 20000);
     document.addEventListener('visibilitychange', tick);
+    // A push notification wakes any open admin tab: refresh right away (and chime).
+    const onSw = (e) => e.data?.type === 'dino-order' && loadOrders(true);
+    navigator.serviceWorker?.addEventListener('message', onSw);
     return () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', tick);
+      navigator.serviceWorker?.removeEventListener('message', onSw);
     };
   }, [authed, loadOrders]);
 
@@ -151,6 +161,7 @@ export default function Admin() {
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => setWeek(addDays(week, 7))}>›</button>
         </div>
+        <AlertsButton />
         <Link href="/order?admin=1" className="btn btn-red btn-sm"><Plus size={16} /> DM order</Link>
       </header>
       {demo && <div className="demo-strip">Demo mode — sample orders, nothing is saved. Connect Supabase to go live.</div>}
