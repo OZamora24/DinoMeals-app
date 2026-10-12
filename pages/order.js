@@ -429,7 +429,7 @@ export default function OrderPage({ settings, adminMode }) {
           <div className="cb-total">{hasItems ? money(subtotal) : custom.trim() ? t('quote') : '$0'}</div>
         </div>
         <button className="btn btn-red btn-lg" disabled={!canCheckout || closed} onClick={() => { setErr(''); setSheet(true); }}>
-          {t('checkout')} <Arrow size={18} />
+          {closed ? (full && settings.ordering_open ? t('week_full') : t('closed_btn')) : <>{t('checkout')} <Arrow size={18} /></>}
         </button>
       </div>
 
