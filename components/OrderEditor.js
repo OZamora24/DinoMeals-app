@@ -29,12 +29,13 @@ export default function OrderEditor({ order, onSave, onClose }) {
   });
   const [meals, setMeals] = useState(start.meals.map((m) => ({ ...m, count: mealLineCount(m) })));
   const [lbs, setLbs] = useState(start.lbs);
+  const [extras, setExtras] = useState(start.extras || []);
   const [total, setTotal] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
 
-  const cart = { meals, lbs };
+  const cart = { meals, lbs, extras };
   const itemsChanged = cartKey(cart) !== cartKey(start);
   const preview = priceCart(cart, [], { skipMin: true });
   const subtotal = preview.ok ? preview.subtotal : null;
@@ -52,7 +53,7 @@ export default function OrderEditor({ order, onSave, onClose }) {
     for (const k of Object.keys(f)) {
       if (String(f[k] ?? '') !== String(order[k] ?? '')) body[k] = f[k];
     }
-    if (itemsChanged) body.cart = { meals: meals.filter((m) => m.count > 0), lbs: lbs.filter((l) => Number(l.lbs) > 0) };
+    if (itemsChanged) body.cart = { meals: meals.filter((m) => m.count > 0), lbs: lbs.filter((l) => Number(l.lbs) > 0), extras: extras.filter((x) => Number(x.qty) > 0) };
     if (total !== '') body.total = total;
     if (Object.keys(body).length === 0) return onClose();
     setBusy(true);
@@ -127,7 +128,17 @@ export default function OrderEditor({ order, onSave, onClose }) {
                 </div>
               </div>
             ))}
-            {meals.length === 0 && lbs.length === 0 && <p className="muted small">No priced items on this order.</p>}
+            {extras.map((x, i) => (
+              <div className="edit-line" key={`x${i}`}>
+                <div>Extra {lineLabel({ type: 'extra', ...x })}</div>
+                <div className="edit-line-foot">
+                  <Stepper value={Number(x.qty) || 0} onDec={() => setExtras((xs) => xs.map((y, j) => (j === i ? { ...y, qty: Math.max(0, (Number(y.qty) || 0) - 1) } : y)))} onInc={() => setExtras((xs) => xs.map((y, j) => (j === i ? { ...y, qty: (Number(y.qty) || 0) + 1 } : y)))} unit="x" />
+                  <span />
+                  <button className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => setExtras((xs) => xs.filter((_, j) => j !== i))}><X size={14} /></button>
+                </div>
+              </div>
+            ))}
+            {meals.length === 0 && lbs.length === 0 && extras.length === 0 && <p className="muted small">No priced items on this order.</p>}
             <button className="btn btn-ghost btn-sm" onClick={addMeal}><Plus size={14} /> Add a meal</button>
             {itemsChanged && (
               <p className="muted small">

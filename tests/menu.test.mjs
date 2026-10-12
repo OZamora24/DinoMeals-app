@@ -252,3 +252,35 @@ test('meals can skip the carb OR the veggie (same price), not both', async () =>
   assert.equal(r.meals, 21);
   assert.equal(lineLabel(r.lines[0]), 'Ground Beef · Taco + White Rice');
 });
+
+import { extraUnitPrice, lineSummary, priceCart as priceCartX } from '../lib/menu.js';
+import { linesToCart as linesToCartX } from '../lib/cart.js';
+
+test('extra portions are priced from the lb menu, per portion', () => {
+  assert.equal(extraUnitPrice({ kind: 'protein', item: 'tritip' }), 7.5); // $30/lb x 4oz
+  assert.equal(extraUnitPrice({ kind: 'carb', item: 'whiterice' }), 2.5); // $10/lb x 4oz
+  assert.equal(extraUnitPrice({ kind: 'veg', item: 'broccoli' }), 2); // $10/lb x 3oz
+  assert.ok(extraUnitPrice({ kind: 'veg', item: 'fajitas' }) > 0);
+  assert.equal(extraUnitPrice({ kind: 'protein', item: 'nope' }), null);
+});
+
+test('extras add to the subtotal and survive a round trip', () => {
+  const base = { meals: [{ protein: 'chicken', carb: 'whiterice', veg: 'broccoli', count: 8 }], lbs: [] };
+  const plain = priceCartX(base);
+  const withExtra = priceCartX({ ...base, extras: [{ kind: 'protein', item: 'chicken', qty: 2 }, { kind: 'veg', item: 'broccoli', qty: 1 }] });
+  assert.ok(withExtra.ok);
+  assert.equal(withExtra.meals, 8); // extras are not meals
+  assert.equal(withExtra.subtotal, plain.subtotal + 2 * 4 + 2);
+  const lines = withExtra.lines.filter((l) => l.type === 'extra');
+  assert.equal(lines.length, 2);
+  assert.equal(lineSummary(lines[0]), '2× extra Grilled Chicken Breast');
+  assert.deepEqual(linesToCartX(withExtra.lines).extras, [{ kind: 'protein', item: 'chicken', qty: 2 }, { kind: 'veg', item: 'broccoli', qty: 1 }]);
+});
+
+test('extras alone are not an order; bad or sold-out extras are rejected', () => {
+  assert.equal(priceCartX({ meals: [], lbs: [], extras: [{ kind: 'carb', item: 'whiterice', qty: 2 }] }).error, 'empty');
+  const base = { meals: [{ protein: 'chicken', carb: 'whiterice', veg: 'broccoli', count: 8 }] };
+  assert.equal(priceCartX({ ...base, extras: [{ kind: 'carb', item: 'zzz', qty: 1 }] }).error, 'bad_item');
+  assert.equal(priceCartX({ ...base, extras: [{ kind: 'carb', item: 'brownrice', qty: 1 }] }, ['brownrice']).error, 'sold_out');
+  assert.equal(priceCartX({ ...base, extras: [{ kind: 'carb', item: 'brownrice', qty: 999 }] }).error, 'bad_item');
+});

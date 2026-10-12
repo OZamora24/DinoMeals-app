@@ -1,4 +1,4 @@
-import { DIET_FLAGS, lineLabel, money } from '../../lib/menu';
+import { DIET_FLAGS, lineSummary, money } from '../../lib/menu';
 import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 
@@ -99,7 +99,7 @@ export default function CheckoutSheet({
             <ul className="review-list">
               {priced.lines.map((l, i) => (
                 <li key={i}>
-                  <span>{l.type === 'meal' ? `${l.count}×` : `${l.lbs} lb`} {lineLabel(l, lang)}</span>
+                  <span>{lineSummary(l, lang)}</span>
                   <b>{money(l.total)}</b>
                 </li>
               ))}

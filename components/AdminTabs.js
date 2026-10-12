@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, DIET_FLAGS,
-  lineLabel, proteinLabel, nameOf, byId, prettyDate, money,
+  lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
 
@@ -11,7 +11,7 @@ export const SOURCE_LABEL = { web: 'Website', dm: 'IG DM', text: 'Text', call: '
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 export const dietLabel = (id) => DIET_FLAGS.find((d) => d.id === id)?.en || id;
 export const smsHref = (phone, body) => `sms:${String(phone).replace(/[^\d+]/g, '')}${/iPhone|iPad/.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') ? '&' : '?'}body=${encodeURIComponent(body)}`;
-export const lineText = (l) => (l.type === 'meal' ? `${l.count}× ${lineLabel(l)}` : `${l.lbs} lb ${lineLabel(l)}`);
+export const lineText = (l) => lineSummary(l);
 
 export async function api(url, opts = {}) {
   const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -50,6 +50,9 @@ export function CookTab({ orders, week }) {
           add('protein', `${l.protein}:${l.flavor || ''}`, proteinLabel(l.protein, l.flavor), l.count, l.count * PORTIONS.protein, 0);
           if (byId(CARBS, l.carb)) add('carb', l.carb, nameOf(byId(CARBS, l.carb)), l.count, l.count * PORTIONS.carb, 0);
           if (byId(VEGGIES, l.veg)) add('veg', l.veg, nameOf(byId(VEGGIES, l.veg)), l.count, l.count * PORTIONS.veg, 0);
+        } else if (l.type === 'extra') {
+          const key = l.kind === 'protein' ? `${l.item}:` : l.item;
+          add(l.kind, key, lineLabel(l), l.qty, l.qty * PORTIONS[l.kind], 0);
         } else if (l.type === 'lb') {
           const key = l.kind === 'protein' ? `${l.item}:${l.flavor || ''}` : l.item;
           add(l.kind, key, lineLabel(l), 0, l.lbs * 16, l.lbs);

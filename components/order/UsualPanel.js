@@ -1,4 +1,4 @@
-import { priceCart, lineLabel, money } from '../../lib/menu';
+import { priceCart, lineSummary, money } from '../../lib/menu';
 import { Repeat } from '../../components/Icons';
 import { formatPhone } from '../../lib/orderForm';
 
@@ -32,7 +32,7 @@ export default function UsualPanel({ lang, t, open, setOpen, phone, setPhone, us
                 <div className="usual-item" key={i}>
                   <ul>
                     {p.lines.map((l, k) => (
-                      <li key={k}>{l.type === 'meal' ? `${l.count}×` : `${l.lbs} lb`} {lineLabel(l, lang)}</li>
+                      <li key={k}>{lineSummary(l, lang)}</li>
                     ))}
                   </ul>
                   <button className="btn btn-red btn-sm" onClick={() => loadUsual(o)}>{t('load')} · {money(p.subtotal)}</button>

@@ -16,6 +16,7 @@ import UsualPanel from '../components/order/UsualPanel';
 import MealBuilder from '../components/order/MealBuilder';
 import MealBox from '../components/order/MealBox';
 import LbMenu from '../components/order/LbMenu';
+import ExtrasPanel from '../components/order/ExtrasPanel';
 import CheckoutSheet from '../components/order/CheckoutSheet';
 
 export async function getServerSideProps({ req, query }) {
@@ -36,6 +37,7 @@ export default function OrderPage({ settings, adminMode }) {
   const [planQty, setPlanQty] = useState(1); // how many of the chosen plan are in this order
   const [anyQty, setAnyQty] = useState(4); // 'any amount': meals per combo
   const [lbs, setLbs] = useState([]); // [{kind, item, flavor, lbs}]
+  const [extras, setExtras] = useState([]); // [{kind, item, qty}] add-on portions
   const [custom, setCustom] = useState('');
   const [info, setInfo] = useState(emptyInfo);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -80,6 +82,7 @@ export default function OrderPage({ settings, adminMode }) {
         if (d.plan && MEAL_PLANS.some((p) => p.id === d.plan)) setPlanId(d.plan);
         if (Number.isInteger(d.planQty) && d.planQty >= 1 && d.planQty <= 5) setPlanQty(d.planQty);
         if (Array.isArray(d.lbs)) setLbs(d.lbs);
+        if (Array.isArray(d.extras)) setExtras(d.extras);
         if (typeof d.custom === 'string') setCustom(d.custom);
         if (d.info) setInfo({ ...emptyInfo, ...d.info });
         if (d.info?.phone) setUsualPhone(d.info.phone);
@@ -90,12 +93,12 @@ export default function OrderPage({ settings, adminMode }) {
   useEffect(() => {
     if (!draftLoaded || adminMode) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals, lbs, custom, info, plan: planId, planQty }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals, lbs, extras, custom, info, plan: planId, planQty }));
     } catch {}
-  }, [meals, lbs, custom, info, planId, planQty, draftLoaded, adminMode]);
+  }, [meals, lbs, extras, custom, info, planId, planQty, draftLoaded, adminMode]);
 
   // ---- pricing ----
-  const cart = { meals, lbs };
+  const cart = { meals, lbs, extras };
   const priced = priceCart(cart, []);
   const mealCount = meals.reduce((a, m) => a + mealLineCount(m), 0);
   // 2 x the 8-meal plan = a 16-meal plan; sets of the same combo stay the plan's size.
@@ -203,6 +206,12 @@ export default function OrderPage({ settings, adminMode }) {
     });
   }
   const [lbFlavor, setLbFlavor] = useState({});
+  function setExtraQty(kind, item, qty) {
+    setExtras((prev) => {
+      const rest = prev.filter((e) => !(e.kind === kind && e.item === item));
+      return qty > 0 ? [...rest, { kind, item, qty }] : rest;
+    });
+  }
 
   // ---- usual ----
   async function findUsual() {
@@ -222,6 +231,7 @@ export default function OrderPage({ settings, adminMode }) {
     const n = (o.cart.meals || []).reduce((a, m) => a + mealLineCount(m), 0);
     if (n) setPlanId(planForCount(n).id);
     setLbs(o.cart.lbs || []);
+    setExtras(o.cart.extras || []);
     setInfo((i) => ({ ...i, phone: usualPhone, fulfillment: o.fulfillment || i.fulfillment, payment_method: o.payment_method || i.payment_method }));
     setTab(o.cart.meals?.length ? 'meals' : 'lb');
     setUsualOpen(false);
@@ -252,7 +262,7 @@ export default function OrderPage({ settings, adminMode }) {
       setSheet(false);
       if (!adminMode) {
         try {
-          localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals: [], lbs: [], custom: '', info: { ...info, notes: '', allergy_notes: info.allergy_notes } }));
+          localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals: [], lbs: [], extras: [], custom: '', info: { ...info, notes: '', allergy_notes: info.allergy_notes } }));
         } catch {}
       }
       window.scrollTo({ top: 0 });
@@ -266,6 +276,7 @@ export default function OrderPage({ settings, adminMode }) {
   function resetAll() {
     setMeals([]);
     setLbs([]);
+    setExtras([]);
     setCustom('');
     setDone(null);
     setInfo((i) => ({ ...(adminMode ? emptyInfo : { ...i, notes: '' }) }));
@@ -276,6 +287,7 @@ export default function OrderPage({ settings, adminMode }) {
     if (!window.confirm(t('reset_confirm'))) return;
     setMeals([]);
     setLbs([]);
+    setExtras([]);
     setCustom('');
     setPlanId(MEAL_PLANS[0].id);
     setPlanQty(1);
@@ -408,6 +420,10 @@ export default function OrderPage({ settings, adminMode }) {
             <p>{t('custom_sub')}</p>
             <textarea className="input" rows={6} placeholder={t('custom_ph')} value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={1500} />
           </section>
+        )}
+        {/* ---------------- EXTRAS (meals + by-the-lb tabs) ---------------- */}
+        {(tab === 'meals' || tab === 'lb') && hasItems && (
+          <ExtrasPanel lang={lang} t={t} soldOut={soldOut} extras={extras} setExtraQty={setExtraQty} />
         )}
       </main>
 
