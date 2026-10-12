@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mealUnitPrice, lbUnitPrice, priceCart, cookDateFor, addDays, dateKey, money } from '../lib/menu.js';
+import { mealUnitPrice, lbUnitPrice, priceCart, lineLabel, cookDateFor, addDays, dateKey, money } from '../lib/menu.js';
 import { linesToCart, cartKey } from '../lib/cart.js';
 
 const meal = (protein, carb, veg, sets = 2, flavor) => ({ protein, flavor, carb, veg, sets });
@@ -196,4 +196,59 @@ test('cartKey ignores line order but not contents', () => {
   const b = { meals: [...a.meals].reverse(), lbs: [] };
   assert.equal(cartKey(a), cartKey(b));
   assert.notEqual(cartKey(a), cartKey({ meals: [meal('tritip', 'whiterice', 'broccoli', 3)], lbs: [] }));
+});
+
+// ---- meal plans / per-meal counts ----
+import { MEAL_PLANS, planParts, planForCount, mealLineCount } from '../lib/menu.js';
+
+test('meal plans: sets + leftover picks add up to the plan size', () => {
+  const want = { 8: [2, 0, 4], 10: [3, 1, 3], 12: [4, 0, 3], 14: [4, 2, 3], 16: [5, 1, 3] };
+  for (const p of MEAL_PLANS.filter((x) => x.meals)) {
+    const { sets, extra } = planParts(p);
+    assert.deepEqual([sets, extra, p.setSize], want[p.meals]);
+    assert.equal(sets * p.setSize + extra, p.meals);
+  }
+  assert.equal(planForCount(12).id, '12');
+  assert.equal(planForCount(9).id, 'any');
+});
+
+test('priceCart: count lines (any amount) and legacy sets lines both work', () => {
+  const r = priceCart({ meals: [
+    { protein: 'turkey', carb: 'whiterice', veg: 'broccoli', count: 7 },
+    { protein: 'turkey', carb: 'brownrice', veg: 'broccoli', count: 1 },
+  ], lbs: [] });
+  assert.equal(r.ok, true);
+  assert.equal(r.meals, 8);
+  assert.equal(r.lines[0].count, 7);
+  assert.equal('sets' in r.lines[0], false);
+  assert.equal(mealLineCount({ sets: 3 }), 12);
+  assert.equal(mealLineCount({ count: 5, sets: 3 }), 5);
+  const bad = priceCart({ meals: [{ protein: 'turkey', carb: 'whiterice', veg: 'broccoli', count: 7 }], lbs: [] });
+  assert.equal(bad.error, 'min_meals');
+});
+
+test('linesToCart keeps per-meal counts (10-meal plan reloads as 10)', () => {
+  const r = priceCart({ meals: [
+    { protein: 'chicken', flavor: 'chipotle', carb: 'whiterice', veg: 'broccoli', count: 9 },
+    { protein: 'tilapia', carb: 'redpotato', veg: 'asparagus', count: 1 },
+  ], lbs: [] });
+  const cart = linesToCart(r.lines);
+  assert.equal(cart.meals.reduce((a, m) => a + m.count, 0), 10);
+  assert.equal(cartKey(cart), cartKey(linesToCart(priceCart(cart).lines)));
+});
+
+test('meals can skip the carb OR the veggie (same price), not both', async () => {
+  const { NONE } = await import('../lib/menu.js');
+  const full = mealUnitPrice({ protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: 'broccoli' });
+  assert.equal(mealUnitPrice({ protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: NONE }), full);
+  assert.equal(mealUnitPrice({ protein: 'chicken', flavor: 'teriyaki', carb: NONE, veg: 'asparagus' }), 12);
+  assert.equal(mealUnitPrice({ protein: 'chicken', carb: NONE, veg: NONE }), null);
+  assert.equal(mealUnitPrice({ protein: 'chicken', carb: 'basmati', veg: 'broccoli' }), null);
+  const r = priceCart({ meals: [
+    { protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: NONE, count: 14 },
+    { protein: 'chicken', flavor: 'teriyaki', carb: NONE, veg: 'fajitas', count: 7 },
+  ], lbs: [] });
+  assert.equal(r.ok, true);
+  assert.equal(r.meals, 21);
+  assert.equal(lineLabel(r.lines[0]), 'Ground Beef · Taco + White Rice');
 });

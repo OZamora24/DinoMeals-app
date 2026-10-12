@@ -4,7 +4,7 @@ import { formatPhone } from '../../lib/orderForm';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
-  hasItems, fee, subtotal, total, err, busy, place, onClose,
+  hasItems, fee, cardFee, subtotal, total, err, busy, place, onClose,
 }) {
   return (
     <div className="sheet-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -73,6 +73,7 @@ export default function CheckoutSheet({
               {[['zelle', Bolt], ['cash', Cash], ['card', Card]].map(([k, I]) => (
                 <button key={k} className={`opt ${info.payment_method === k ? 'on' : ''}`} onClick={() => setInfo({ ...info, payment_method: k })}>
                   <I size={22} /><b>{t(k)}</b>
+                  {k === 'card' && Number(settings.card_fee) > 0 && <span>+{money(settings.card_fee)} {t('fee')}</span>}
                 </button>
               ))}
             </div>
@@ -108,10 +109,11 @@ export default function CheckoutSheet({
             </ul>
             {hasItems && (
               <div className="totals">
-                {fee > 0 && (
+                {(fee > 0 || cardFee > 0) && (
                   <>
                     <div><span>{t('subtotal')}</span><span>{money(subtotal)}</span></div>
-                    <div><span>{t('delivery_fee')}</span><span>{money(fee)}</span></div>
+                    {fee > 0 && <div><span>{t('delivery_fee')}</span><span>{money(fee)}</span></div>}
+                    {cardFee > 0 && <div><span>{t('card_fee')}</span><span>{money(cardFee)}</span></div>}
                   </>
                 )}
                 <div className="grand"><span>{t('total')}</span><span>{money(total)}</span></div>

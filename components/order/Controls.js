@@ -1,23 +1,23 @@
 import { Plus, Minus } from '../../components/Icons';
 
-export function Stepper({ value, onDec, onInc, unit }) {
+export function Stepper({ value, onDec, onInc, unit, incDisabled }) {
   return (
     <div className="stepper">
       <button aria-label="less" onClick={onDec} disabled={value <= 0}><Minus size={16} /></button>
       <span>{value}{unit ? <small> {unit}</small> : null}</span>
-      <button aria-label="more" onClick={onInc}><Plus size={16} /></button>
+      <button aria-label="more" onClick={onInc} disabled={incDisabled}><Plus size={16} /></button>
     </div>
   );
 }
 
-export function Meter({ value, min, step = 1, label, unit }) {
+export function Meter({ value, min, step = 1, label, unit, over }) {
   const slots = Math.max(min, Math.ceil(value / step) * step);
   const n = Math.round(slots / step);
   const filled = Math.floor(value / step);
   return (
-    <div className={`meter ${value >= min ? 'ok' : ''}`}>
-      <div className="meter-bars" style={{ gridTemplateColumns: `repeat(${Math.min(n, 12)}, 1fr)` }}>
-        {Array.from({ length: Math.min(n, 12) }).map((_, i) => (
+    <div className={`meter ${over ? 'over' : value >= min ? 'ok' : ''}`}>
+      <div className="meter-bars" style={{ gridTemplateColumns: `repeat(${Math.min(n, 16)}, 1fr)` }}>
+        {Array.from({ length: Math.min(n, 16) }).map((_, i) => (
           <span key={i} className={i < filled ? 'f' : ''} />
         ))}
       </div>

@@ -4,10 +4,10 @@ import Link from 'next/link';
 import SiteNav from '../components/SiteNav';
 import { useLang } from '../lib/i18n';
 import {
-  PROTEINS, MEAL_SET_SIZE, MIN_MEALS, MIN_LBS, byId, mealUnitPrice, priceCart, allergensFor, prettyDate, money,
+  PROTEINS, NONE, MIN_MEALS, proteinLabel, MIN_LBS, MEAL_PLANS, planById, planForCount, mealLineCount, byId, mealUnitPrice, priceCart, allergensFor, prettyDate, money,
 } from '../lib/menu';
 import { getSettings } from '../lib/db';
-import { publicSettings } from '../lib/publicSettings';
+import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { isValidSession } from '../lib/adminSession';
 import { Check, Arrow } from '../components/Icons';
 import { sumMacros, emptyInfo, DRAFT_KEY } from '../lib/orderForm';
@@ -21,7 +21,7 @@ import CheckoutSheet from '../components/order/CheckoutSheet';
 export async function getServerSideProps({ req, query }) {
   const s = await getSettings();
   const adminMode = query.admin === '1' && isValidSession(req);
-  return { props: { settings: publicSettings(s), adminMode } };
+  return { props: { settings: await publicSettingsWithCapacity(s), adminMode } };
 }
 
 export default function OrderPage({ settings, adminMode }) {
@@ -31,7 +31,9 @@ export default function OrderPage({ settings, adminMode }) {
   const macros = settings.macros || {};
 
   const [tab, setTab] = useState('meals');
-  const [meals, setMeals] = useState([]); // [{protein, flavor, carb, veg, sets}]
+  const [meals, setMeals] = useState([]); // [{protein, flavor, carb, veg, count}]
+  const [planId, setPlanId] = useState(MEAL_PLANS[0].id);
+  const [anyQty, setAnyQty] = useState(4); // 'any amount': meals per combo
   const [lbs, setLbs] = useState([]); // [{kind, item, flavor, lbs}]
   const [custom, setCustom] = useState('');
   const [info, setInfo] = useState(emptyInfo);
@@ -74,6 +76,7 @@ export default function OrderPage({ settings, adminMode }) {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
       if (d) {
         if (Array.isArray(d.meals)) setMeals(d.meals);
+        if (d.plan && MEAL_PLANS.some((p) => p.id === d.plan)) setPlanId(d.plan);
         if (Array.isArray(d.lbs)) setLbs(d.lbs);
         if (typeof d.custom === 'string') setCustom(d.custom);
         if (d.info) setInfo({ ...emptyInfo, ...d.info });
@@ -85,27 +88,34 @@ export default function OrderPage({ settings, adminMode }) {
   useEffect(() => {
     if (!draftLoaded || adminMode) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals, lbs, custom, info }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals, lbs, custom, info, plan: planId }));
     } catch {}
-  }, [meals, lbs, custom, info, draftLoaded, adminMode]);
+  }, [meals, lbs, custom, info, planId, draftLoaded, adminMode]);
 
   // ---- pricing ----
   const cart = { meals, lbs };
   const priced = priceCart(cart, []);
-  const mealCount = meals.reduce((a, m) => a + m.sets * MEAL_SET_SIZE, 0);
+  const mealCount = meals.reduce((a, m) => a + mealLineCount(m), 0);
+  const plan = planById(planId);
+  const planTarget = plan.meals; // null = any amount
+  const remaining = planTarget ? planTarget - mealCount : Infinity;
+  // How many meals the builder's Add button adds right now: a full set, or
+  // the leftover "your pick" meals once the sets are filled.
+  const addN = planTarget ? Math.max(0, Math.min(plan.setSize, remaining)) : anyQty;
   const lbCount = lbs.reduce((a, l) => a + (Number(l.lbs) || 0), 0);
   const hasItems = mealCount > 0 || lbCount > 0;
   const fee = info.fulfillment === 'delivery' && hasItems ? Number(settings.delivery_fee) || 0 : 0;
   const subtotal = hasItems ? Math.round(priced.subtotal * 100) / 100 : 0;
-  const total = hasItems ? subtotal + fee : null;
-  const mealsOk = mealCount === 0 || mealCount >= MIN_MEALS;
+  const cardFee = info.payment_method === 'card' && hasItems ? Number(settings.card_fee) || 0 : 0;
+  const total = hasItems ? subtotal + fee + cardFee : null;
+  const mealsOk = mealCount === 0 || (planTarget ? mealCount === planTarget : mealCount >= MIN_MEALS);
   const lbsOk = lbCount === 0 || lbCount >= MIN_LBS;
   const canCheckout = (hasItems && mealsOk && lbsOk) || (!hasItems && custom.trim().length > 3);
 
   // ---- builder helpers ----
   const bP = byId(PROTEINS, bProtein);
   const builderUnit = bProtein && bCarb && bVeg ? mealUnitPrice({ protein: bProtein, flavor: bFlavor, carb: bCarb, veg: bVeg }) : null;
-  const builderMacros = bProtein && bCarb && bVeg ? sumMacros([macros[bProtein], macros[bCarb], macros[bVeg]]) : null;
+  const builderMacros = builderUnit ? sumMacros([bProtein, bCarb, bVeg].filter((x) => x && x !== NONE).map((x) => macros[x])) : null;
   const builderAllergens = allergensFor(
     [bProtein, bProtein && `${bProtein}:${bFlavor}`, bCarb, bVeg].filter(Boolean),
     settings.allergens
@@ -119,23 +129,24 @@ export default function OrderPage({ settings, adminMode }) {
 
   function addSet() {
     if (!builderUnit) return;
+    if (editIdx == null && addN <= 0) return;
     const combo = { protein: bProtein, flavor: bP.flavors ? bFlavor : undefined, carb: bCarb, veg: bVeg };
     const same = (m) => m.protein === combo.protein && (m.flavor || '') === (combo.flavor || '') && m.carb === combo.carb && m.veg === combo.veg;
     setMeals((prev) => {
       if (editIdx != null) {
         const next = prev.slice();
-        next[editIdx] = { ...combo, sets: prev[editIdx].sets };
+        next[editIdx] = { ...combo, count: mealLineCount(prev[editIdx]) };
         return next;
       }
       const i = prev.findIndex(same);
       if (i >= 0) {
         const next = prev.slice();
-        next[i] = { ...next[i], sets: next[i].sets + 1 };
+        next[i] = { ...combo, count: mealLineCount(next[i]) + addN };
         return next;
       }
-      return [...prev, { ...combo, sets: 1 }];
+      return [...prev, { ...combo, count: addN }];
     });
-    setFlash(editIdx != null ? 'updated' : 'added');
+    setFlash(editIdx != null ? 'updated' : { added: addN });
     setTimeout(() => setFlash(null), 1300);
     setEditIdx(null);
     setBProtein(null);
@@ -154,8 +165,28 @@ export default function OrderPage({ settings, adminMode }) {
     builderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const setSets = (i, n) =>
-    setMeals((prev) => (n <= 0 ? prev.filter((_, j) => j !== i) : prev.map((m, j) => (j === i ? { ...m, sets: n } : m))));
+  // Protein-only meals (no carb AND no veggie) go through the Custom tab.
+  function goCustom() {
+    const p = bProtein ? proteinLabel(bProtein, bFlavor, lang) : '';
+    const line = p ? `${t('nosides_prefill', p)}\n` : '';
+    if (line && !custom.includes(line.trim())) setCustom((c) => (c.trim() ? `${c.trim()}\n${line}` : line));
+    setTab('custom');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const setCount = (i, n) =>
+    setMeals((prev) => (n <= 0 ? prev.filter((_, j) => j !== i) : prev.map((m, j) => (j === i ? { protein: m.protein, flavor: m.flavor, carb: m.carb, veg: m.veg, count: n } : m))));
+  // Box steppers move by a whole set (or 1 meal on "any amount"), never past the plan size.
+  const incMeal = (i) => {
+    const c = mealLineCount(meals[i]);
+    const step = planTarget ? Math.min(plan.setSize, remaining) : 1;
+    if (step > 0) setCount(i, c + step);
+  };
+  const decMeal = (i) => {
+    const c = mealLineCount(meals[i]);
+    const step = planTarget ? (c % plan.setSize || plan.setSize) : 1;
+    setCount(i, c - step);
+  };
 
   function lbQty(kind, item, flavor) {
     const l = lbs.find((x) => x.kind === kind && x.item === item && (x.flavor || '') === (flavor || ''));
@@ -184,6 +215,8 @@ export default function OrderPage({ settings, adminMode }) {
   }
   function loadUsual(o) {
     setMeals(o.cart.meals || []);
+    const n = (o.cart.meals || []).reduce((a, m) => a + mealLineCount(m), 0);
+    if (n) setPlanId(planForCount(n).id);
     setLbs(o.cart.lbs || []);
     setInfo((i) => ({ ...i, phone: usualPhone, fulfillment: o.fulfillment || i.fulfillment, payment_method: o.payment_method || i.payment_method }));
     setTab(o.cart.meals?.length ? 'meals' : 'lb');
@@ -238,7 +271,8 @@ export default function OrderPage({ settings, adminMode }) {
     return <OrderDone done={done} adminMode={adminMode} settings={settings} lang={lang} setLang={setLang} t={t} resetAll={resetAll} />;
   }
 
-  const closed = !settings.ordering_open && !adminMode;
+  const full = !!settings.week_full && !adminMode;
+  const closed = (!settings.ordering_open || full) && !adminMode;
 
   // =================== BUILDER ===================
   return (
@@ -255,11 +289,12 @@ export default function OrderPage({ settings, adminMode }) {
         <h1 className="display">{tab === 'lb' ? t('by_lb') : tab === 'custom' ? t('custom_title') : t('build_meals')}</h1>
         <div className={`status-pill ${closed ? 'closed' : 'open'}`}>
           <span className="dot" />
-          {closed ? t('closed') : <>{t('cook_day')}: <b>{prettyDate(settings.cook_date, lang)}</b></>}
+          {full && settings.ordering_open ? t('week_full') : closed ? t('closed') : <>{t('cook_day')}: <b>{prettyDate(settings.cook_date, lang)}</b></>}
         </div>
       </header>
 
       {settings.announcement ? <div className="announce">{settings.announcement}</div> : null}
+      {full && settings.ordering_open ? <div className="announce">{t('week_full_note')}</div> : null}
 
       {!adminMode && (
         <UsualPanel
@@ -313,9 +348,16 @@ export default function OrderPage({ settings, adminMode }) {
               builderAllergens={builderAllergens}
               pickProtein={pickProtein}
               addSet={addSet}
+              plan={plan}
+              setPlanId={setPlanId}
+              addN={addN}
+              mealCount={mealCount}
+              anyQty={anyQty}
+              setAnyQty={setAnyQty}
+              goCustom={goCustom}
             />
 
-            <MealBox lang={lang} t={t} settings={settings} meals={meals} mealCount={mealCount} editSet={editSet} setSets={setSets} />
+            <MealBox lang={lang} t={t} settings={settings} meals={meals} mealCount={mealCount} plan={plan} remaining={remaining} editSet={editSet} incMeal={incMeal} decMeal={decMeal} />
           </>
         )}
 
@@ -345,7 +387,7 @@ export default function OrderPage({ settings, adminMode }) {
 
       {flash && (
         <div className="toast">
-          <Check size={16} /> {flash === 'loaded' ? t('load') : flash === 'updated' ? t('update_set') : t('add_set_short')}
+          <Check size={16} /> {flash === 'loaded' ? t('load') : flash === 'updated' ? t('update_set') : t('added_n', flash.added || 1)}
         </div>
       )}
 
@@ -380,6 +422,7 @@ export default function OrderPage({ settings, adminMode }) {
           priced={priced}
           hasItems={hasItems}
           fee={fee}
+          cardFee={cardFee}
           subtotal={subtotal}
           total={total}
           err={err}

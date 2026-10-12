@@ -5,12 +5,12 @@ import Footer from '../components/Footer';
 import { useLang } from '../lib/i18n';
 import { PROTEINS, CARBS, VEGGIES, nameOf, prettyDate, money, PORTIONS } from '../lib/menu';
 import { getSettings } from '../lib/db';
-import { publicSettings } from '../lib/publicSettings';
+import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { Flame, Grain, Leaf, Box, Card, Truck, Arrow, Repeat } from '../components/Icons';
 
 export async function getServerSideProps() {
   const s = await getSettings();
-  return { props: { settings: publicSettings(s) } };
+  return { props: { settings: await publicSettingsWithCapacity(s) } };
 }
 
 const TICKER = [
@@ -52,9 +52,11 @@ export default function Home({ settings }) {
               </Link>
               <Link href="/order?tab=lb" className="btn btn-ghost btn-lg">{t('by_lb')}</Link>
             </div>
-            <div className={`status-pill ${open ? 'open' : 'closed'}`}>
+            <div className={`status-pill ${open && !settings.week_full ? 'open' : 'closed'}`}>
               <span className="dot" />
-              {open ? (
+              {open && settings.week_full ? (
+                t('week_full')
+              ) : open ? (
                 <>
                   {t('open_for')} <b>{prettyDate(settings.cook_date, lang)}</b>
                 </>

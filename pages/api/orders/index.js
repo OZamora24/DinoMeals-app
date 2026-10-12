@@ -1,4 +1,4 @@
-import { insertOrder, listOrders, updateOrder, deleteOrder, getOrder } from '../../../lib/db';
+import { insertOrder, listOrders, updateOrder, deleteOrder, getOrder, getSettings } from '../../../lib/db';
 import { isValidSession } from '../../../lib/adminSession';
 import { rateLimit } from '../../../lib/rateLimit';
 import { notifyNewOrder } from '../../../lib/push';
@@ -48,6 +48,17 @@ export default async function handler(req, res) {
       }
       if ('payment_method' in p && PAY.includes(p.payment_method)) patch.payment_method = p.payment_method;
       if ('total' in p) patch.total = p.total === '' || p.total == null ? null : Math.max(0, Number(p.total) || 0);
+      else if (patch.payment_method) {
+        // Switching to/from card adds/drops the card fee (unless the total is being set by hand).
+        const cur = await getOrder(id);
+        if (cur && cur.payment_method !== patch.payment_method && cur.total != null) {
+          const fee = Number((await getSettings()).card_fee) || 0;
+          const wasCard = cur.payment_method === 'card';
+          const isCard = patch.payment_method === 'card';
+          if (isCard && !wasCard) patch.total = Math.round((Number(cur.total) + fee) * 100) / 100;
+          if (wasCard && !isCard) patch.total = Math.max(0, Math.round((Number(cur.total) - fee) * 100) / 100);
+        }
+      }
       if ('notes' in p) patch.notes = clean(p.notes, 800);
       if ('cook_date' in p && /^\d{4}-\d{2}-\d{2}$/.test(p.cook_date)) patch.cook_date = p.cook_date;
       if ('route_pos' in p) patch.route_pos = p.route_pos == null ? null : parseInt(p.route_pos, 10);

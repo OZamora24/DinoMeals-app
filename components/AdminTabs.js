@@ -48,8 +48,8 @@ export function CookTab({ orders, week }) {
         if (l.type === 'meal') {
           containers += l.count;
           add('protein', `${l.protein}:${l.flavor || ''}`, proteinLabel(l.protein, l.flavor), l.count, l.count * PORTIONS.protein, 0);
-          add('carb', l.carb, nameOf(byId(CARBS, l.carb)), l.count, l.count * PORTIONS.carb, 0);
-          add('veg', l.veg, nameOf(byId(VEGGIES, l.veg)), l.count, l.count * PORTIONS.veg, 0);
+          if (byId(CARBS, l.carb)) add('carb', l.carb, nameOf(byId(CARBS, l.carb)), l.count, l.count * PORTIONS.carb, 0);
+          if (byId(VEGGIES, l.veg)) add('veg', l.veg, nameOf(byId(VEGGIES, l.veg)), l.count, l.count * PORTIONS.veg, 0);
         } else if (l.type === 'lb') {
           const key = l.kind === 'protein' ? `${l.item}:${l.flavor || ''}` : l.item;
           add(l.kind, key, lineLabel(l), 0, l.lbs * 16, l.lbs);
@@ -341,10 +341,14 @@ export function SettingsTab({ settings, save, week }) {
           </label>
         </div>
         <p className="muted small">Orders after the cutoff go to the following Sunday. Current cook day: <b>{prettyDate(settings.cook_date)}</b></p>
+        <label>Max customers per week (0 = no limit)
+          <input className="input" inputMode="numeric" value={s.weekly_capacity} onChange={(e) => set('weekly_capacity', e.target.value.replace(/\D/g, ''))} />
+        </label>
+        <p className="muted small">Once this many different customers have ordered for the week, the site shows "This week is full". Someone who already ordered can still add to their order; you can always enter orders yourself.</p>
         <label>Banner message (shows on the site)
           <input className="input" value={s.announcement} placeholder="e.g. No cook Nov 30 — happy Thanksgiving!" onChange={(e) => set('announcement', e.target.value)} />
         </label>
-        <button className="btn btn-red btn-sm" onClick={() => save({ cutoff_day: s.cutoff_day, cutoff_hour: s.cutoff_hour, announcement: s.announcement })}>Save</button>
+        <button className="btn btn-red btn-sm" onClick={() => save({ cutoff_day: s.cutoff_day, cutoff_hour: s.cutoff_hour, announcement: s.announcement, weekly_capacity: s.weekly_capacity })}>Save</button>
       </section>
 
       <section className="set-card">
@@ -362,7 +366,8 @@ export function SettingsTab({ settings, save, week }) {
         <label>Zelle (name / phone / email)<input className="input" value={s.zelle_info} onChange={(e) => set('zelle_info', e.target.value)} placeholder="Juan Carlos · (909) 555-0000" /></label>
         <label>Card payment link (Square / Stripe / Venmo business — optional)<input className="input" value={s.card_link} onChange={(e) => set('card_link', e.target.value)} placeholder="https://square.link/…" /></label>
         <label>Cash instructions<input className="input" value={s.cash_info} onChange={(e) => set('cash_info', e.target.value)} /></label>
-        <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, card_link: s.card_link, cash_info: s.cash_info })}>Save</button>
+        <label>Card fee ($ added to the total when a customer pays by card)<input className="input" inputMode="decimal" value={s.card_fee} onChange={(e) => set('card_fee', e.target.value)} /></label>
+        <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, card_link: s.card_link, cash_info: s.cash_info, card_fee: s.card_fee })}>Save</button>
       </section>
 
       <section className="set-card">
