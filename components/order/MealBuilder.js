@@ -36,8 +36,8 @@ export default function MealBuilder({
         {bP?.flavors && (
           <div className="flavor-row">
             <span className="muted small">{t('flavor')}:</span>
-            {bP.flavors.map((f) => (
-              <button key={f.id} className={`chip ${bFlavor === f.id ? 'on' : ''}`} onClick={() => setBFlavor(f.id)}>
+            {bP.flavors.filter((f) => f.id !== 'plain').map((f) => (
+              <button key={f.id} className={`chip ${bFlavor === f.id ? 'on' : ''}`} onClick={() => setBFlavor(bFlavor === f.id ? 'plain' : f.id)}>
                 {lang === 'es' ? f.es : f.name}
                 {f.extra ? <em>+${f.extra}</em> : null}
               </button>

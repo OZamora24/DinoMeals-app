@@ -29,8 +29,8 @@ export default function LbMenu({ lang, t, soldOut, lbs, lbCount, lbFlavor, setLb
                   <span className="lb-price">{out ? t('sold_out') : `${money(unit)} / lb`}</span>
                   {flavors && (
                     <div className="flavor-row tight">
-                      {flavors.map((f) => (
-                        <button key={f.id} className={`chip sm ${fl === f.id ? 'on' : ''}`} onClick={() => setLbFlavor((s) => ({ ...s, [x.id]: f.id }))}>
+                      {flavors.filter((f) => f.id !== 'plain').map((f) => (
+                        <button key={f.id} className={`chip sm ${fl === f.id ? 'on' : ''}`} onClick={() => setLbFlavor((s) => ({ ...s, [x.id]: fl === f.id ? 'plain' : f.id }))}>
                           {lang === 'es' ? f.es : f.name}{f.extra ? <em>+${f.extra}</em> : null}
                         </button>
                       ))}
