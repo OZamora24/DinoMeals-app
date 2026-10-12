@@ -4,6 +4,7 @@ import { prettyDate, addDays, money } from '../lib/menu';
 import { ORDERS_WARN, ORDERS_ACT } from '../lib/limits';
 import { playChime, soundEnabled, localNotify } from '../lib/alerts';
 import AlertsButton from '../components/AlertsButton';
+import OrderEditor from '../components/OrderEditor';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab } from '../components/AdminTabs';
 
@@ -110,6 +111,23 @@ export default function Admin() {
       loadOrders();
     }
   }
+  const EDIT_ERR = {
+    name_required: 'Enter a name.',
+    phone_required: 'Enter a 10-digit phone number.',
+    address_required: 'Delivery needs an address and a 5-digit ZIP.',
+    bad_item: 'One of the items is not valid.',
+    empty: 'The order has no items.',
+  };
+  // Full edit from the order's Edit dialog. Throws so the dialog can show why.
+  async function edit(id, p) {
+    try {
+      const j = await api('/api/orders', { method: 'PATCH', body: { id, ...p } });
+      setOrders((os) => os.map((o) => (o.id === id ? j.order : o)));
+      say('Order updated');
+    } catch (e) {
+      throw new Error(EDIT_ERR[e.message] || 'Could not save — try again');
+    }
+  }
   async function remove(id) {
     if (!window.confirm('Delete this order for good?')) return;
     await api(`/api/orders?id=${id}`, { method: 'DELETE' });
@@ -192,7 +210,7 @@ export default function Admin() {
       </nav>
 
       <main className="admin-main">
-        {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} remove={remove} repeat={repeat} week={week} />}
+        {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />}
         {tab === 'cook' && <CookTab orders={live} week={week} />}
         {tab === 'pay' && <PayTab orders={live} patch={patch} settings={settings} />}
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
@@ -206,7 +224,7 @@ export default function Admin() {
 }
 
 /* =========================== ORDERS =========================== */
-function OrdersTab({ orders, loading, patch, remove, repeat, week }) {
+function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
   const live = orders.filter((o) => o.status !== 'cancelled');
@@ -247,15 +265,16 @@ function OrdersTab({ orders, loading, patch, remove, repeat, week }) {
       {!loading && shown.length === 0 && <p className="muted empty">No orders here yet.</p>}
       <div className="order-cards">
         {shown.map((o) => (
-          <OrderCard key={o.id} o={o} patch={patch} remove={remove} repeat={repeat} week={week} />
+          <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />
         ))}
       </div>
     </>
   );
 }
 
-function OrderCard({ o, patch, remove, repeat, week }) {
+function OrderCard({ o, patch, edit, remove, repeat, week }) {
   const [quote, setQuote] = useState(o.total ?? '');
+  const [editing, setEditing] = useState(false);
   const flags = [...(o.diet || []).map(dietLabel), o.allergy_notes].filter(Boolean);
   return (
     <article className={`ocard st-${o.status} ${o.paid ? 'is-paid' : 'is-unpaid'}`}>
@@ -305,6 +324,7 @@ function OrderCard({ o, patch, remove, repeat, week }) {
           ))}
         </div>
         <div className="oc-actions">
+          <button className="btn btn-ghost btn-sm" title="Change the customer, items, delivery or payment" onClick={() => setEditing(true)}>Edit</button>
           <button className="btn btn-ghost btn-sm" title="Copy this order into next week" onClick={() => repeat([o.id], addDays(week, 7))}><Repeat size={14} /> Next week</button>
           {o.status !== 'cancelled' && (
             <button className="btn btn-ghost btn-sm" title="Keep the order but mark it cancelled" onClick={() => patch(o.id, { status: 'cancelled' })}>Cancel</button>
@@ -312,6 +332,7 @@ function OrderCard({ o, patch, remove, repeat, week }) {
           <button className="btn btn-ghost btn-sm" title="Delete this order permanently" onClick={() => remove(o.id)}><X size={14} /> Delete</button>
         </div>
       </footer>
+      {editing && <OrderEditor order={o} onSave={(p) => edit(o.id, p)} onClose={() => setEditing(false)} />}
     </article>
   );
 }

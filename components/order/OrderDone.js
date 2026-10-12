@@ -2,6 +2,7 @@ import { prettyDate, money } from '../../lib/menu';
 import { Check, Card, Cash, Bolt } from '../../components/Icons';
 import Link from 'next/link';
 import SiteNav from '../SiteNav';
+import { CONTACT_PHONE } from '../../lib/orderForm';
 
 export default function OrderDone({ done, adminMode, settings, lang, setLang, t, resetAll }) {
   const quote = done.total == null;
@@ -37,6 +38,7 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
             )}
           </div>
         )}
+        <p className="contact-line">{t('questions')} <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
         <div className="done-actions">
           {adminMode ? (
             <>

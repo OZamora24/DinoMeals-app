@@ -267,6 +267,24 @@ export default function OrderPage({ settings, adminMode }) {
     setInfo((i) => ({ ...(adminMode ? emptyInfo : { ...i, notes: '' }) }));
   }
 
+  // Customer "oops" button: empties the box (contact info is kept).
+  function resetCart() {
+    if (!window.confirm(t('reset_confirm'))) return;
+    setMeals([]);
+    setLbs([]);
+    setCustom('');
+    setPlanId(MEAL_PLANS[0].id);
+    setAnyQty(4);
+    setLbFlavor({});
+    setBProtein(null);
+    setBFlavor('plain');
+    setBCarb(null);
+    setBVeg(null);
+    setEditIdx(null);
+    setTab('meals');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   if (done) {
     return <OrderDone done={done} adminMode={adminMode} settings={settings} lang={lang} setLang={setLang} t={t} resetAll={resetAll} />;
   }
@@ -321,6 +339,7 @@ export default function OrderPage({ settings, adminMode }) {
             {badge && <span className="tab-badge">{badge}</span>}
           </button>
         ))}
+        <button className="tab-reset" disabled={!hasItems && !custom.trim()} onClick={resetCart}>{t('reset')}</button>
       </nav>
 
       <main className="order-main">
