@@ -76,7 +76,7 @@ export default function MealBuilder({
             </button>
           ))}
           <button className={`chip chip-none ${bCarb === NONE ? 'on' : ''} ${bVeg === NONE ? 'blocked' : ''}`} onClick={() => (bVeg === NONE ? setNoSides(true) : setBCarb(NONE))}>
-            {t('no_carb')}
+            {t('na')}
           </button>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function MealBuilder({
             </button>
           ))}
           <button className={`chip chip-none ${bVeg === NONE ? 'on' : ''} ${bCarb === NONE ? 'blocked' : ''}`} onClick={() => (bCarb === NONE ? setNoSides(true) : setBVeg(NONE))}>
-            {t('no_veg')}
+            {t('na')}
           </button>
         </div>
         <p className="muted small side-rule">{t('one_side')}</p>
