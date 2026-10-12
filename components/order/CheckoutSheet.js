@@ -1,6 +1,6 @@
 import { DIET_FLAGS, lineLabel, money } from '../../lib/menu';
 import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
-import { formatPhone } from '../../lib/orderForm';
+import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
@@ -126,6 +126,7 @@ export default function CheckoutSheet({
           <button className="btn btn-red btn-lg btn-block" disabled={busy} onClick={place}>
             {busy ? t('placing') : <>{t('place')}{hasItems ? ` · ${money(total)}` : ''}</>}
           </button>
+          <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
         </div>
       </div>
     </div>
