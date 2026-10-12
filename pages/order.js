@@ -33,6 +33,7 @@ export default function OrderPage({ settings, adminMode }) {
   const [tab, setTab] = useState('meals');
   const [meals, setMeals] = useState([]); // [{protein, flavor, carb, veg, count}]
   const [planId, setPlanId] = useState(MEAL_PLANS[0].id);
+  const [planQty, setPlanQty] = useState(1); // how many of the chosen plan are in this order
   const [anyQty, setAnyQty] = useState(4); // 'any amount': meals per combo
   const [lbs, setLbs] = useState([]); // [{kind, item, flavor, lbs}]
   const [custom, setCustom] = useState('');
@@ -77,6 +78,7 @@ export default function OrderPage({ settings, adminMode }) {
       if (d) {
         if (Array.isArray(d.meals)) setMeals(d.meals);
         if (d.plan && MEAL_PLANS.some((p) => p.id === d.plan)) setPlanId(d.plan);
+        if (Number.isInteger(d.planQty) && d.planQty >= 1 && d.planQty <= 5) setPlanQty(d.planQty);
         if (Array.isArray(d.lbs)) setLbs(d.lbs);
         if (typeof d.custom === 'string') setCustom(d.custom);
         if (d.info) setInfo({ ...emptyInfo, ...d.info });
@@ -88,15 +90,17 @@ export default function OrderPage({ settings, adminMode }) {
   useEffect(() => {
     if (!draftLoaded || adminMode) return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals, lbs, custom, info, plan: planId }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ meals, lbs, custom, info, plan: planId, planQty }));
     } catch {}
-  }, [meals, lbs, custom, info, planId, draftLoaded, adminMode]);
+  }, [meals, lbs, custom, info, planId, planQty, draftLoaded, adminMode]);
 
   // ---- pricing ----
   const cart = { meals, lbs };
   const priced = priceCart(cart, []);
   const mealCount = meals.reduce((a, m) => a + mealLineCount(m), 0);
-  const plan = planById(planId);
+  // 2 x the 8-meal plan = a 16-meal plan; sets of the same combo stay the plan's size.
+  const basePlan = planById(planId);
+  const plan = basePlan.meals ? { ...basePlan, meals: basePlan.meals * planQty } : basePlan;
   const planTarget = plan.meals; // null = any amount
   const remaining = planTarget ? planTarget - mealCount : Infinity;
   // How many meals the builder's Add button adds right now: a full set, or
@@ -274,6 +278,7 @@ export default function OrderPage({ settings, adminMode }) {
     setLbs([]);
     setCustom('');
     setPlanId(MEAL_PLANS[0].id);
+    setPlanQty(1);
     setAnyQty(4);
     setLbFlavor({});
     setBProtein(null);
@@ -369,6 +374,8 @@ export default function OrderPage({ settings, adminMode }) {
               addSet={addSet}
               plan={plan}
               setPlanId={setPlanId}
+              planQty={planQty}
+              setPlanQty={setPlanQty}
               addN={addN}
               mealCount={mealCount}
               anyQty={anyQty}

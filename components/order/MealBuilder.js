@@ -8,7 +8,7 @@ export default function MealBuilder({
   lang, t, soldOut, builderRef, editIdx, setEditIdx,
   bProtein, setBProtein, bFlavor, setBFlavor, bCarb, setBCarb, bVeg, setBVeg,
   bP, builderUnit, builderMacros, builderAllergens, pickProtein, addSet,
-  plan, setPlanId, addN, mealCount, anyQty, setAnyQty, goCustom,
+  plan, setPlanId, planQty, setPlanQty, addN, mealCount, anyQty, setAnyQty, goCustom,
 }) {
   const [noSides, setNoSides] = useState(false);
   const full = editIdx == null && addN <= 0;
@@ -25,6 +25,12 @@ export default function MealBuilder({
             ))}
           </select>
         </label>
+        {plan.meals && (
+          <span className="plan-pick">
+            <span className="muted small">{t('plan_qty')}</span>
+            <Stepper value={planQty} onDec={() => setPlanQty((q) => Math.max(1, q - 1))} onInc={() => setPlanQty((q) => Math.min(5, q + 1))} incDisabled={planQty >= 5} />
+          </span>
+        )}
       </div>
 
       <div className="b-step">
