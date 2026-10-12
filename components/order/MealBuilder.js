@@ -1,16 +1,30 @@
-import { PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, byId, nameOf, proteinLabel, money } from '../../lib/menu';
+import { PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, MEAL_PLANS, NONE, byId, nameOf, proteinLabel, money } from '../../lib/menu';
 import { Flame, Grain, Leaf, Plus, X, Check } from '../../components/Icons';
+import { Stepper } from './Controls';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function MealBuilder({
   lang, t, soldOut, builderRef, editIdx, setEditIdx,
   bProtein, setBProtein, bFlavor, setBFlavor, bCarb, setBCarb, bVeg, setBVeg,
   bP, builderUnit, builderMacros, builderAllergens, pickProtein, addSet,
+  plan, setPlanId, addN, mealCount, anyQty, setAnyQty, goCustom,
 }) {
+  const [noSides, setNoSides] = useState(false);
+  const full = editIdx == null && addN <= 0;
+  const picking = editIdx == null && plan.meals && addN > 0 && addN < plan.setSize;
   return (
     <section className="builder" ref={builderRef}>
       <div className="builder-head">
         <span>{editIdx != null ? t('update_set') : `${t('every_meal')}: ${PORTIONS.protein}oz · ${PORTIONS.carb}oz · ${PORTIONS.veg}oz`}</span>
-        <span className="muted small">{t('min_meals')}</span>
+        <label className="plan-pick">
+          <span className="muted small">{t('plan_label')}</span>
+          <select className="input plan-select" value={plan.id} onChange={(e) => setPlanId(e.target.value)}>
+            {MEAL_PLANS.map((p) => (
+              <option key={p.id} value={p.id}>{t(`plan_${p.id}`)}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="b-step">
@@ -55,6 +69,9 @@ export default function MealBuilder({
               {soldOut.has(c.id) ? <em>{t('sold_out')}</em> : c.mealExtra ? <em>+${c.mealExtra}</em> : null}
             </button>
           ))}
+          <button className={`chip chip-none ${bCarb === NONE ? 'on' : ''} ${bVeg === NONE ? 'blocked' : ''}`} onClick={() => (bVeg === NONE ? setNoSides(true) : setBCarb(NONE))}>
+            {t('no_carb')}
+          </button>
         </div>
       </div>
 
@@ -67,14 +84,30 @@ export default function MealBuilder({
               {soldOut.has(v.id) ? <em>{t('sold_out')}</em> : v.mealExtra ? <em>+${v.mealExtra}</em> : null}
             </button>
           ))}
+          <button className={`chip chip-none ${bVeg === NONE ? 'on' : ''} ${bCarb === NONE ? 'blocked' : ''}`} onClick={() => (bCarb === NONE ? setNoSides(true) : setBVeg(NONE))}>
+            {t('no_veg')}
+          </button>
         </div>
+        <p className="muted small side-rule">{t('one_side')}</p>
       </div>
+
+      {(picking || (!plan.meals && editIdx == null)) && (
+        <div className="plan-hint">
+          <span>{picking ? t('pick_hint', addN) : t('any_hint')}</span>
+          {!plan.meals && editIdx == null && (
+            <span className="qty-pick">
+              <span className="muted small">{t('qty')}</span>
+              <Stepper value={anyQty} onDec={() => setAnyQty((q) => Math.max(1, q - 1))} onInc={() => setAnyQty((q) => Math.min(50, q + 1))} />
+            </span>
+          )}
+        </div>
+      )}
 
       <div className={`builder-foot ${builderUnit ? 'ready' : ''}`}>
         <div className="bf-info">
           {builderUnit ? (
             <>
-              <div className="bf-combo">{proteinLabel(bProtein, bFlavor, lang)} + {nameOf(byId(CARBS, bCarb), lang)} + {nameOf(byId(VEGGIES, bVeg), lang)}</div>
+              <div className="bf-combo">{[proteinLabel(bProtein, bFlavor, lang), nameOf(byId(CARBS, bCarb), lang), nameOf(byId(VEGGIES, bVeg), lang)].filter(Boolean).join(' + ')}</div>
               <div className="bf-meta">
                 <b>{money(builderUnit)}</b> / {t('meal')}
                 {builderMacros ? (
@@ -97,11 +130,26 @@ export default function MealBuilder({
               <X size={16} />
             </button>
           )}
-          <button className="btn btn-red" disabled={!builderUnit} onClick={addSet}>
-            {editIdx != null ? t('update_set') : <><Plus size={18} /> {t('add_set')}{builderUnit ? ` · ${money(builderUnit * 4)}` : ''}</>}
+          <button className="btn btn-red" disabled={!builderUnit || full} onClick={addSet}>
+            {editIdx != null ? t('update_set') : full ? <><Check size={18} /> {t('box_full')}</> : <><Plus size={18} /> {t('add_n', addN)}{builderUnit ? ` · ${money(builderUnit * addN)}` : ''}</>}
           </button>
         </div>
       </div>
+      {noSides && typeof document !== 'undefined' && createPortal(
+        <div className="sheet-backdrop" onClick={(e) => e.target === e.currentTarget && setNoSides(false)}>
+          <div className="sheet pop-card" role="dialog" aria-modal="true">
+            <div className="pop-body">
+              <h2>{t('nosides_title')}</h2>
+              <p>{t('nosides_body')}</p>
+            </div>
+            <div className="pop-actions">
+              <button className="btn btn-ghost" onClick={() => setNoSides(false)}>{t('nosides_keep')}</button>
+              <button className="btn btn-red" onClick={() => { setNoSides(false); goCustom(); }}>{t('nosides_go')}</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </section>
   );
 }

@@ -169,6 +169,12 @@ export default function Admin() {
         <div className="week-warn">Viewing {week < settings.cook_date ? 'a past' : 'a future'} week · <button className="link" onClick={() => setWeek(settings.cook_date)}>Jump to current ({prettyDate(settings.cook_date)})</button></div>
       )}
 
+      {Number(settings.weekly_capacity) > 0 && (() => {
+        const n = new Set(orders.filter((o) => o.status !== 'cancelled').map((o) => o.phone_digits)).size;
+        const cap = Number(settings.weekly_capacity);
+        return <div className={`vol-warn ${n >= cap ? 'act' : ''}`}>{n} of {cap} customers this week{n >= cap ? ' — FULL, the site is closed to new customers' : ` · ${cap - n} spots left`}</div>;
+      })()}
+
       {orders.length >= ORDERS_WARN && (
         <div className={`vol-warn ${orders.length >= ORDERS_ACT ? 'act' : ''}`}>
           {orders.length >= ORDERS_ACT

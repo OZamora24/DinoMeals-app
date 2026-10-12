@@ -23,6 +23,7 @@ export default async function handler(req, res) {
       const priced = priceCart(cart);
       const hasItems = priced.ok;
       const fee = o.fulfillment === 'delivery' && hasItems ? Number(settings.delivery_fee) || 0 : 0;
+      const cFee = o.payment_method === 'card' && hasItems ? Number(settings.card_fee) || 0 : 0;
       const { id: _i, order_no: _n, created_at: _c, ...rest } = o;
       created.push(
         await insertOrder({
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
           items: hasItems ? priced.lines : o.items,
           subtotal: hasItems ? priced.subtotal : o.subtotal,
           delivery_fee: fee,
-          total: hasItems ? priced.subtotal + fee : o.total,
+          total: hasItems ? priced.subtotal + fee + cFee : o.total,
           paid: false,
           paid_at: null,
           status: hasItems ? 'new' : 'quote',
