@@ -426,6 +426,9 @@ label .input { margin-top: 6px; font-weight: 500; }
 .tabs button.on { background: var(--cream); color: #1a1714; border-color: var(--cream); }
 .tabs button.tab-reset { color: var(--red-2); border-color: transparent; background: none; padding: 11px 10px; font-weight: 700; }
 .tabs button.tab-reset:disabled { opacity: .35; }
+.extras { margin: 18px 0 0; border: 1px solid var(--line); border-radius: 16px; background: var(--card); padding: 4px 16px 12px; }
+.extras summary { cursor: pointer; padding: 12px 0; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.extras[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
 .contact-line { margin: 10px 0 0; text-align: center; font-size: .85rem; color: var(--muted); }
 .contact-line a { color: var(--cream); font-weight: 800; }
 .tab-badge { background: var(--red); color: #fff; border-radius: 999px; font-size: .7rem; padding: 1px 7px; }
