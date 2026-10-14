@@ -84,7 +84,7 @@ export default function OrderPage({ settings, adminMode }) {
         if (Array.isArray(d.lbs)) setLbs(d.lbs);
         if (Array.isArray(d.extras)) setExtras(d.extras);
         if (typeof d.custom === 'string') setCustom(d.custom);
-        if (d.info) setInfo({ ...emptyInfo, ...d.info });
+        if (d.info) setInfo({ ...emptyInfo, ...d.info, sms_opt_in: false });
         if (d.info?.phone) setUsualPhone(d.info.phone);
       }
     } catch {}

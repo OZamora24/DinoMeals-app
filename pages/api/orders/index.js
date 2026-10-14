@@ -3,6 +3,18 @@ import { isValidSession } from '../../../lib/adminSession';
 import { rateLimit } from '../../../lib/rateLimit';
 import { notifyNewOrder } from '../../../lib/push';
 import { buildOrderRow, repriceOrder, normalizePhone, PAY, STATUSES, clean } from '../../../lib/orderRow';
+import { sendOrderText } from '../../../lib/sms';
+
+// Sends one order-status text (if the customer opted in and texts are switched on)
+// and records it on the order so it never sends twice. Capped at 5s; never throws.
+async function textCustomer(kind, order, settings) {
+  try {
+    const sent = await Promise.race([sendOrderText(kind, order, settings), new Promise((r) => setTimeout(() => r(null), 5500))]);
+    if (sent) await updateOrder(order.id, { sms_sent: sent });
+  } catch (e) {
+    console.error('textCustomer', kind, e?.message);
+  }
+}
 
 export default async function handler(req, res) {
   try {
@@ -17,6 +29,7 @@ export default async function handler(req, res) {
       const order = await insertOrder(built.row);
       // Ping the owner's devices; capped at 3s so a slow push service never delays the customer.
       if (!wantAdmin) await Promise.race([notifyNewOrder(order), new Promise((r) => setTimeout(r, 3000))]);
+      if (!wantAdmin) await textCustomer('confirm', order, await getSettings());
       return res.status(200).json({
         order: {
           id: order.id,
@@ -94,7 +107,12 @@ export default async function handler(req, res) {
         if (r.error) return res.status(400).json({ error: r.error });
         Object.assign(patch, r.patch);
       }
+      const wasPaid = !!cur.paid;
+      const wasStatus = cur.status;
       const order = await updateOrder(id, patch);
+      // Order-status texts: "payment received" when it flips to paid, "ready" when marked ready.
+      if (patch.paid === true && !wasPaid) await textCustomer('paid', order, settings);
+      if (patch.status === 'ready' && wasStatus !== 'ready') await textCustomer('ready', order, settings);
       return res.status(200).json({ order });
     }
 

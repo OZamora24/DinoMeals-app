@@ -729,3 +729,24 @@ label .input { margin-top: 6px; font-weight: 500; }
 }
 .alerts-status { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 @media (max-width: 700px) { .alerts-pop { left: 12px; right: 12px; width: auto; max-width: 380px; margin-left: auto; margin-right: auto; } }
+
+/* ---------- SMS consent + legal pages ---------- */
+.sms-consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); cursor: pointer; }
+.sms-consent input { flex: none; width: 20px; height: 20px; margin-top: 2px; accent-color: var(--red); }
+.sms-consent b { display: block; font-size: .95rem; color: var(--text); }
+.sms-consent small { display: block; margin-top: 4px; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.sms-consent a, .legal-line a, .footer-links a, .legal a { color: var(--cream, #f4ede0); text-decoration: underline; text-underline-offset: 2px; }
+.legal-line { text-align: center; font-size: .8rem; color: var(--muted); margin: 6px 0 0; }
+.footer-links { display: inline-block; margin-left: 10px; }
+.legal { max-width: 760px; margin: 0 auto; padding: 28px 20px 10px; line-height: 1.6; }
+.legal h1 { margin: 0 0 4px; font-size: clamp(2rem, 7vw, 3rem); }
+.legal h2 { font-size: 1.15rem; margin: 26px 0 8px; }
+.legal p, .legal li { color: var(--muted); }
+.legal p b { color: var(--text); }
+.legal ul { padding-left: 20px; margin: 6px 0; }
+.legal-intro { font-size: 1.05rem; color: var(--text) !important; }
+.sms-demo { margin: 18px 0 6px; padding: 14px; border: 1px dashed var(--line-2, var(--line)); border-radius: 14px; }
+.sms-demo-head { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.src.src-sms { background: rgba(71,194,122,.15); color: var(--ok); border-color: rgba(71,194,122,.4); margin-left: 6px; }
+.ok-text { color: var(--ok); }
+.warn-text { color: #E8A33A; }

@@ -17,7 +17,10 @@ export default function Footer({ t, settings = {} }) {
         <p>{settings.pickup_window ? `${t('pickup')}: ${settings.pickup_window}` : t('footer_pickup')}</p>
         <p>{t('footer_delivery')}</p>
       </div>
-      <div className="footer-fine">© {new Date().getFullYear()} DinoMeals · Juan Carlos</div>
+      <div className="footer-fine">
+        © {new Date().getFullYear()} DinoMeals · Juan Carlos
+        <span className="footer-links"><a href="/privacy">{t('privacy')}</a> · <a href="/terms">{t('terms')}</a> · <a href="/sms">{t('sms_link')}</a></span>
+      </div>
     </footer>
   );
 }

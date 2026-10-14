@@ -1,6 +1,7 @@
 import { DIET_FLAGS, lineSummary, money } from '../../lib/menu';
 import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
+import SmsConsent from '../SmsConsent';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
@@ -42,6 +43,9 @@ export default function CheckoutSheet({
               <label>{t('phone')}<input className="input" inputMode="tel" autoComplete="tel" placeholder="(909) 555-0123" value={info.phone} onChange={(e) => setInfo({ ...info, phone: formatPhone(e.target.value) })} /></label>
               <label>{t('email_opt')}<input className="input" type="email" autoComplete="email" value={info.email} onChange={(e) => setInfo({ ...info, email: e.target.value })} /></label>
             </div>
+            {!adminMode && (
+              <SmsConsent lang={lang} checked={!!info.sms_opt_in} onChange={(v) => setInfo({ ...info, sms_opt_in: v })} />
+            )}
           </fieldset>
 
           <fieldset className="fs">
@@ -127,6 +131,7 @@ export default function CheckoutSheet({
             {busy ? t('placing') : <>{t('place')}{hasItems ? ` · ${money(total)}` : ''}</>}
           </button>
           <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
+          <p className="legal-line"><a href="/privacy" target="_blank" rel="noreferrer">{t('privacy')}</a> · <a href="/terms" target="_blank" rel="noreferrer">{t('terms')}</a></p>
         </div>
       </div>
     </div>

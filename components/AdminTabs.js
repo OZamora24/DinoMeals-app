@@ -326,6 +326,18 @@ export function SettingsTab({ settings, save, week }) {
   return (
     <div className="settings">
       <section className="set-card">
+        <h3>Customer texts</h3>
+        <p className="small">
+          {s._sms?.live ? (
+            <><b className="ok-text">ON</b> — customers who tick the box at checkout get 3 texts: order received, payment received (when you mark Paid) and ready (when you mark Ready).</>
+          ) : (
+            <><b className="warn-text">OFF</b> — waiting on carrier approval (Twilio A2P 10DLC). The opt-in box is already on the checkout so the carriers can review it; nothing is texted until Orlando switches texts on.{s._sms && !s._sms.configured ? ' Twilio keys not added yet.' : ''}</>
+          )}
+        </p>
+        <p className="muted small">Opted-in orders show a <b>Texts ✓</b> tag. Pages: <a href="/privacy" target="_blank" rel="noreferrer">Privacy</a> · <a href="/terms" target="_blank" rel="noreferrer">Terms</a> · <a href="/sms" target="_blank" rel="noreferrer">SMS opt-in</a></p>
+      </section>
+
+      <section className="set-card">
         <h3>Ordering</h3>
         <label className="switch-row">
           <span><b>Taking orders</b><br /><small className="muted">Turn off to pause the order page.</small></span>

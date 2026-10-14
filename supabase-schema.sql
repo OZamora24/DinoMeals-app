@@ -29,7 +29,10 @@ create table if not exists orders (
   custom_request text default '',
   lang text default 'en',
   source text default 'web',               -- web | dm | text | call | repeat
-  route_pos int
+  route_pos int,
+  sms_opt_in boolean not null default false,   -- ticked the text-updates box at checkout
+  sms_opt_in_at timestamptz,
+  sms_sent jsonb not null default '{}'         -- {confirm|paid|ready: sent-at} so a text never repeats
 );
 
 create index if not exists orders_cook_date_idx on orders (cook_date);
