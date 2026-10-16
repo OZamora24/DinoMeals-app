@@ -16,7 +16,7 @@ export default function MealBuilder({
   return (
     <section className="builder" ref={builderRef}>
       <div className="builder-head">
-        <span>{editIdx != null ? t('update_set') : `${t('every_meal')}: ${PORTIONS.protein}oz · ${PORTIONS.carb}oz · ${PORTIONS.veg}oz`}</span>
+        <span>{editIdx != null ? t('update_set') : t('every_meal_oz', PORTIONS.protein, PORTIONS.carb, PORTIONS.veg)}</span>
         <label className="plan-pick">
           <span className="muted small">{t('plan_label')}</span>
           <select className="input plan-select" value={plan.id} onChange={(e) => setPlanId(e.target.value)}>
