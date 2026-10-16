@@ -1,6 +1,7 @@
 // "Fossil" page transition: home page → menu.
 // The screen turns to cracked mud, real three-toed theropod tracks press into it,
 // a giant print slams down, and the menu opens out from under it.
+// (Phone-friendly: no SVG filters and no animated masks, only transform/opacity animations.)
 // Phases: 'run' (mud + tracks + big print) → 'reveal' (hole opens onto the new page).
 // Styles: .fossil-fx in globals.css. Driven by pages/_app.js.
 
@@ -12,7 +13,7 @@ const toe = (sc, rot) => (
 
 function Track() {
   return (
-    <svg viewBox="0 0 100 120" filter="url(#fx-press)">
+    <svg viewBox="0 0 100 120" stroke="#8c5a3c" strokeWidth="3.4" strokeLinejoin="round" paintOrder="stroke">
       {toe(1, 0)}
       {toe(0.8, -36)}
       {toe(0.8, 34)}
@@ -38,15 +39,6 @@ export default function FossilTransition({ phase }) {
             <stop offset=".7" stopColor="#1c100b" />
             <stop offset="1" stopColor="#7a4a32" />
           </radialGradient>
-          <filter id="fx-press" x="-20%" y="-20%" width="140%" height="140%">
-            <feMorphology in="SourceAlpha" operator="dilate" radius="2.2" result="d" />
-            <feFlood floodColor="#8c5a3c" />
-            <feComposite in2="d" operator="in" result="rim" />
-            <feMerge>
-              <feMergeNode in="rim" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
       </svg>
       <div className="fx-shake">
