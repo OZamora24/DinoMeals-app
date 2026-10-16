@@ -783,3 +783,8 @@ label .input { margin-top: 6px; font-weight: 500; }
 /* per-meal portion size picker */
 .oz-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .chip-oz { padding: 6px 12px; font-size: 0.88rem; }
+
+/* calories in the box */
+.box-cal { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.05); font-size: .9rem; }
+.box-cal b { font-size: 1.05rem; }
+.bi-cal { color: var(--ember); font-weight: 700; }

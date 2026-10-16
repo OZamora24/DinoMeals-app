@@ -325,3 +325,13 @@ test('oz shows in summaries, survives repeat orders, and splits cart keys', () =
   assert.deepEqual(c.meals[0].oz, { protein: 6, veg: 5 });
   assert.notEqual(cartKey(c), cartKey(linesToCart([{ ...line, oz: undefined }])));
 });
+
+import { mealMacros } from '../lib/orderForm.js';
+test('mealMacros adds the parts, scales bigger portions, and is null with missing numbers', () => {
+  const macros = { chicken: { cal: 200, p: 30, c: 0, f: 5 }, whiterice: { cal: 180, p: 3, c: 40, f: 1 }, broccoli: { cal: 30, p: 3, c: 6, f: 0 } };
+  const m = { protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli' };
+  assert.equal(mealMacros(m, macros).cal, 410);
+  assert.equal(mealMacros({ ...m, oz: { protein: 8 } }, macros).cal, 610); // 200 x 8/4 + 180 + 30
+  assert.equal(mealMacros({ ...m, veg: 'none' }, macros).cal, 380);
+  assert.equal(mealMacros(m, { chicken: macros.chicken }), null);
+});
