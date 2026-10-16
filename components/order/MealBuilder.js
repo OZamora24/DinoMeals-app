@@ -1,4 +1,4 @@
-import { PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, MEAL_PLANS, NONE, byId, nameOf, proteinLabel, money } from '../../lib/menu';
+import { PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, OZ_CHOICES, ozUpcharge, MEAL_PLANS, NONE, byId, nameOf, proteinLabel, money } from '../../lib/menu';
 import { Flame, Grain, Leaf, Plus, X, Check } from '../../components/Icons';
 import { Stepper } from './Controls';
 import { useState } from 'react';
@@ -6,12 +6,32 @@ import { createPortal } from 'react-dom';
 
 export default function MealBuilder({
   lang, t, soldOut, builderRef, editIdx, setEditIdx,
-  bProtein, setBProtein, bFlavor, setBFlavor, bCarb, setBCarb, bVeg, setBVeg,
+  bProtein, setBProtein, bFlavor, setBFlavor, bCarb, setBCarb, bVeg, setBVeg, bOz, setBOz,
   bP, builderUnit, builderMacros, builderAllergens, pickProtein, addSet,
   plan, setPlanId, planQty, setPlanQty, addN, mealCount, anyQty, setAnyQty, goCustom,
 }) {
   const [noSides, setNoSides] = useState(false);
   const full = editIdx == null && addN <= 0;
+  const ozRow = (kind, item) => {
+    if (!item || item === NONE) return null;
+    const cur = Number(bOz[kind]) || PORTIONS[kind];
+    return (
+      <div className="oz-row">
+        <span className="muted small">{t('portion_size')}</span>
+        <div className="chips">
+          {OZ_CHOICES[kind].map((oz) => {
+            const up = oz === PORTIONS[kind] ? 0 : ozUpcharge({ protein: bProtein, carb: bCarb, veg: bVeg, oz: { [kind]: oz } });
+            return (
+              <button key={oz} className={`chip chip-oz ${cur === oz ? 'on' : ''}`} onClick={() => setBOz((o) => { const n = { ...o }; if (oz === PORTIONS[kind]) delete n[kind]; else n[kind] = oz; return n; })}>
+                {oz}oz
+                {up ? <em>+{money(up)}</em> : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
   const picking = editIdx == null && plan.meals && addN > 0 && addN < plan.setSize;
   return (
     <section className="builder" ref={builderRef}>
@@ -64,6 +84,7 @@ export default function MealBuilder({
             ))}
           </div>
         )}
+        {ozRow('protein', bProtein)}
       </div>
 
       <div className="b-step">
@@ -79,6 +100,7 @@ export default function MealBuilder({
             {t('na')}
           </button>
         </div>
+        {ozRow('carb', bCarb)}
       </div>
 
       <div className="b-step">
@@ -94,6 +116,7 @@ export default function MealBuilder({
             {t('na')}
           </button>
         </div>
+        {ozRow('veg', bVeg)}
         <p className="muted small side-rule">{t('one_side')}</p>
       </div>
 
@@ -132,7 +155,7 @@ export default function MealBuilder({
         </div>
         <div className="bf-actions">
           {editIdx != null && (
-            <button className="btn btn-ghost" onClick={() => { setEditIdx(null); setBProtein(null); setBCarb(null); setBVeg(null); }}>
+            <button className="btn btn-ghost" onClick={() => { setEditIdx(null); setBProtein(null); setBCarb(null); setBVeg(null); setBOz({}); }}>
               <X size={16} />
             </button>
           )}

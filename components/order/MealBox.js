@@ -1,4 +1,4 @@
-import { CARBS, VEGGIES, ALLERGEN_LABELS, MIN_MEALS, mealLineCount, byId, nameOf, proteinLabel, mealUnitPrice, allergensFor, money } from '../../lib/menu';
+import { CARBS, VEGGIES, ALLERGEN_LABELS, MIN_MEALS, mealLineCount, byId, nameOf, proteinLabel, mealUnitPrice, ozTag, allergensFor, money } from '../../lib/menu';
 import { Stepper, Meter } from './Controls';
 
 export default function MealBox({ lang, t, settings, meals, mealCount, plan, remaining, editSet, incMeal, decMeal }) {
@@ -26,6 +26,7 @@ export default function MealBox({ lang, t, settings, meals, mealCount, plan, rem
                 <div className="bi-main">
                   <div className="bi-title">{proteinLabel(m.protein, m.flavor, lang)}</div>
                   <div className="bi-sub">{nameOf(byId(CARBS, m.carb), lang) || t('no_carb')} · {nameOf(byId(VEGGIES, m.veg), lang) || t('no_veg')}</div>
+                  {ozTag(m, lang) && <div className="bi-sub">{ozTag(m, lang)}</div>}
                   <div className="bi-meta">
                     {money(unit)} {t('each')}
                     {al.length > 0 && <span className="al-dot" title={al.join(', ')}>⚠ {al.map((a) => ALLERGEN_LABELS[a]?.[lang] || a).join(', ')}</span>}

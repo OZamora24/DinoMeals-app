@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  PROTEINS, CARBS, VEGGIES, NONE, DIET_FLAGS, byId, flavorOf, lineLabel, mealLineCount, mealUnitPrice, priceCart, money,
+  PROTEINS, CARBS, VEGGIES, NONE, DIET_FLAGS, byId, flavorOf, lineLabel, mealLineCount, mealUnitPrice, ozTag, priceCart, money,
 } from '../lib/menu';
 import { linesToCart, cartKey } from '../lib/cart';
 import { formatPhone } from '../lib/orderForm';
@@ -110,7 +110,8 @@ export default function OrderEditor({ order, onSave, onClose }) {
                       <option value={NONE}>No veggie</option>
                     </select>
                   </div>
-                  <div className="edit-line-foot">
+                  {ozTag(m) && <div className="muted small">Portions: {ozTag(m)}</div>}
+                  <div className="edit-line-foot">
                     <Stepper value={m.count} onDec={() => setMeal(i, { count: Math.max(0, m.count - 1) })} onInc={() => setMeal(i, { count: m.count + 1 })} unit="meals" />
                     <b>{unit == null ? '—' : money(unit * m.count)}</b>
                     <button className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => setMeals((ms) => ms.filter((_, j) => j !== i))}><X size={14} /></button>

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import SiteNav from '../components/SiteNav';
 import { useLang } from '../lib/i18n';
 import {
-  PROTEINS, NONE, MIN_MEALS, proteinLabel, MIN_LBS, MEAL_PLANS, planById, planForCount, mealLineCount, byId, mealUnitPrice, priceCart, allergensFor, prettyDate, money,
+  PROTEINS, NONE, MIN_MEALS, proteinLabel, MIN_LBS, MEAL_PLANS, planById, planForCount, mealLineCount, byId, mealUnitPrice, cleanOz, mealOz, PORTIONS, priceCart, allergensFor, prettyDate, money,
 } from '../lib/menu';
 import { getSettings } from '../lib/db';
 import { publicSettingsWithCapacity } from '../lib/publicSettings';
@@ -47,6 +47,7 @@ export default function OrderPage({ settings, adminMode }) {
   const [bFlavor, setBFlavor] = useState('plain');
   const [bCarb, setBCarb] = useState(null);
   const [bVeg, setBVeg] = useState(null);
+  const [bOz, setBOz] = useState({}); // non-standard oz picks: { protein?, carb?, veg? }
   const [editIdx, setEditIdx] = useState(null);
   const [flash, setFlash] = useState(null);
 
@@ -121,10 +122,22 @@ export default function OrderPage({ settings, adminMode }) {
 
   // ---- builder helpers ----
   const bP = byId(PROTEINS, bProtein);
-  const builderUnit = bProtein && bCarb && bVeg ? mealUnitPrice({ protein: bProtein, flavor: bFlavor, carb: bCarb, veg: bVeg }) : null;
+  const builderUnit = bProtein && bCarb && bVeg ? mealUnitPrice({ protein: bProtein, flavor: bFlavor, carb: bCarb, veg: bVeg, oz: bOz }) : null;
   // Flavor rows (e.g. groundbeef:taco) can have their own macros; else the base protein's.
   const proteinMacros = bProtein ? macros[`${bProtein}:${bFlavor}`] || macros[bProtein] : null;
-  const builderMacros = builderUnit ? sumMacros([proteinMacros, ...[bCarb, bVeg].filter((x) => x && x !== NONE).map((x) => macros[x])]) : null;
+  // Macros are saved per standard portion; bigger portions scale them.
+  const ozNow = mealOz({ oz: bOz });
+  const scaleMacro = (m, kind) => {
+    if (!m) return m;
+    const k = ozNow[kind] / PORTIONS[kind];
+    return k === 1 ? m : { cal: (+m.cal || 0) * k, p: (+m.p || 0) * k, c: (+m.c || 0) * k, f: (+m.f || 0) * k };
+  };
+  const builderMacros = builderUnit
+    ? sumMacros([
+        scaleMacro(proteinMacros, 'protein'),
+        ...[['carb', bCarb], ['veg', bVeg]].filter(([, x]) => x && x !== NONE).map(([kind, x]) => scaleMacro(macros[x], kind)),
+      ])
+    : null;
   const builderAllergens = allergensFor(
     [bProtein, bProtein && `${bProtein}:${bFlavor}`, bCarb, bVeg].filter(Boolean),
     settings.allergens
@@ -139,8 +152,10 @@ export default function OrderPage({ settings, adminMode }) {
   function addSet() {
     if (!builderUnit) return;
     if (editIdx == null && addN <= 0) return;
-    const combo = { protein: bProtein, flavor: bP.flavors ? bFlavor : undefined, carb: bCarb, veg: bVeg };
-    const same = (m) => m.protein === combo.protein && (m.flavor || '') === (combo.flavor || '') && m.carb === combo.carb && m.veg === combo.veg;
+    const cz = cleanOz({ carb: bCarb, veg: bVeg, oz: bOz }).oz;
+    const combo = { protein: bProtein, flavor: bP.flavors ? bFlavor : undefined, carb: bCarb, veg: bVeg, ...(cz ? { oz: cz } : {}) };
+    const ozSig = (o) => JSON.stringify([o?.protein || 0, o?.carb || 0, o?.veg || 0]);
+    const same = (m) => m.protein === combo.protein && (m.flavor || '') === (combo.flavor || '') && m.carb === combo.carb && m.veg === combo.veg && ozSig(m.oz) === ozSig(combo.oz);
     setMeals((prev) => {
       if (editIdx != null) {
         const next = prev.slice();
@@ -161,6 +176,7 @@ export default function OrderPage({ settings, adminMode }) {
     setBProtein(null);
     setBCarb(null);
     setBVeg(null);
+    setBOz({});
   }
 
   function editSet(i) {
@@ -171,6 +187,7 @@ export default function OrderPage({ settings, adminMode }) {
     setBFlavor(m.flavor || 'plain');
     setBCarb(m.carb);
     setBVeg(m.veg);
+    setBOz(m.oz || {});
     builderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -184,7 +201,7 @@ export default function OrderPage({ settings, adminMode }) {
   }
 
   const setCount = (i, n) =>
-    setMeals((prev) => (n <= 0 ? prev.filter((_, j) => j !== i) : prev.map((m, j) => (j === i ? { protein: m.protein, flavor: m.flavor, carb: m.carb, veg: m.veg, count: n } : m))));
+    setMeals((prev) => (n <= 0 ? prev.filter((_, j) => j !== i) : prev.map((m, j) => (j === i ? { protein: m.protein, flavor: m.flavor, carb: m.carb, veg: m.veg, ...(m.oz ? { oz: m.oz } : {}), count: n } : m))));
   // Box steppers move by a whole set (or 1 meal on "any amount"), never past the plan size.
   const incMeal = (i) => {
     const c = mealLineCount(meals[i]);
@@ -299,6 +316,7 @@ export default function OrderPage({ settings, adminMode }) {
     setBFlavor('plain');
     setBCarb(null);
     setBVeg(null);
+    setBOz({});
     setEditIdx(null);
     setTab('meals');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -380,6 +398,8 @@ export default function OrderPage({ settings, adminMode }) {
               setBCarb={setBCarb}
               bVeg={bVeg}
               setBVeg={setBVeg}
+              bOz={bOz}
+              setBOz={setBOz}
               bP={bP}
               builderUnit={builderUnit}
               builderMacros={builderMacros}

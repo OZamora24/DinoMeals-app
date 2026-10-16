@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, DIET_FLAGS,
+  PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, DIET_FLAGS, mealOz,
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
@@ -47,9 +47,10 @@ export function CookTab({ orders, week }) {
       for (const l of o.items || []) {
         if (l.type === 'meal') {
           containers += l.count;
-          add('protein', `${l.protein}:${l.flavor || ''}`, proteinLabel(l.protein, l.flavor), l.count, l.count * PORTIONS.protein, 0);
-          if (byId(CARBS, l.carb)) add('carb', l.carb, nameOf(byId(CARBS, l.carb)), l.count, l.count * PORTIONS.carb, 0);
-          if (byId(VEGGIES, l.veg)) add('veg', l.veg, nameOf(byId(VEGGIES, l.veg)), l.count, l.count * PORTIONS.veg, 0);
+          const oz = mealOz(l); // customers can pick bigger portions
+          add('protein', `${l.protein}:${l.flavor || ''}`, proteinLabel(l.protein, l.flavor), l.count, l.count * oz.protein, 0);
+          if (byId(CARBS, l.carb)) add('carb', l.carb, nameOf(byId(CARBS, l.carb)), l.count, l.count * oz.carb, 0);
+          if (byId(VEGGIES, l.veg)) add('veg', l.veg, nameOf(byId(VEGGIES, l.veg)), l.count, l.count * oz.veg, 0);
         } else if (l.type === 'extra') {
           const key = l.kind === 'protein' ? `${l.item}:` : l.item;
           add(l.kind, key, lineLabel(l), l.qty, l.qty * PORTIONS[l.kind], 0);

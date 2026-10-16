@@ -284,3 +284,44 @@ test('extras alone are not an order; bad or sold-out extras are rejected', () =>
   assert.equal(priceCartX({ ...base, extras: [{ kind: 'carb', item: 'brownrice', qty: 1 }] }, ['brownrice']).error, 'sold_out');
   assert.equal(priceCartX({ ...base, extras: [{ kind: 'carb', item: 'brownrice', qty: 999 }] }).error, 'bad_item');
 });
+
+// ---- per-meal portion sizes ----
+import { cleanOz, ozUpcharge, mealOz, ozTag, OZ_CHOICES } from '../lib/menu.js';
+
+test('standard portions cost nothing extra and bigger ones add the per-oz upcharge', () => {
+  const base = { protein: 'tritip', flavor: 'plain', carb: 'whiterice', veg: 'broccoli' };
+  assert.equal(mealUnitPrice(base), 15);
+  assert.equal(mealUnitPrice({ ...base, oz: { protein: 8 } }), 15 + 7.5); // $30/lb x 4oz more
+  assert.equal(mealUnitPrice({ ...base, oz: { carb: 6, veg: 6 } }), 15 + 1.5 + 2); // 10*2/16=1.25->1.5, 10*3/16=1.875->2
+  assert.equal(ozUpcharge({ ...base, oz: { protein: 4 } }), 0);
+});
+
+test('oz outside the preset sizes is rejected; N/A parts ignore oz', () => {
+  const base = { protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli' };
+  assert.equal(mealUnitPrice({ ...base, oz: { protein: 5 } }), null);
+  assert.equal(cleanOz({ ...base, veg: 'none', oz: { veg: 99 } }).ok, true);
+  assert.deepEqual(cleanOz({ ...base, oz: { protein: 6, carb: 4 } }).oz, { protein: 6 });
+  assert.equal(OZ_CHOICES.protein[0], 4);
+});
+
+test('priceCart stores oz on the line, rejects bad oz, and totals the upcharge', () => {
+  const m = { protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli', count: 8, oz: { protein: 6 } };
+  const r = priceCart({ meals: [m] });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.lines[0].oz, { protein: 6 });
+  assert.equal(r.lines[0].unit, 11 + 2); // 15*2/16 = 1.875 -> 2
+  assert.equal(r.subtotal, 104);
+  assert.equal(priceCart({ meals: [{ ...m, oz: { protein: 7 } }] }).error, 'bad_item');
+  const std = priceCart({ meals: [{ ...m, oz: { protein: 4 } }] });
+  assert.equal(std.lines[0].oz, undefined);
+});
+
+test('oz shows in summaries, survives repeat orders, and splits cart keys', () => {
+  const line = { type: 'meal', protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli', count: 4, oz: { protein: 6, veg: 5 } };
+  assert.deepEqual(mealOz(line), { protein: 6, carb: 4, veg: 5 });
+  assert.match(lineSummary(line), /\(6oz protein · 5oz veg\)/);
+  assert.equal(ozTag({ ...line, oz: undefined }), '');
+  const c = linesToCart([line]);
+  assert.deepEqual(c.meals[0].oz, { protein: 6, veg: 5 });
+  assert.notEqual(cartKey(c), cartKey(linesToCart([{ ...line, oz: undefined }])));
+});

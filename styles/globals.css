@@ -779,3 +779,7 @@ label .input { margin-top: 6px; font-weight: 500; }
 @keyframes ds-smoke { 0% { transform: translateY(6px) scale(.85); opacity: 0; } 30% { opacity: .55; } 100% { transform: translateY(-26px) scale(1.25); opacity: 0; } }
 @keyframes ds-glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .dino-scene * { animation: none !important; } }
+
+/* per-meal portion size picker */
+.oz-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.chip-oz { padding: 6px 12px; font-size: 0.88rem; }
