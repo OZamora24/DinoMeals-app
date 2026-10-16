@@ -10,6 +10,7 @@ import '@fontsource/manrope/latin-800.css';
 import '../styles/globals.css';
 import '../styles/splash-extra.css';
 import SplashScreen from '../components/SplashScreen';
+import FossilTransition from '../components/FossilTransition';
 
 // Splash rules
 //  - First visit: "Tap to enter" gate, then the full splash with the
@@ -24,6 +25,11 @@ const TIMING = {
 };
 const FADE_MS = 700;
 const SOUND_SRC = '/sounds/splash.mp3';
+
+// Fossil transition (home → menu): plays the first time per visit that a customer taps
+// a link to /order from the home page. Skipped for reduced motion. Timeline in ms.
+const FX = { navigateAt: 1500, revealAt: 1750, revealMs: 700, maxWait: 4000 };
+const FX_KEY = 'dino_fossil';
 
 const safe = (fn, fallback = null) => {
   try { return fn(); } catch { return fallback; }
@@ -44,6 +50,8 @@ export default function App({ Component, pageProps }) {
   const [mode, setMode] = useState('full'); // full | quick
   const [muted, setMuted] = useState(false);
   const audio = useRef(null);
+  const [fx, setFx] = useState(null); // null | run | reveal
+  const fxBusy = useRef(false);
 
   const label = router.pathname === '/order' ? 'LOADING THE MENU' : 'FIRING UP THE SMOKER';
 
@@ -126,6 +134,49 @@ export default function App({ Component, pageProps }) {
     return () => clearTimeout(t);
   }, [phase]);
 
+  // Fossil transition: catch taps on links to /order from the home page before Next's <Link> does.
+  useEffect(() => {
+    if (isAdmin) return undefined;
+    const onClick = (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (window.location.pathname !== '/') return;
+      const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a || (a.target && a.target !== '_self')) return;
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname !== '/order') return;
+      if (fxBusy.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (session.get(FX_KEY) === '1') return;
+      if (safe(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, false)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      session.set(FX_KEY, '1');
+      fxBusy.current = true;
+      const href = url.pathname + url.search + url.hash;
+      const start = Date.now();
+      setFx('run');
+      setTimeout(async () => {
+        await Promise.race([
+          router.push(href).catch(() => {}),
+          new Promise((r) => setTimeout(r, FX.maxWait)),
+        ]);
+        setTimeout(() => {
+          setFx('reveal');
+          setTimeout(() => {
+            setFx(null);
+            fxBusy.current = false;
+          }, FX.revealMs);
+        }, Math.max(0, FX.revealAt - (Date.now() - start)));
+      }, FX.navigateAt);
+    };
+    window.addEventListener('click', onClick, true);
+    return () => window.removeEventListener('click', onClick, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+
   const enter = (withSound) => {
     if (withSound && !muted) {
       const a = getAudio();
@@ -160,6 +211,7 @@ export default function App({ Component, pageProps }) {
       <div className={hidden ? 'app-hidden' : 'app-shown'}>
         <Component {...pageProps} />
       </div>
+      <FossilTransition phase={fx} />
       {phase !== 'gone' && (
         <SplashScreen
           phase={phase}
