@@ -7,6 +7,7 @@ import { PROTEINS, CARBS, VEGGIES, nameOf, prettyDate, money, PORTIONS } from '.
 import { getSettings } from '../lib/db';
 import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { Flame, Grain, Leaf, Box, Card, Truck, Arrow, Repeat } from '../components/Icons';
+import DinoScene from '../components/DinoScene';
 
 export async function getServerSideProps() {
   const s = await getSettings();
@@ -38,6 +39,7 @@ export default function Home({ settings }) {
             <span /><span /><span />
           </div>
         </div>
+        <DinoScene />
         <div className="hero-inner">
           <div className="hero-copy">
             <div className="kicker"><Flame size={16} /> {t('hero_kicker')}</div>

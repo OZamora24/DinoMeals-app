@@ -31,7 +31,7 @@ test('the three messages name the brand and carry STOP/HELP', () => {
   const p = buildMessage('paid', { ...order, paid: true }, s);
   const r = buildMessage('ready', order, s);
   for (const m of [c, p, r]) {
-    assert.match(m, /^DinoMeals: /);
+    assert.match(m, /^🦖 DinoMeals: /);
     assert.match(m, /STOP/);
     assert.ok(m.length <= 320, `too long (${m.length}): ${m}`);
   }
@@ -51,9 +51,29 @@ test('sendOrderText posts to Twilio and returns the sent map; errors never throw
   assert.match(call.url, /Accounts\/AC1\/Messages\.json$/);
   assert.match(call.init.body, /To=%2B19095550123/);
   assert.match(call.init.body, /MessagingServiceSid=MG1/);
+  assert.doesNotMatch(call.init.body, /MediaUrl/); // plain text, no picture
+  assert.match(new URLSearchParams(call.init.body).get('Body'), /^🦖 DinoMeals:/);
   assert.equal(await sendOrderText('confirm', order, {}, { env: {}, fetchImpl: ok }), null);
   const bad = async () => ({ ok: false, status: 400, text: async () => 'nope' });
   assert.equal(await sendOrderText('confirm', order, {}, { env: ON, fetchImpl: bad }), null);
   const boom = async () => { throw new Error('net'); };
   assert.equal(await sendOrderText('confirm', order, {}, { env: ON, fetchImpl: boom }), null);
+});
+
+
+test('weekly reminder: cutoff wording and message', async () => {
+  const { cutoffText, reminderMessage } = await import('../lib/sms.js');
+  assert.equal(cutoffText({ cutoff_day: 6, cutoff_hour: 0 }), 'Fri 11:59 PM'); // "end of Friday"
+  assert.equal(cutoffText({ cutoff_day: 5, cutoff_hour: 20 }), 'Fri 8:00 PM');
+  assert.equal(cutoffText({ cutoff_day: 6, cutoff_hour: 0 }, 'es'), 'vie 11:59 PM');
+  const m = reminderMessage('en', { cutoff_day: 6, cutoff_hour: 0 });
+  assert.equal(m, '🦖 DinoMeals: Orders for this week close Fri 11:59 PM. Order at dinomeals.vercel.app/order. Reply STOP to opt out.');
+  assert.match(reminderMessage('es', { cutoff_day: 6, cutoff_hour: 0 }), /cierran el vie 11:59 PM/);
+});
+
+test('sendText reports Twilio STOP (21610) so the reminder list drops that number', async () => {
+  const { sendText } = await import('../lib/sms.js');
+  const stop = async () => ({ ok: false, status: 400, json: async () => ({ code: 21610, message: 'unsubscribed' }) });
+  assert.deepEqual(await sendText('9095550123', 'hi', { env: ON, fetchImpl: stop }), { ok: false, code: 21610 });
+  assert.equal((await sendText('9095550123', 'hi', { env: {}, fetchImpl: stop })).code, 'off');
 });

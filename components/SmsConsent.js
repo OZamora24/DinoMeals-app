@@ -1,9 +1,10 @@
-import { SMS_CONSENT } from '../lib/legal';
+import { SMS_CONSENT, REMINDER_CONSENT } from '../lib/legal';
 
 // Text-message opt-in. Unchecked by default, separate from everything else,
 // optional — exactly what the carriers' A2P 10DLC review requires.
-export default function SmsConsent({ lang = 'en', checked, onChange, readOnly = false }) {
-  const c = SMS_CONSENT[lang === 'es' ? 'es' : 'en'];
+// kind: 'order' (order-status texts) or 'reminder' (weekly cutoff reminder) — two separate boxes.
+export default function SmsConsent({ lang = 'en', checked, onChange, readOnly = false, kind = 'order' }) {
+  const c = (kind === 'reminder' ? REMINDER_CONSENT : SMS_CONSENT)[lang === 'es' ? 'es' : 'en'];
   return (
     <label className="sms-consent">
       <input

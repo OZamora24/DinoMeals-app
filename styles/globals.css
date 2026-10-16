@@ -750,3 +750,32 @@ label .input { margin-top: 6px; font-weight: 500; }
 .src.src-sms { background: rgba(71,194,122,.15); color: var(--ok); border-color: rgba(71,194,122,.4); margin-left: 6px; }
 .ok-text { color: var(--ok); }
 .warn-text { color: #E8A33A; }
+.pay-links { display: grid; gap: 8px; }
+.kitchen-note { margin: 4px 0 8px; }
+
+/* ---------- prehistoric skyline at the bottom of the hero ---------- */
+.dino-scene { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: max(100%, 680px); max-width: 1400px; height: auto; aspect-ratio: 1200 / 260; pointer-events: none; z-index: 0; }
+.hero { padding-bottom: 120px; }
+.hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: #1a100e; z-index: 0; }
+@media (min-width: 880px) { .hero { padding-bottom: 210px; } }
+.hero-inner { z-index: 1; }
+.dino-scene .ds-far { fill: #2c1814; }
+.dino-scene .ds-far .ds-smoke circle { fill: #3a2522; opacity: .55; animation: ds-smoke 7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.dino-scene .ds-far .ds-smoke circle:nth-child(2) { animation-delay: -2.3s; }
+.dino-scene .ds-far .ds-smoke circle:nth-child(3) { animation-delay: -4.6s; }
+.dino-scene .ds-lava { animation: ds-glow 3.2s ease-in-out infinite; }
+.dino-scene .ds-mid { fill: #451b16; }
+.dino-scene .ds-front { fill: #6d1f18; }
+.dino-scene .ds-eye { fill: #ff8a3d; }
+.dino-scene .ds-ground { fill: #1a100e; }
+.dino-scene .ds-palm { animation: ds-sway 6s ease-in-out infinite; }
+.dino-scene .ds-palm-2 { animation-duration: 7.5s; animation-delay: -2s; }
+.dino-scene .ds-fronds { animation: ds-sway 4s ease-in-out infinite reverse; }
+.dino-scene .ds-neck { animation: ds-munch 5s ease-in-out infinite; }
+.dino-scene .ds-rex { animation: ds-breathe 3.6s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom center; }
+@keyframes ds-sway { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+@keyframes ds-munch { 0%, 100% { transform: rotate(0deg); } 40% { transform: rotate(-4deg); } 55% { transform: rotate(-2deg); } }
+@keyframes ds-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.015); } }
+@keyframes ds-smoke { 0% { transform: translateY(6px) scale(.85); opacity: 0; } 30% { opacity: .55; } 100% { transform: translateY(-26px) scale(1.25); opacity: 0; } }
+@keyframes ds-glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dino-scene * { animation: none !important; } }

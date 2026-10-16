@@ -44,7 +44,10 @@ export default function CheckoutSheet({
               <label>{t('email_opt')}<input className="input" type="email" autoComplete="email" value={info.email} onChange={(e) => setInfo({ ...info, email: e.target.value })} /></label>
             </div>
             {!adminMode && (
-              <SmsConsent lang={lang} checked={!!info.sms_opt_in} onChange={(v) => setInfo({ ...info, sms_opt_in: v })} />
+              <>
+                <SmsConsent lang={lang} checked={!!info.sms_opt_in} onChange={(v) => setInfo({ ...info, sms_opt_in: v })} />
+                <SmsConsent kind="reminder" lang={lang} checked={!!info.reminder_opt_in} onChange={(v) => setInfo({ ...info, reminder_opt_in: v })} />
+              </>
             )}
           </fieldset>
 
@@ -55,7 +58,7 @@ export default function CheckoutSheet({
                 <Pin size={22} /><b>{t('pickup')}</b><span>{settings.pickup_window || t('pickup_when')}</span>
               </button>
               <button className={`opt ${info.fulfillment === 'delivery' ? 'on' : ''}`} onClick={() => setInfo({ ...info, fulfillment: 'delivery' })}>
-                <Truck size={22} /><b>{t('delivery')}</b><span>{settings.delivery_window || t('delivery_when')}{settings.delivery_fee ? ` · +${money(settings.delivery_fee)}` : ''}</span>
+                <Truck size={22} /><b>{t('delivery')}</b><span>{settings.delivery_window || t('delivery_when')}{settings.delivery_fee ? ` · +${money(settings.delivery_fee)}` : settings.delivery_fee_note ? ` · ${settings.delivery_fee_note}` : ''}</span>
               </button>
             </div>
             {info.fulfillment === 'pickup' && settings.pickup_address && <p className="muted small"><Pin size={14} /> {settings.pickup_address}</p>}
@@ -95,6 +98,7 @@ export default function CheckoutSheet({
                 );
               })}
             </div>
+            <p className="muted small kitchen-note">{t('kitchen_note')}</p>
             <label>{t('allergy_notes')}<textarea className="input" rows={2} value={info.allergy_notes} onChange={(e) => setInfo({ ...info, allergy_notes: e.target.value })} /></label>
           </fieldset>
 

@@ -121,7 +121,7 @@ export default function MealBuilder({
                 ) : null}
               </div>
               {builderAllergens.length > 0 && (
-                <div className="allergens">{t('contains')}: {builderAllergens.map((a) => ALLERGEN_LABELS[a]?.[lang] || a).join(', ')}</div>
+                <div className="allergens">{t('contains')}: {builderAllergens.map((a) => ALLERGEN_LABELS[a]?.[lang] || a).join(', ')} · <span className="muted">{t('kitchen_short')}</span></div>
               )}
             </>
           ) : (

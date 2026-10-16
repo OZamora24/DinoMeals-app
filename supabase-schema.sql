@@ -48,3 +48,15 @@ insert into shop_settings (id, data) values (1, '{}') on conflict (id) do nothin
 -- only the server (API routes) using the service role key.
 alter table orders enable row level security;
 alter table shop_settings enable row level security;
+
+-- Weekly cutoff-reminder texts: one row per phone that ticked the separate reminder box.
+alter table orders add column if not exists reminder_opt_in boolean not null default false;
+create table if not exists sms_reminders (
+  phone_digits text primary key,
+  name text default '',
+  lang text not null default 'en',
+  opted_in_at timestamptz not null default now(),
+  opted_out_at timestamptz,      -- set when they reply STOP
+  last_sent_week date            -- cook week of the last reminder (never twice a week)
+);
+alter table sms_reminders enable row level security;

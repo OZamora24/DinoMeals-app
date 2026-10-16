@@ -4,6 +4,14 @@ import Link from 'next/link';
 import SiteNav from '../SiteNav';
 import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 
+// Card-type pay links from settings, labelled by where they go (Venmo / Cash App / card).
+function payLinks(s) {
+  return [s.card_link, s.cashapp_link]
+    .map((h) => String(h || '').trim().split(/\s+/)[0])
+    .filter((h) => /^https?:\/\//.test(h))
+    .map((href) => ({ href, label: /venmo\./i.test(href) ? 'Venmo' : /cash\.app/i.test(href) ? 'Cash App' : /paypal\./i.test(href) ? 'PayPal' : '' }));
+}
+
 export default function OrderDone({ done, adminMode, settings, lang, setLang, t, resetAll }) {
   const quote = done.total == null;
   return (
@@ -25,10 +33,15 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
                   <div className="pay-line"><Bolt size={18} /><div>{settings.zelle_info ? <>{t('pay_zelle')} <b>{settings.zelle_info}</b><br /><span className="muted">{t('memo')}: <b>#{done.order_no}</b></span></> : t('zelle_tbd')}</div></div>
                 )}
                 {done.payment_method === 'card' &&
-                  (settings.card_link ? (
-                    <a className="btn btn-red btn-block" href={settings.card_link} target="_blank" rel="noreferrer">
-                      <Card size={18} /> {t('pay_card')} {money(done.total)}
-                    </a>
+                  (payLinks(settings).length ? (
+                    <div className="pay-links">
+                      {payLinks(settings).map((l) => (
+                        <a key={l.href} className="btn btn-red btn-block" href={l.href} target="_blank" rel="noreferrer">
+                          <Card size={18} /> {l.label ? `${lang === 'es' ? 'Pagar con' : 'Pay with'} ${l.label}` : t('pay_card')} · {money(done.total)}
+                        </a>
+                      ))}
+                      <span className="muted small">{t('memo')}: <b>#{done.order_no}</b></span>
+                    </div>
                   ) : (
                     <div className="pay-line"><Card size={18} /><div>{t('card_tbd')}</div></div>
                   ))}

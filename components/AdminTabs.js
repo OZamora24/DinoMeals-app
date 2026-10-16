@@ -329,7 +329,7 @@ export function SettingsTab({ settings, save, week }) {
         <h3>Customer texts</h3>
         <p className="small">
           {s._sms?.live ? (
-            <><b className="ok-text">ON</b> — customers who tick the box at checkout get 3 texts: order received, payment received (when you mark Paid) and ready (when you mark Ready).</>
+            <><b className="ok-text">ON</b> — customers who tick the first box at checkout get 3 texts: order received, payment received (when you mark Paid) and ready (when you mark Ready). Customers who tick the second box get a reminder every Thursday at 4 PM while ordering is open.</>
           ) : (
             <><b className="warn-text">OFF</b> — waiting on carrier approval (Twilio A2P 10DLC). The opt-in box is already on the checkout so the carriers can review it; nothing is texted until Orlando switches texts on.{s._sms && !s._sms.configured ? ' Twilio keys not added yet.' : ''}</>
           )}
@@ -379,10 +379,11 @@ export function SettingsTab({ settings, save, week }) {
       <section className="set-card">
         <h3>Payment info (shown after checkout)</h3>
         <label>Zelle (name / phone / email)<input className="input" value={s.zelle_info} onChange={(e) => set('zelle_info', e.target.value)} placeholder="Juan Carlos · (909) 555-0000" /></label>
-        <label>Card payment link (Square / Stripe / Venmo business — optional)<input className="input" value={s.card_link} onChange={(e) => set('card_link', e.target.value)} placeholder="https://square.link/…" /></label>
+        <label>Card / Venmo payment link (optional)<input className="input" value={s.card_link} onChange={(e) => set('card_link', e.target.value)} placeholder="https://venmo.com/… or https://square.link/…" /></label>
+        <label>Cash App link (optional)<input className="input" value={s.cashapp_link || ''} onChange={(e) => set('cashapp_link', e.target.value)} placeholder="https://cash.app/$yourtag" /></label>
         <label>Cash instructions<input className="input" value={s.cash_info} onChange={(e) => set('cash_info', e.target.value)} /></label>
         <label>Card fee ($ added to the total when a customer pays by card)<input className="input" inputMode="decimal" value={s.card_fee} onChange={(e) => set('card_fee', e.target.value)} /></label>
-        <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, card_link: s.card_link, cash_info: s.cash_info, card_fee: s.card_fee })}>Save</button>
+        <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, card_link: s.card_link, cashapp_link: s.cashapp_link, cash_info: s.cash_info, card_fee: s.card_fee })}>Save</button>
       </section>
 
       <section className="set-card">
@@ -395,16 +396,17 @@ export function SettingsTab({ settings, save, week }) {
         <label>Kitchen address (route start — private)<input className="input" value={s.kitchen_address} onChange={(e) => set('kitchen_address', e.target.value)} /></label>
         <div className="grid2">
           <label>Delivery fee ($)<input className="input" inputMode="decimal" value={s.delivery_fee} onChange={(e) => set('delivery_fee', e.target.value)} /></label>
+          <label>Delivery fee note (when it varies)<input className="input" value={s.delivery_fee_note || ''} onChange={(e) => set('delivery_fee_note', e.target.value)} placeholder="Fee depends on Uber" /></label>
           <label>Delivery ZIPs (12-mile area, comma separated — blank = any)
             <input className="input" value={(s.delivery_zips || []).join(', ')} onChange={(e) => set('delivery_zips', e.target.value.split(/[ ,]+/).filter(Boolean))} placeholder="92376, 92377, 92335…" />
           </label>
         </div>
-        <button className="btn btn-red btn-sm" onClick={() => save({ pickup_window: s.pickup_window, delivery_window: s.delivery_window, pickup_address: s.pickup_address, kitchen_address: s.kitchen_address, delivery_fee: s.delivery_fee, delivery_zips: s.delivery_zips })}>Save</button>
+        <button className="btn btn-red btn-sm" onClick={() => save({ pickup_window: s.pickup_window, delivery_window: s.delivery_window, pickup_address: s.pickup_address, kitchen_address: s.kitchen_address, delivery_fee: s.delivery_fee, delivery_fee_note: s.delivery_fee_note, delivery_zips: s.delivery_zips })}>Save</button>
       </section>
 
       <section className="set-card wide">
         <h3>Menu: sold out · macros · allergens</h3>
-        <p className="muted small">Macros are per portion (protein {PORTIONS.protein}oz, carb {PORTIONS.carb}oz, veggie {PORTIONS.veg}oz). The order page adds them up per meal once all three parts have numbers. Allergen labels: double-check these — customers see them.</p>
+        <p className="muted small">Macros are per portion (protein {PORTIONS.protein}oz, carb {PORTIONS.carb}oz, veggie {PORTIONS.veg}oz). Flavor rows can have their own numbers; leave them blank to use the base protein's. The order page adds them up per meal once every part has numbers. Allergen labels: double-check these — customers see them.</p>
         <div className="menu-table">
           <div className="mt-head"><span>Item</span><span>Sold out</span><span>Cal</span><span>P</span><span>C</span><span>F</span><span>Allergens</span></div>
           {items.map((it) => {
@@ -416,8 +418,8 @@ export function SettingsTab({ settings, save, week }) {
               <div className={`mt-row ${it.flavor ? 'flavor' : ''}`} key={it.id}>
                 <span className="mt-name">{it.name}</span>
                 <span>{!it.flavor && <button className={`switch sm ${soldOut.has(it.id) ? 'on' : ''}`} onClick={() => toggleOut(it.id)}><span /></button>}</span>
-                {it.flavor ? <span className="muted tiny mt-span">macros use base protein</span> : ['cal', 'p', 'c', 'f'].map((k) => (
-                  <input key={k} className="input xs" inputMode="numeric" placeholder={{ cal: 'Cal', p: 'P', c: 'C', f: 'F' }[k]} value={m[k] ?? ''} onChange={(e) => setM(k, e.target.value.replace(/[^\d.]/g, ''))} />
+                {['cal', 'p', 'c', 'f'].map((k) => (
+                  <input key={k} className="input xs" inputMode="numeric" placeholder={it.flavor ? 'base' : { cal: 'Cal', p: 'P', c: 'C', f: 'F' }[k]} value={m[k] ?? ''} onChange={(e) => setM(k, e.target.value.replace(/[^\d.]/g, ''))} />
                 ))}
                 <span className="al-chips">
                   {Object.keys(ALLERGEN_LABELS).map((a) => (

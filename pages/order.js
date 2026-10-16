@@ -84,7 +84,7 @@ export default function OrderPage({ settings, adminMode }) {
         if (Array.isArray(d.lbs)) setLbs(d.lbs);
         if (Array.isArray(d.extras)) setExtras(d.extras);
         if (typeof d.custom === 'string') setCustom(d.custom);
-        if (d.info) setInfo({ ...emptyInfo, ...d.info, sms_opt_in: false });
+        if (d.info) setInfo({ ...emptyInfo, ...d.info, sms_opt_in: false, reminder_opt_in: false });
         if (d.info?.phone) setUsualPhone(d.info.phone);
       }
     } catch {}
@@ -122,7 +122,9 @@ export default function OrderPage({ settings, adminMode }) {
   // ---- builder helpers ----
   const bP = byId(PROTEINS, bProtein);
   const builderUnit = bProtein && bCarb && bVeg ? mealUnitPrice({ protein: bProtein, flavor: bFlavor, carb: bCarb, veg: bVeg }) : null;
-  const builderMacros = builderUnit ? sumMacros([bProtein, bCarb, bVeg].filter((x) => x && x !== NONE).map((x) => macros[x])) : null;
+  // Flavor rows (e.g. groundbeef:taco) can have their own macros; else the base protein's.
+  const proteinMacros = bProtein ? macros[`${bProtein}:${bFlavor}`] || macros[bProtein] : null;
+  const builderMacros = builderUnit ? sumMacros([proteinMacros, ...[bCarb, bVeg].filter((x) => x && x !== NONE).map((x) => macros[x])]) : null;
   const builderAllergens = allergensFor(
     [bProtein, bProtein && `${bProtein}:${bFlavor}`, bCarb, bVeg].filter(Boolean),
     settings.allergens
