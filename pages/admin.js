@@ -151,7 +151,7 @@ export default function Admin() {
     return (
       <div className="admin-login">
         <form onSubmit={login} className="login-card">
-          <span className="nav-badge xl"><img src="/logo-mark.png" alt="" /></span>
+          <span className="nav-badge xl spin"><img src="/logo-mark.png" alt="" /></span>
           <h1 className="display">Kitchen</h1>
           <input className="input" type="password" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />
           {loginErr && <div className="error">{loginErr}</div>}
@@ -168,7 +168,7 @@ export default function Admin() {
     <div className="admin-wrap">
       <header className="admin-top">
         <Link href="/" className="nav-brand">
-          <span className="nav-badge"><img src="/logo-mark.png" alt="" /></span>
+          <span className="nav-badge spin"><img src="/logo-mark.png" alt="" /></span>
           <span className="nav-name">DINO<em>KITCHEN</em></span>
         </Link>
         <div className="week-nav">
