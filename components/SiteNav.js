@@ -1,10 +1,10 @@
 import Link from 'next/link';
 
-export default function SiteNav({ lang, setLang, t, cta = true }) {
+export default function SiteNav({ lang, setLang, t, cta = true, spin = false }) {
   return (
     <header className="nav">
       <Link href="/" className="nav-brand" aria-label="DinoMeals home">
-        <span className="nav-badge"><img src="/logo-mark.png" alt="" /></span>
+        <span className={`nav-badge${spin ? ' spin' : ''}`}><img src="/logo-mark.png" alt="" /></span>
         <span className="nav-name">DINO<em>MEALS</em></span>
       </Link>
       <div className="nav-right">

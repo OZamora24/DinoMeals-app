@@ -824,11 +824,7 @@ label .input { margin-top: 6px; font-weight: 500; }
 @keyframes fx-quake { 0%, 6%, 20%, 26%, 38%, 44%, 56%, 62%, 78%, 90%, 100% { transform: none; } 3%, 22%, 40%, 58%, 81% { transform: translate(0, 5px); } 5%, 24%, 42%, 60%, 85% { transform: translate(0, -3px); } }
 @media (prefers-reduced-motion: reduce) { .fossil-fx { display: none; } }
 
-/* spinning-ring dino badge beside the /order title (same as the home hero, smaller) */
-.order-title { display: flex; align-items: center; gap: 14px; }
-.order-title h1 { margin: 0; }
-.hero-badge.order-badge { width: 62px; flex: none; }
-.order-badge .hero-ring { border-width: 2.5px; animation-duration: 7s; filter: drop-shadow(0 0 6px rgba(226,55,45,.6)); }
-.order-badge .hero-ring::after { inset: 5px; }
-.order-badge .hero-badge-inner { box-shadow: 0 8px 22px -8px rgba(226,55,45,.6), inset 0 -4px 10px rgba(0,0,0,.08); }
-.order-badge .hb-mark { width: 62%; }
+/* top-left logo on /order: same red spinning ring as the home hero badge */
+.nav-badge { position: relative; }
+.nav-badge.spin::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2.5px solid transparent; border-top-color: var(--red); border-right-color: var(--red); animation: spin 7s linear infinite; filter: drop-shadow(0 0 6px rgba(226,55,45,.6)); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .nav-badge.spin::before { animation: none; } }
