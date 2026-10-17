@@ -67,7 +67,7 @@ test('weekly reminder: cutoff wording and message', async () => {
   assert.equal(cutoffText({ cutoff_day: 5, cutoff_hour: 20 }), 'Fri 8:00 PM');
   assert.equal(cutoffText({ cutoff_day: 6, cutoff_hour: 0 }, 'es'), 'vie 11:59 PM');
   const m = reminderMessage('en', { cutoff_day: 6, cutoff_hour: 0 });
-  assert.equal(m, '🦖 DinoMeals: Orders for this week close Fri 11:59 PM. Order at dinomeals.vercel.app/order. Reply STOP to opt out.');
+  assert.equal(m, '🦖 DinoMeals: Orders for this week close Fri 11:59 PM. Order at dinomeals.app/order. Reply STOP to opt out.');
   assert.match(reminderMessage('es', { cutoff_day: 6, cutoff_hour: 0 }), /cierran el vie 11:59 PM/);
 });
 
