@@ -341,7 +341,15 @@ export default function OrderPage({ settings, adminMode }) {
       )}
 
       <header className="order-head">
-        <h1 className="display">{tab === 'lb' ? t('by_lb') : tab === 'custom' ? t('custom_title') : t('build_meals')}</h1>
+        <div className="order-title">
+          <div className="hero-badge order-badge" aria-hidden="true">
+            <div className="hero-ring" />
+            <div className="hero-badge-inner">
+              <img src="/logo-mark.png" alt="" className="hb-mark" />
+            </div>
+          </div>
+          <h1 className="display">{tab === 'lb' ? t('by_lb') : tab === 'custom' ? t('custom_title') : t('build_meals')}</h1>
+        </div>
         <div className={`status-pill ${closed ? 'closed' : 'open'}`}>
           <span className="dot" />
           {full && settings.ordering_open ? t('week_full') : closed ? t('closed') : <>{t('cook_day')}: <b>{prettyDate(settings.cook_date, lang)}</b></>}
