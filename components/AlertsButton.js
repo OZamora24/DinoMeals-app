@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   enableAlerts, disableAlerts, sendTestAlert, getAlertState, getServerStatus, healSubscription,
   soundEnabled, setSoundEnabled, playChime,
@@ -19,11 +19,25 @@ const REASONS = {
 // Bell button for the admin header: turn new-order sound + pop-ups on/off.
 export default function AlertsButton() {
   const [open, setOpen] = useState(false);
+  const box = useRef(null);
   const [st, setSt] = useState(null);
   const [server, setServer] = useState(null);
   const [sound, setSound] = useState(true);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Tap/click anywhere outside the bell + panel (or press Esc) to close the panel.
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
 
   const refresh = useCallback(async () => {
     const s = await getAlertState();
@@ -80,7 +94,7 @@ export default function AlertsButton() {
   }
 
   return (
-    <div className="alerts">
+    <div className="alerts" ref={box}>
       <button className={`btn btn-ghost btn-sm alerts-btn ${on ? 'on' : ''}`} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span aria-hidden="true">{on ? '🔔' : '🔕'}</span><span className="alerts-label"> Alerts{st?.subscribed ? ' on' : ''}</span>
       </button>
