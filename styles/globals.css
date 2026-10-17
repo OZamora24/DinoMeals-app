@@ -828,3 +828,31 @@ label .input { margin-top: 6px; font-weight: 500; }
 .nav-badge { position: relative; }
 .nav-badge.spin::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2.5px solid transparent; border-top-color: var(--red); border-right-color: var(--red); animation: spin 7s linear infinite; filter: drop-shadow(0 0 6px rgba(226,55,45,.6)); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .nav-badge.spin::before { animation: none; } }
+/* ---------- 📲 Add to Home Screen: nav button + Dino guide (components/HomeScreenGuide.js) ---------- */
+.nav-app { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); display: grid; place-items: center; flex: none; padding: 0; }
+.nav-app svg { width: 20px; height: 20px; fill: none; stroke: var(--cream); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-app.fresh::after { content: ''; position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--bg); animation: a2hs-ping 1.8s ease-out infinite; }
+@keyframes a2hs-ping { 0% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 2px rgba(226,55,45,.7); } 100% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 12px rgba(226,55,45,0); } }
+@media (max-width: 430px) { .nav .nav-right { gap: 6px; } .nav-app { width: 34px; height: 34px; } .nav-app svg { width: 18px; height: 18px; } .nav .nav-badge { width: 34px; height: 34px; } .nav .nav-brand { gap: 7px; } .nav .nav-name { font-size: 1.12rem; } .nav .lang-toggle button { padding-left: 8px; padding-right: 8px; } .nav .btn-sm { padding-left: 11px; padding-right: 11px; } }
+.a2hs { position: fixed; inset: 0; z-index: 8000; background: radial-gradient(110% 70% at 50% 8%, #3a1612, #121110 60%); overflow-y: auto; animation: a2hs-in .35s ease both; padding: calc(14px + env(safe-area-inset-top, 0px)) 18px calc(64px + var(--safe-b)); }
+@keyframes a2hs-in { from { opacity: 0; transform: translateY(16px); } }
+.a2hs-in { max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.a2hs-x { position: absolute; right: 14px; top: calc(12px + env(safe-area-inset-top, 0px)); width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); color: var(--muted); font-size: 15px; z-index: 2; }
+.a2hs-mascot { display: flex; align-items: flex-end; gap: 10px; margin-top: 4px; padding-right: 30px; }
+.a2hs-mk { width: 60px; height: 60px; border-radius: 50%; background: var(--cream); display: grid; place-items: center; flex: none; box-shadow: 0 0 0 3px var(--red-deep), 0 10px 30px -8px rgba(226,55,45,.7); animation: a2hs-bob 2.4s ease-in-out infinite; }
+.a2hs-mk img { width: 80%; }
+@keyframes a2hs-bob { 50% { transform: translateY(-5px) rotate(-4deg); } }
+.a2hs-bub { background: var(--cream); color: #1a1210; border-radius: 16px 16px 16px 4px; padding: 9px 13px; font-weight: 800; font-size: .88rem; text-align: left; margin-bottom: 20px; max-width: 230px; }
+.a2hs-sub { color: var(--muted); font-size: .86rem; margin: 10px 0 0; max-width: 320px; }
+.a2hs-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin: 12px 0; background: var(--bg-2); }
+.a2hs-seg button { border: 0; background: none; color: var(--muted); font-weight: 700; font-size: .8rem; padding: 6px 14px; border-radius: 999px; }
+.a2hs-seg button.on { background: var(--red); color: #fff; }
+.a2hs-phone { position: relative; border-radius: calc(34px * var(--k, 1)); box-shadow: 0 0 0 6px #26221f, 0 24px 50px rgba(0,0,0,.6); flex: none; }
+.a2hs-demo .dmx { transform: scale(var(--k, 1)); }
+.a2hs-btn { margin-top: 18px; max-width: 320px; }
+.a2hs-hint { position: fixed; z-index: 8001; left: 0; right: 0; bottom: 0; padding: 6px 0 calc(6px + var(--safe-b)); background: linear-gradient(transparent, rgba(18,17,16,.95) 40%); text-align: center; color: var(--ember); font-weight: 800; font-size: .78rem; letter-spacing: .03em; pointer-events: none; }
+.a2hs-hint span { display: block; font-size: 22px; animation: a2hs-arrow 1.1s ease-in-out infinite; }
+@keyframes a2hs-arrow { 50% { transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .a2hs, .a2hs-mk, .a2hs-hint span, .nav-app.fresh::after { animation: none; } }
+@media (max-width: 370px) { .nav .nav-name { font-size: 1rem; } .nav .nav-badge { width: 30px; height: 30px; } .nav { gap: 8px; } .nav .btn-sm { padding-left: 10px; padding-right: 10px; font-size: .8rem; } }
+@media (max-width: 340px) { .nav .nav-name { display: none; } }
