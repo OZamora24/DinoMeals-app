@@ -25,7 +25,7 @@ const content = {
         `If you check the box "Text me updates about this order" at checkout, ${L.brand} will send you up to 3 text messages per order: an order confirmation, a payment-received notice, and an order-ready / out-for-delivery notice. Apart from the optional weekly reminder below, we don't send promotional texts. Checking the box is optional and is not required to place an order.`,
         `If you check the separate box "Text me a weekly reminder before the order cutoff," ${L.brand} will also send you one reminder text per week (Thursdays) before orders close. This box is optional and separate from the order-update box.`,
         'Message frequency: up to 3 texts per order, plus 1 per week if you chose the weekly reminder. Message and data rates may apply. Reply STOP at any time to opt out, or HELP for help. You can also contact us at the number below.',
-        <b key="b">No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Text messaging opt-in data and consent are not shared with or sold to any third parties.</b>,
+        <b key="b">We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes. No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Text messaging opt-in data and consent are not shared with or sold to any third parties.</b>,
         'Information sharing to subcontractors in support services, such as customer service and the text-message provider that delivers our texts, is permitted. All other use case categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.',
       ] },
       { h: 'Who else sees your information', p: [
@@ -60,7 +60,7 @@ const content = {
         `Si marcas la casilla "Mándenme mensajes de texto sobre esta orden" al pagar, ${L.brand} te enviará hasta 3 mensajes por orden: confirmación, pago recibido y orden lista / en camino. Aparte del recordatorio semanal opcional, no mandamos publicidad. La casilla es opcional y no es necesaria para ordenar.`,
         `Si marcas la casilla aparte "Mándenme un recordatorio semanal antes del cierre de órdenes", ${L.brand} también te mandará un recordatorio por semana (los jueves) antes de que cierren las órdenes. Esa casilla es opcional y separada.`,
         'Frecuencia: hasta 3 mensajes por orden, más 1 por semana si escogiste el recordatorio. Pueden aplicar tarifas de mensajes y datos. Responde STOP para no recibir más o HELP para ayuda.',
-        <b key="b">No compartiremos tu información móvil con terceros ni afiliados para fines de mercadeo o promoción. Los datos y el consentimiento para mensajes de texto no se comparten ni se venden a terceros.</b>,
+        <b key="b">No vendemos ni compartimos tus datos de aceptación de SMS ni tu información personal con terceros para fines de mercadeo. No compartiremos tu información móvil con terceros ni afiliados para fines de mercadeo o promoción. Los datos y el consentimiento para mensajes de texto no se comparten ni se venden a terceros.</b>,
         'Se permite compartir información con proveedores que nos dan servicio, como el proveedor que entrega nuestros mensajes de texto. Fuera de eso, esta información no se comparte con terceros.',
       ] },
       { h: 'Quién más ve tu información', p: [
