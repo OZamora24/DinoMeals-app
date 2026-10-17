@@ -135,7 +135,7 @@ export default function Home({ settings }) {
                     <div className="mi-name">
                       {mode === 'lb' && p.lbName ? (lang === 'es' ? p.lbEs : p.lbName) : nameOf(p, lang)}
                       {p.smoked && <span className="smoke-tag">SMOKED</span>}
-                      {flavors && (
+                      {flavors && flavors.some((f) => f.extra) && (
                         <small>{flavors.filter((f) => f.extra).map((f) => (lang === 'es' ? f.es : f.name)).join(' / ')} +$1</small>
                       )}
                     </div>

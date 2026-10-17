@@ -9,9 +9,9 @@ const meal = (protein, carb, veg, sets = 2, flavor) => ({ protein, flavor, carb,
 test('meal price = protein + flavor + carb + veg upcharges', () => {
   assert.equal(mealUnitPrice(meal('tritip', 'cilantrorice', 'broccoli')), 15);
   assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli')), 11);
-  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli', 2, 'teriyaki')), 12); // flavor +1
+  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli', 2, 'teriyaki')), 11); // chicken flavors are free
   assert.equal(mealUnitPrice(meal('tritip', 'sweetpotato', 'fajitas')), 17); // +1 carb, +1 veg
-  assert.equal(mealUnitPrice(meal('chicken', 'sweetpotato', 'greenbeans', 2, 'chipotle')), 14); // 11+1+1+1
+  assert.equal(mealUnitPrice(meal('chicken', 'sweetpotato', 'greenbeans', 2, 'chipotle')), 13); // 11+0+1+1
 });
 
 test('unknown flavor falls back to the default flavor (no upcharge)', () => {
@@ -26,8 +26,9 @@ test('meal price is null for unknown items', () => {
 
 test('per-lb prices', () => {
   assert.equal(lbUnitPrice({ kind: 'protein', item: 'tritip' }), 30);
-  assert.equal(lbUnitPrice({ kind: 'protein', item: 'burgers', flavor: 'smashed' }), 23); // 22 + 1
-  assert.equal(lbUnitPrice({ kind: 'protein', item: 'burgers', flavor: 'plain' }), 22);
+  assert.equal(lbUnitPrice({ kind: 'protein', item: 'burgers', flavor: 'smashed' }), 21);
+  assert.equal(lbUnitPrice({ kind: 'protein', item: 'burgers', flavor: 'smoked' }), 22); // 21 + 1
+  assert.equal(lbUnitPrice({ kind: 'protein', item: 'burgers', flavor: 'plain' }), 21);
   assert.equal(lbUnitPrice({ kind: 'carb', item: 'whiterice' }), 10);
   assert.equal(lbUnitPrice({ kind: 'veg', item: 'asparagus' }), 12);
 });
@@ -52,7 +53,7 @@ test('priceCart: multiple combos add up', () => {
   const r = priceCart({ meals: [meal('tritip', 'cilantrorice', 'broccoli', 1), meal('chicken', 'whiterice', 'asparagus', 1, 'teriyaki')] });
   assert.equal(r.ok, true);
   assert.equal(r.meals, 8);
-  assert.equal(r.subtotal, 4 * 15 + 4 * 12);
+  assert.equal(r.subtotal, 4 * 15 + 4 * 11);
 });
 
 test('priceCart: meal minimum is 8', () => {
@@ -241,7 +242,7 @@ test('meals can skip the carb OR the veggie (same price), not both', async () =>
   const { NONE } = await import('../lib/menu.js');
   const full = mealUnitPrice({ protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: 'broccoli' });
   assert.equal(mealUnitPrice({ protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: NONE }), full);
-  assert.equal(mealUnitPrice({ protein: 'chicken', flavor: 'teriyaki', carb: NONE, veg: 'asparagus' }), 12);
+  assert.equal(mealUnitPrice({ protein: 'chicken', flavor: 'teriyaki', carb: NONE, veg: 'asparagus' }), 11);
   assert.equal(mealUnitPrice({ protein: 'chicken', carb: NONE, veg: NONE }), null);
   assert.equal(mealUnitPrice({ protein: 'chicken', carb: 'basmati', veg: 'broccoli' }), null);
   const r = priceCart({ meals: [
@@ -288,11 +289,11 @@ test('extras alone are not an order; bad or sold-out extras are rejected', () =>
 // ---- per-meal portion sizes ----
 import { cleanOz, ozUpcharge, mealOz, ozTag, OZ_CHOICES } from '../lib/menu.js';
 
-test('standard portions cost nothing extra and bigger ones add the per-oz upcharge', () => {
+test('standard portions cost nothing extra and bigger ones add the flat size upcharge', () => {
   const base = { protein: 'tritip', flavor: 'plain', carb: 'whiterice', veg: 'broccoli' };
   assert.equal(mealUnitPrice(base), 15);
-  assert.equal(mealUnitPrice({ ...base, oz: { protein: 8 } }), 15 + 7.5); // $30/lb x 4oz more
-  assert.equal(mealUnitPrice({ ...base, oz: { carb: 6, veg: 6 } }), 15 + 1.5 + 2); // 10*2/16=1.25->1.5, 10*3/16=1.875->2
+  assert.equal(mealUnitPrice({ ...base, oz: { protein: 8 } }), 15 + 4); // 8oz meat +$4
+  assert.equal(mealUnitPrice({ ...base, oz: { carb: 6, veg: 6 } }), 15 + 1 + 1.5); // 6oz carb +$1, 6oz veg +$1.50
   assert.equal(ozUpcharge({ ...base, oz: { protein: 4 } }), 0);
 });
 
@@ -309,7 +310,7 @@ test('priceCart stores oz on the line, rejects bad oz, and totals the upcharge',
   const r = priceCart({ meals: [m] });
   assert.equal(r.ok, true);
   assert.deepEqual(r.lines[0].oz, { protein: 6 });
-  assert.equal(r.lines[0].unit, 11 + 2); // 15*2/16 = 1.875 -> 2
+  assert.equal(r.lines[0].unit, 11 + 2); // 6oz meat +$2
   assert.equal(r.subtotal, 104);
   assert.equal(priceCart({ meals: [{ ...m, oz: { protein: 7 } }] }).error, 'bad_item');
   const std = priceCart({ meals: [{ ...m, oz: { protein: 4 } }] });
@@ -334,4 +335,23 @@ test('mealMacros adds the parts, scales bigger portions, and is null with missin
   assert.equal(mealMacros({ ...m, oz: { protein: 8 } }, macros).cal, 610); // 200 x 8/4 + 180 + 30
   assert.equal(mealMacros({ ...m, veg: 'none' }, macros).cal, 380);
   assert.equal(mealMacros(m, { chicken: macros.chicken }), null);
+});
+
+test("Juan's Oct 16 prices", async () => {
+  const M = await import('../lib/menu.js');
+  const unit = (o) => M.mealUnitPrice({ carb: 'whiterice', veg: 'broccoli', ...o });
+  assert.equal(unit({ protein: 'swchicken' }), 12);
+  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'chicken', flavor: 'teriyaki' }), 16);
+  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'taco' }), 20);
+  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'kbbq' }), 21);
+  // bigger portions: protein 6oz +2 / 8oz +4, carb 6oz +1 / 8oz +2.50, veg 5oz +1 / 6oz +1.50
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 6 } }), 13);
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 8 } }), 15);
+  assert.equal(unit({ protein: 'chicken', oz: { carb: 6 } }), 12);
+  assert.equal(unit({ protein: 'chicken', oz: { carb: 8 } }), 13.5);
+  assert.equal(unit({ protein: 'chicken', oz: { veg: 5 } }), 12);
+  assert.equal(unit({ protein: 'chicken', oz: { veg: 6 } }), 12.5);
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 8, carb: 8, veg: 6 } }), 19);
+  assert.equal(unit({ protein: 'smashburgers', oz: { protein: 8 } }), 18); // no lb price needed any more
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 7 } }), null);
 });
