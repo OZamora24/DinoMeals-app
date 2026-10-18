@@ -7,7 +7,7 @@ import Link from 'next/link';
 import SiteNav from '../../components/SiteNav';
 import Receipt from '../../components/order/Receipt';
 import PayInfo from '../../components/order/PayInfo';
-import { Tracker, ReceiptButtons, OrderAgain } from '../../components/order/OrderTools';
+import { Tracker, ReceiptButtons, OrderAgain, SaveContact } from '../../components/order/OrderTools';
 import { useLang } from '../../lib/i18n';
 import { prettyDate } from '../../lib/menu';
 import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
@@ -73,6 +73,7 @@ export default function OrderPage({ order, pay }) {
             <Receipt order={order} lang={lang} />
             <ReceiptButtons order={order} lang={lang} />
             <OrderAgain order={order} lang={lang} />
+            <SaveContact lang={lang} />
             <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
           </>
         )}

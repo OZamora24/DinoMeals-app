@@ -12,6 +12,7 @@ import { isValidSession } from '../lib/adminSession';
 import { Check, Arrow } from '../components/Icons';
 import { sumMacros, emptyInfo, DRAFT_KEY } from '../lib/orderForm';
 import OrderDone from '../components/order/OrderDone';
+import { primeSizzle } from '../lib/sizzle';
 import UsualPanel from '../components/order/UsualPanel';
 import MealBuilder from '../components/order/MealBuilder';
 import MealBox from '../components/order/MealBox';
@@ -260,6 +261,7 @@ export default function OrderPage({ settings, adminMode }) {
 
   // ---- submit ----
   async function place() {
+    if (!adminMode) primeSizzle(); // unlock Chef Rex's sizzle while we still have the tap
     setErr('');
     setBusy(true);
     try {

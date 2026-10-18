@@ -1,6 +1,7 @@
 // Chef Rex: pops in from the side right after an order is placed, says his line,
 // hangs around ~3 seconds, then fades out. Decorative only (no clicks blocked).
 import { useEffect, useState } from 'react';
+import { playSizzle } from '../../lib/sizzle';
 
 const TXT = {
   en: { q: 'RAWR! SEE YOU SOON!', s: "Order's in — we're firing up the grill 🦖" },
@@ -19,6 +20,7 @@ export default function ChefRexPopup({ lang = 'en', orderNo }) {
       if (orderNo) sessionStorage.setItem(key, '1');
     } catch {}
     setShow(true);
+    playSizzle(); // grill sizzle as he slides in (only when sound is on)
     const id = setTimeout(() => setShow(false), 4900);
     return () => clearTimeout(id);
   }, [orderNo]);

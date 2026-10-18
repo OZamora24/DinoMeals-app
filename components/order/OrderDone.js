@@ -7,7 +7,7 @@ import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import ChefRexPopup from './ChefRexPopup';
 import PayInfo from './PayInfo';
 import Receipt from './Receipt';
-import { ReceiptButtons } from './OrderTools';
+import { ReceiptButtons, SaveContact } from './OrderTools';
 import { rememberOrder } from '../../lib/orderView';
 
 export default function OrderDone({ done, adminMode, settings, lang, setLang, t, resetAll }) {
@@ -37,6 +37,7 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
         )}
         {done.items?.length > 0 && <Receipt order={done} lang={lang} badge={false} />}
         {!adminMode && done.token && <ReceiptButtons order={done} lang={lang} />}
+        {!adminMode && <SaveContact lang={lang} />}
         <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
         <div className="done-actions">
           {adminMode ? (

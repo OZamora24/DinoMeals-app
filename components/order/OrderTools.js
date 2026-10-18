@@ -5,6 +5,7 @@ import { VIEW_TXT, trackOf } from '../../lib/orderView';
 import { linesToCart } from '../../lib/cart';
 import { mealLineCount, planForCount } from '../../lib/menu';
 import { DRAFT_KEY } from '../../lib/orderForm';
+import { TEXT_NUMBER } from '../../lib/vcard';
 
 export const orderUrl = (token) => (typeof window !== 'undefined' ? `${window.location.origin}/o/${token}` : `https://dinomeals.app/o/${token}`);
 
@@ -90,4 +91,20 @@ export function OrderAgain({ order, lang = 'en', className = 'btn btn-red btn-bl
     router.push(cart.meals.length ? '/order' : '/order?tab=lb');
   };
   return <button type="button" className={className} onClick={go}>🔁 {x.again}</button>;
+}
+
+// "Add DinoMeals to contacts" — downloads the contact card (/api/contact) so the
+// order texts come from a saved contact and their links are tappable.
+export function SaveContact({ lang = 'en' }) {
+  const x = VIEW_TXT[lang] || VIEW_TXT.en;
+  return (
+    <div className="save-contact">
+      <span className="sc-ic" aria-hidden="true"><img src="/logo-mark.png" alt="" /></span>
+      <div className="sc-tx">
+        <b>{x.contact_t}</b>
+        <small>{x.contact_s(TEXT_NUMBER.replace(' ', '\u00a0').replace('-', '\u2011'))}</small>
+        <a className="btn btn-ghost btn-sm" href="/api/contact" download="DinoMeals.vcf">📇 {x.contact_btn}</a>
+      </div>
+    </div>
+  );
 }
