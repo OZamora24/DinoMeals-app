@@ -3,6 +3,7 @@ import { Check, Card, Cash, Bolt } from '../../components/Icons';
 import Link from 'next/link';
 import SiteNav from '../SiteNav';
 import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
+import ChefRexPopup from './ChefRexPopup';
 
 // Card-type pay links from settings, labelled by where they go (Venmo / Cash App / card).
 function payLinks(s) {
@@ -66,6 +67,7 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
           )}
         </div>
       </main>
+      {!adminMode && <ChefRexPopup lang={lang} orderNo={done.order_no} />}
     </div>
   );
 }
