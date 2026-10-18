@@ -37,8 +37,8 @@ test('order status tracker', () => {
 test('confirmation and payment texts link to the private order page', () => {
   const s = { zelle_info: '(909) 436-6621' };
   const c = buildMessage('confirm', { ...base, lang: 'en' }, s);
-  assert.match(c, /Your order: dinomeals\.app\/o\/ab12cd34ef56 Reply STOP/);
-  assert.match(buildMessage('confirm', base, s), /Tu orden: dinomeals\.app\/o\/ab12cd34ef56/);
+  assert.match(c, /Your order: https:\/\/dinomeals\.app\/o\/ab12cd34ef56 Reply STOP/);
+  assert.match(buildMessage('confirm', base, s), /Tu orden: https:\/\/dinomeals\.app\/o\/ab12cd34ef56/);
   assert.match(buildMessage('paid', { ...base, lang: 'en', paid: true }, s), /dinomeals\.app\/o\/ab12cd34ef56/);
   assert.doesNotMatch(buildMessage('ready', { ...base, lang: 'en' }, s), /\/o\//);
   assert.doesNotMatch(buildMessage('confirm', { ...base, lang: 'en', view_token: undefined }, s), /\/o\/|  /);
