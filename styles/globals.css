@@ -148,7 +148,8 @@ label .input { margin-top: 6px; font-weight: 500; }
    SPLASH
    ========================================================= */
 .app-hidden { visibility: hidden; height: 100vh; overflow: hidden; }
-.app-shown { animation: appIn 0.5s ease both; }
+/* "backwards", not "both": a lingering transform from the finished animation made position:fixed overlays (checkout sheet) size and scroll with the whole page */
+.app-shown { animation: appIn 0.5s ease backwards; }
 @keyframes appIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 .splash {
