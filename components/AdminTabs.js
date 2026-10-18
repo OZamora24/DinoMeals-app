@@ -326,7 +326,7 @@ export function SettingsTab({ settings, save, week }) {
 
   return (
     <div className="settings">
-      <section className="set-card">
+      <section className="set-card wide">
         <h3>Customer texts</h3>
         <p className="small">
           {s._sms?.live ? (
