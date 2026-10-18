@@ -70,10 +70,14 @@ export default function DinoScene() {
             <circle className="ds-eye" cx="342" cy="101" r="2" />
           </g>
         </g>
-        {/* T-rex on patrol */}
+        {/* T-rex on patrol: big head + jaw, tiny arms, thick legs, tail out back */}
+        {/* shifted left + up so the whole rex shows on phones and its legs clear the ground strip */}
+        <g transform="translate(-50 -10)">
         <g className="ds-rex">
-          <path d="M820 208 Q842 190 870 188 Q884 172 906 170 Q930 170 944 182 Q950 190 942 194 L922 196 Q916 204 902 206 Q900 214 892 216 Q890 222 884 222 L888 214 Q878 214 874 222 L870 220 Q874 210 882 206 Q872 210 862 220 L866 246 L878 258 L852 258 L850 236 Q838 228 832 226 L828 244 L840 258 L814 258 L812 230 Q790 226 760 222 Q730 220 708 224 Q736 210 770 208 Q796 206 820 208 Z" />
-          <circle className="ds-eye" cx="926" cy="178" r="2.2" />
+          <path d="M 682 214 C 720 206 770 196 806 184 C 830 175 856 168 878 166 C 890 165 897 160 900 150 L 903 140 C 908 132 924 130 944 133 L 964 139 C 972 142 974 150 970 154 L 952 157 L 968 161 C 968 168 958 172 946 172 L 922 173 C 912 176 906 183 904 190 C 900 202 890 210 876 214 C 878 222 876 232 868 240 L 870 251 L 884 255 L 884 259 L 848 259 L 850 252 L 849 244 C 840 241 832 234 829 226 C 824 230 819 233 815 235 L 813 248 L 824 255 L 824 259 L 796 259 L 798 250 L 798 234 C 791 228 788 221 786 214 C 760 214 720 216 682 214 Z" />
+          <path d="M 898 192 C 906 192 912 196 914 202 L 910 204 C 907 199 902 198 896 198 Z" />
+          <circle className="ds-eye" cx="932" cy="145" r="2.4" />
+        </g>
         </g>
       </g>
 
