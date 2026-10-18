@@ -870,3 +870,6 @@ label .input { margin-top: 6px; font-weight: 500; }
 .new-tag { font-size: .68rem; font-weight: 900; letter-spacing: .12em; color: var(--red); margin-right: 2px; }
 /* Cancel + Delete always stay side by side, even when the action buttons wrap on a phone */
 .oc-pair { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
+/* phones: Edit / Next week / Cancel / Delete fit on ONE row (Cancel and Delete stay side by side); only very narrow screens wrap, and then the pair wraps together */
+@media (max-width: 520px) { .oc-actions { gap: 5px; flex-wrap: nowrap; } .oc-actions .btn-sm { padding: 7px 9px; font-size: .78rem; gap: 4px; white-space: nowrap; } .oc-pair { gap: 5px; } }
+@media (max-width: 350px) { .oc-actions { flex-wrap: wrap; } }
