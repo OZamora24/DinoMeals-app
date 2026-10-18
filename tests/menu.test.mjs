@@ -8,14 +8,14 @@ const meal = (protein, carb, veg, sets = 2, flavor) => ({ protein, flavor, carb,
 // ---------------- unit prices ----------------
 test('meal price = protein + flavor + carb + veg upcharges', () => {
   assert.equal(mealUnitPrice(meal('tritip', 'cilantrorice', 'broccoli')), 15);
-  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli')), 11);
-  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli', 2, 'teriyaki')), 11); // chicken flavors are free
+  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli')), 12);
+  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli', 2, 'teriyaki')), 12); // chicken flavors are free
   assert.equal(mealUnitPrice(meal('tritip', 'sweetpotato', 'fajitas')), 17); // +1 carb, +1 veg
-  assert.equal(mealUnitPrice(meal('chicken', 'sweetpotato', 'greenbeans', 2, 'chipotle')), 13); // 11+0+1+1
+  assert.equal(mealUnitPrice(meal('chicken', 'sweetpotato', 'greenbeans', 2, 'chipotle')), 14); // 12+0+1+1
 });
 
 test('unknown flavor falls back to the default flavor (no upcharge)', () => {
-  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli', 2, 'nope')), 11);
+  assert.equal(mealUnitPrice(meal('chicken', 'whiterice', 'broccoli', 2, 'nope')), 12);
 });
 
 test('meal price is null for unknown items', () => {
@@ -53,7 +53,7 @@ test('priceCart: multiple combos add up', () => {
   const r = priceCart({ meals: [meal('tritip', 'cilantrorice', 'broccoli', 1), meal('chicken', 'whiterice', 'asparagus', 1, 'teriyaki')] });
   assert.equal(r.ok, true);
   assert.equal(r.meals, 8);
-  assert.equal(r.subtotal, 4 * 15 + 4 * 11);
+  assert.equal(r.subtotal, 4 * 15 + 4 * 12);
 });
 
 test('priceCart: meal minimum is 8', () => {
@@ -242,7 +242,7 @@ test('meals can skip the carb OR the veggie (same price), not both', async () =>
   const { NONE } = await import('../lib/menu.js');
   const full = mealUnitPrice({ protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: 'broccoli' });
   assert.equal(mealUnitPrice({ protein: 'groundbeef', flavor: 'taco', carb: 'whiterice', veg: NONE }), full);
-  assert.equal(mealUnitPrice({ protein: 'chicken', flavor: 'teriyaki', carb: NONE, veg: 'asparagus' }), 11);
+  assert.equal(mealUnitPrice({ protein: 'chicken', flavor: 'teriyaki', carb: NONE, veg: 'asparagus' }), 12);
   assert.equal(mealUnitPrice({ protein: 'chicken', carb: NONE, veg: NONE }), null);
   assert.equal(mealUnitPrice({ protein: 'chicken', carb: 'basmati', veg: 'broccoli' }), null);
   const r = priceCart({ meals: [
@@ -310,8 +310,8 @@ test('priceCart stores oz on the line, rejects bad oz, and totals the upcharge',
   const r = priceCart({ meals: [m] });
   assert.equal(r.ok, true);
   assert.deepEqual(r.lines[0].oz, { protein: 6 });
-  assert.equal(r.lines[0].unit, 11 + 2); // 6oz meat +$2
-  assert.equal(r.subtotal, 104);
+  assert.equal(r.lines[0].unit, 12 + 2); // 6oz meat +$2
+  assert.equal(r.subtotal, 112);
   assert.equal(priceCart({ meals: [{ ...m, oz: { protein: 7 } }] }).error, 'bad_item');
   const std = priceCart({ meals: [{ ...m, oz: { protein: 4 } }] });
   assert.equal(std.lines[0].oz, undefined);
@@ -345,13 +345,27 @@ test("Juan's Oct 16 prices", async () => {
   assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'taco' }), 20);
   assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'kbbq' }), 21);
   // bigger portions: protein 6oz +2 / 8oz +4, carb 6oz +1 / 8oz +2.50, veg 5oz +1 / 6oz +1.50
-  assert.equal(unit({ protein: 'chicken', oz: { protein: 6 } }), 13);
-  assert.equal(unit({ protein: 'chicken', oz: { protein: 8 } }), 15);
-  assert.equal(unit({ protein: 'chicken', oz: { carb: 6 } }), 12);
-  assert.equal(unit({ protein: 'chicken', oz: { carb: 8 } }), 13.5);
-  assert.equal(unit({ protein: 'chicken', oz: { veg: 5 } }), 12);
-  assert.equal(unit({ protein: 'chicken', oz: { veg: 6 } }), 12.5);
-  assert.equal(unit({ protein: 'chicken', oz: { protein: 8, carb: 8, veg: 6 } }), 19);
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 6 } }), 14);
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 8 } }), 16);
+  assert.equal(unit({ protein: 'chicken', oz: { carb: 6 } }), 13);
+  assert.equal(unit({ protein: 'chicken', oz: { carb: 8 } }), 14.5);
+  assert.equal(unit({ protein: 'chicken', oz: { veg: 5 } }), 13);
+  assert.equal(unit({ protein: 'chicken', oz: { veg: 6 } }), 13.5);
+  assert.equal(unit({ protein: 'chicken', oz: { protein: 8, carb: 8, veg: 6 } }), 20);
   assert.equal(unit({ protein: 'smashburgers', oz: { protein: 8 } }), 18); // no lb price needed any more
   assert.equal(unit({ protein: 'chicken', oz: { protein: 7 } }), null);
+});
+
+test('grilled chicken is $12 and has the free Pollo Asado flavor, per meal and per lb', async () => {
+  const M = await import('../lib/menu.js');
+  const chicken = M.byId(M.PROTEINS, 'chicken');
+  assert.equal(chicken.meal, 12);
+  assert.ok(chicken.flavors.some((f) => f.id === 'polloasado' && f.extra === 0));
+  assert.equal(M.mealUnitPrice({ protein: 'chicken', flavor: 'polloasado', carb: 'whiterice', veg: 'broccoli' }), 12);
+  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'chicken', flavor: 'polloasado' }), 16);
+  assert.equal(M.proteinLabel('chicken', 'polloasado'), 'Grilled Chicken Breast · Pollo Asado');
+  // flavors without their own macros use the chicken breast numbers
+  const macros = { chicken: { cal: 200, p: 30, c: 0, f: 5 }, whiterice: { cal: 180, p: 3, c: 40, f: 1 }, broccoli: { cal: 30, p: 3, c: 6, f: 0 } };
+  const { mealMacros } = await import('../lib/orderForm.js');
+  assert.equal(mealMacros({ protein: 'chicken', flavor: 'polloasado', carb: 'whiterice', veg: 'broccoli' }, macros).cal, 410);
 });
