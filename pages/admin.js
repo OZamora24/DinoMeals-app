@@ -319,7 +319,7 @@ function OrderCard({ o, patch, edit, remove, repeat, week }) {
 
       <footer className="oc-foot">
         <div className="status-pills">
-          {['new', 'confirmed', 'cooking', 'ready', 'done'].map((s) => (
+          {['confirmed', 'cooking', 'ready', 'done'].map((s) => (
             <button key={s} className={`sp ${o.status === s ? 'on' : ''}`} onClick={() => patch(o.id, { status: s })}>{s}</button>
           ))}
         </div>
