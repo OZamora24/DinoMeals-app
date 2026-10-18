@@ -280,7 +280,7 @@ function OrderCard({ o, patch, edit, remove, repeat, week }) {
     <article className={`ocard st-${o.status} ${o.paid ? 'is-paid' : 'is-unpaid'}`}>
       <header className="oc-head">
         <div>
-          <div className="oc-no">#{o.order_no} <span className={`src src-${o.source}`}>{SOURCE_LABEL[o.source] || o.source}</span>{o.sms_opt_in && <span className="src src-sms" title="Opted in to order texts">Texts ✓</span>}</div>
+          <div className="oc-no">{o.status === 'new' && <span className="new-dot" role="img" aria-label="New order" title="New order — not confirmed yet" />}#{o.order_no} <span className={`src src-${o.source}`}>{SOURCE_LABEL[o.source] || o.source}</span>{o.sms_opt_in && <span className="src src-sms" title="Opted in to order texts">Texts ✓</span>}</div>
           <h3>{o.customer_name}</h3>
           <div className="oc-contact">
             <a href={`tel:${o.phone_digits}`}>{o.phone}</a> · <a href={smsHref(o.phone, `Hey ${o.customer_name.split(' ')[0]}! DinoMeals here about order #${o.order_no}.`)}>Text</a>

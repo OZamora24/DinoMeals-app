@@ -861,3 +861,9 @@ label .input { margin-top: 6px; font-weight: 500; }
 
 /* iPhone Safari zooms into any field under 16px and often stays zoomed after: keep every field at 16px on touch screens */
 @media (hover: none) and (pointer: coarse) { input:not([type="checkbox"]):not([type="radio"]), select, textarea, .input, .input.xs, .plan-select { font-size: 16px !important; } }
+
+/* admin: pulsing red dot on orders still in the "new" status (goes away once you confirm/change it) */
+.new-dot { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--red); flex: none; }
+.new-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--red); animation: new-ping 1.5s ease-out infinite; }
+@keyframes new-ping { 0% { transform: scale(1); opacity: .75; } 100% { transform: scale(3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .new-dot::after { animation: none; } }
