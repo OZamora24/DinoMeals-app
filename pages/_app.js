@@ -30,6 +30,7 @@ const SOUND_SRC = '/sounds/splash.mp3';
 // a link to /order from the home page. Skipped for reduced motion. Timeline in ms.
 const FX = { navigateAt: 1500, revealAt: 1750, revealMs: 700, maxWait: 4000 };
 const FX_KEY = 'dino_fossil';
+const FX_SOUND = '/sounds/fossil.mp3';
 
 const safe = (fn, fallback = null) => {
   try { return fn(); } catch { return fallback; }
@@ -158,6 +159,8 @@ export default function App({ Component, pageProps }) {
       const href = url.pathname + url.search + url.hash;
       const start = Date.now();
       setFx('run');
+      // Stomp/crack sound for the transition. This runs inside the customer's tap, so phones allow it.
+      if (local.get('dino_sound') !== 'off') safe(() => new Audio(FX_SOUND).play().catch(() => {}));
       setTimeout(async () => {
         await Promise.race([
           router.push(href).catch(() => {}),
