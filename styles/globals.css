@@ -867,3 +867,6 @@ label .input { margin-top: 6px; font-weight: 500; }
 .new-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--red); animation: new-ping 1.5s ease-out infinite; }
 @keyframes new-ping { 0% { transform: scale(1); opacity: .75; } 100% { transform: scale(3); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .new-dot::after { animation: none; } }
+.new-tag { font-size: .68rem; font-weight: 900; letter-spacing: .12em; color: var(--red); margin-right: 2px; }
+/* Cancel + Delete always stay side by side, even when the action buttons wrap on a phone */
+.oc-pair { display: inline-flex; gap: 6px; flex-wrap: nowrap; }

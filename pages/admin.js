@@ -280,7 +280,7 @@ function OrderCard({ o, patch, edit, remove, repeat, week }) {
     <article className={`ocard st-${o.status} ${o.paid ? 'is-paid' : 'is-unpaid'}`}>
       <header className="oc-head">
         <div>
-          <div className="oc-no">{o.status === 'new' && <span className="new-dot" role="img" aria-label="New order" title="New order — not confirmed yet" />}#{o.order_no} <span className={`src src-${o.source}`}>{SOURCE_LABEL[o.source] || o.source}</span>{o.sms_opt_in && <span className="src src-sms" title="Opted in to order texts">Texts ✓</span>}</div>
+          <div className="oc-no">{o.status === 'new' && <><span className="new-dot" role="img" aria-label="New order" title="New order — not confirmed yet" /><span className="new-tag">NEW</span></>}#{o.order_no} <span className={`src src-${o.source}`}>{SOURCE_LABEL[o.source] || o.source}</span>{o.sms_opt_in && <span className="src src-sms" title="Opted in to order texts">Texts ✓</span>}</div>
           <h3>{o.customer_name}</h3>
           <div className="oc-contact">
             <a href={`tel:${o.phone_digits}`}>{o.phone}</a> · <a href={smsHref(o.phone, `Hey ${o.customer_name.split(' ')[0]}! DinoMeals here about order #${o.order_no}.`)}>Text</a>
@@ -326,10 +326,12 @@ function OrderCard({ o, patch, edit, remove, repeat, week }) {
         <div className="oc-actions">
           <button className="btn btn-ghost btn-sm" title="Change the customer, items, delivery or payment" onClick={() => setEditing(true)}>Edit</button>
           <button className="btn btn-ghost btn-sm" title="Copy this order into next week" onClick={() => repeat([o.id], addDays(week, 7))}><Repeat size={14} /> Next week</button>
-          {o.status !== 'cancelled' && (
-            <button className="btn btn-ghost btn-sm" title="Keep the order but mark it cancelled" onClick={() => patch(o.id, { status: 'cancelled' })}>Cancel</button>
-          )}
-          <button className="btn btn-ghost btn-sm" title="Delete this order permanently" onClick={() => remove(o.id)}><X size={14} /> Delete</button>
+          <span className="oc-pair">
+            {o.status !== 'cancelled' && (
+              <button className="btn btn-ghost btn-sm" title="Keep the order but mark it cancelled" onClick={() => patch(o.id, { status: 'cancelled' })}>Cancel</button>
+            )}
+            <button className="btn btn-ghost btn-sm" title="Delete this order permanently" onClick={() => remove(o.id)}><X size={14} /> Delete</button>
+          </span>
         </div>
       </footer>
       {editing && <OrderEditor order={o} onSave={(p) => edit(o.id, p)} onClose={() => setEditing(false)} />}
