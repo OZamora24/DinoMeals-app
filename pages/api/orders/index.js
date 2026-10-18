@@ -5,6 +5,7 @@ import { notifyNewOrder } from '../../../lib/push';
 import { buildOrderRow, repriceOrder, normalizePhone, PAY, STATUSES, clean } from '../../../lib/orderRow';
 import { sendOrderText } from '../../../lib/sms';
 import { upsertReminder } from '../../../lib/db';
+import { publicOrder } from '../../../lib/orderView';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
@@ -34,17 +35,8 @@ export default async function handler(req, res) {
       if (!wantAdmin && built.row.reminder_opt_in) {
         await upsertReminder({ digits: built.row.phone_digits, name: built.row.customer_name, lang: built.row.lang }).catch((e) => console.error('reminder opt-in', e?.message));
       }
-      return res.status(200).json({
-        order: {
-          id: order.id,
-          order_no: order.order_no,
-          total: order.total,
-          cook_date: order.cook_date,
-          fulfillment: order.fulfillment,
-          payment_method: order.payment_method,
-          status: order.status,
-        },
-      });
+      // Public receipt fields + the private order-page code (never name/phone/address).
+      return res.status(200).json({ order: { id: order.id, ...publicOrder(order) } });
     }
 
     if (!admin) return res.status(401).json({ error: 'Not logged in' });

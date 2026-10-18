@@ -1,20 +1,19 @@
+import { useEffect } from 'react';
 import { prettyDate, money } from '../../lib/menu';
-import { Check, Card, Cash, Bolt } from '../../components/Icons';
+import { Check } from '../../components/Icons';
 import Link from 'next/link';
 import SiteNav from '../SiteNav';
 import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import ChefRexPopup from './ChefRexPopup';
-
-// Card-type pay links from settings, labelled by where they go (Venmo / Cash App / card).
-function payLinks(s) {
-  return [s.card_link, s.cashapp_link]
-    .map((h) => String(h || '').trim().split(/\s+/)[0])
-    .filter((h) => /^https?:\/\//.test(h))
-    .map((href) => ({ href, label: /venmo\./i.test(href) ? 'Venmo' : /cash\.app/i.test(href) ? 'Cash App' : /paypal\./i.test(href) ? 'PayPal' : '' }));
-}
+import PayInfo from './PayInfo';
+import Receipt from './Receipt';
+import { ReceiptButtons } from './OrderTools';
+import { rememberOrder } from '../../lib/orderView';
 
 export default function OrderDone({ done, adminMode, settings, lang, setLang, t, resetAll }) {
   const quote = done.total == null;
+  // Save it to this phone's 🧾 My orders list.
+  useEffect(() => { if (!adminMode && done.token) rememberOrder(done); }, [adminMode, done]);
   return (
     <div className="page order-page">
       <SiteNav lang={lang} setLang={setLang} t={t} cta={false} />
@@ -30,28 +29,14 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
             {!adminMode && (
               <>
                 <h3>{t('pay_now')}</h3>
-                {done.payment_method === 'zelle' && (
-                  <div className="pay-line"><Bolt size={18} /><div>{settings.zelle_info ? <>{t('pay_zelle')} <b>{settings.zelle_info}</b><br /><span className="muted">{t('memo')}: <b>#{done.order_no}</b></span></> : t('zelle_tbd')}</div></div>
-                )}
-                {done.payment_method === 'card' &&
-                  (payLinks(settings).length ? (
-                    <div className="pay-links">
-                      {payLinks(settings).map((l) => (
-                        <a key={l.href} className="btn btn-red btn-block" href={l.href} target="_blank" rel="noreferrer">
-                          <Card size={18} /> {l.label ? `${lang === 'es' ? 'Pagar con' : 'Pay with'} ${l.label}` : t('pay_card')} · {money(done.total)}
-                        </a>
-                      ))}
-                      <span className="muted small">{t('memo')}: <b>#{done.order_no}</b></span>
-                    </div>
-                  ) : (
-                    <div className="pay-line"><Card size={18} /><div>{t('card_tbd')}</div></div>
-                  ))}
-                {done.payment_method === 'cash' && <div className="pay-line"><Cash size={18} /><div>{settings.cash_info}</div></div>}
+                <PayInfo order={done} settings={settings} lang={lang} t={t} />
                 <p className="muted small">{t('pay_after')}</p>
               </>
             )}
           </div>
         )}
+        {done.items?.length > 0 && <Receipt order={done} lang={lang} badge={false} />}
+        {!adminMode && done.token && <ReceiptButtons order={done} lang={lang} />}
         <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
         <div className="done-actions">
           {adminMode ? (

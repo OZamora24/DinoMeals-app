@@ -60,3 +60,9 @@ create table if not exists sms_reminders (
   last_sent_week date            -- cook week of the last reminder (never twice a week)
 );
 alter table sms_reminders enable row level security;
+
+-- Private, unguessable code for the customer's order page (dinomeals.app/o/<code>).
+-- Shown in the confirmation text and on the confirmation screen; never the address or phone.
+alter table orders add column if not exists view_token text not null
+  default substr(replace(gen_random_uuid()::text, '-', ''), 1, 12);
+create unique index if not exists orders_view_token_key on orders (view_token);

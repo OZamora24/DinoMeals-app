@@ -907,3 +907,62 @@ label .input { margin-top: 6px; font-weight: 500; }
   .rex-bub{margin-bottom:calc(var(--w)*.18)}
 }
 @media (prefers-reduced-motion:reduce){.rex-rx,.rex-bub,.rex-bub b .w span,.rex-spark{animation-duration:.01s}}
+
+/* ---------- Order review: receipt, private order page, My orders ---------- */
+.receipt { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; margin: 18px 0 12px; }
+.rc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.rc-head b { font-size: 1rem; }
+.rc-head span { color: var(--muted); font-size: .8rem; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+.rc-head em { font-style: normal; font-size: .72rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: rgba(242,161,58,.14); color: #ffc777; }
+.rc-head em.ok { background: rgba(63,191,98,.14); color: #7fe09a; }
+.rc-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px dashed var(--line); font-weight: 600; }
+.rc-row:first-of-type { border-top: 0; }
+.rc-row small { display: block; color: var(--muted); font-weight: 500; font-size: .8rem; margin-top: 2px; }
+.rc-row b { white-space: nowrap; }
+.rc-q { color: var(--red-2); font-weight: 800; margin-right: 6px; }
+.rc-tot { border-top: 1px solid var(--line-2); margin-top: 4px; padding-top: 8px; }
+.rc-tot div { display: flex; justify-content: space-between; color: var(--muted); font-size: .88rem; padding: 2px 0; }
+.rc-tot .big { color: var(--cream); font-family: var(--display); font-size: 1.5rem; letter-spacing: .02em; padding-top: 4px; }
+.rc-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 14px; }
+.rc-btns .btn { font-size: .85rem; padding-left: 10px; padding-right: 10px; }
+.track-page h1 { margin-bottom: 6px; }
+.track-page .btn-block { margin-bottom: 6px; }
+.otrack { list-style: none; padding: 0; margin: 22px 0 14px; display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.otrack::before { content: ''; position: absolute; left: 12.5%; right: 12.5%; top: 15px; height: 3px; border-radius: 3px; background: var(--line-2); }
+.otrack li { position: relative; z-index: 1; font-size: .75rem; font-weight: 700; color: var(--muted); }
+.otrack li i { display: grid; place-items: center; width: 32px; height: 32px; margin: 0 auto 6px; border-radius: 50%; background: var(--card-2); border: 2px solid var(--line-2); font-style: normal; font-size: .9rem; filter: grayscale(1); opacity: .7; }
+.otrack li.st-done, .otrack li.st-now { color: var(--cream); }
+.otrack li.st-done i { background: #3fbf62; border-color: #3fbf62; color: #0b1a0f; font-weight: 900; filter: none; opacity: 1; }
+.otrack li.st-now i { background: #f2a13a; border-color: #f2a13a; filter: none; opacity: 1; box-shadow: 0 0 0 6px rgba(242,161,58,.18); animation: otrack-pulse 1.8s ease-in-out infinite; }
+.otrack li.st-done + li.st-done::before, .otrack li.st-done + li.st-now::before { content: ''; position: absolute; right: 50%; width: 100%; top: 15px; height: 3px; background: #3fbf62; z-index: -1; }
+@keyframes otrack-pulse { 50% { box-shadow: 0 0 0 10px rgba(242,161,58,.05); } }
+.otrack-banner { border-radius: 12px; padding: 10px 14px; font-weight: 800; font-size: .9rem; background: rgba(242,161,58,.12); border: 1px solid rgba(242,161,58,.4); color: #ffd59a; }
+.otrack-banner.paid, .otrack-banner.ready, .otrack-banner.picked_up, .otrack-banner.delivered { background: rgba(63,191,98,.1); border-color: rgba(63,191,98,.4); color: #9debb2; }
+.otrack-banner.cancelled { background: rgba(226,55,45,.12); border-color: rgba(226,55,45,.45); color: #ffb3ad; }
+.track-page .pay-card { margin: 14px 0 0; }
+
+.nav-orders { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); display: grid; place-items: center; flex: none; padding: 0; cursor: pointer; }
+.nav-orders svg { width: 20px; height: 20px; fill: none; stroke: var(--cream); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-orders.live::after { content: ''; position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: #f2a13a; box-shadow: 0 0 0 2px var(--bg); }
+@media (max-width: 430px) { .nav-orders { width: 34px; height: 34px; } .nav-orders svg { width: 18px; height: 18px; } }
+.mo-wrap { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; animation: fade .2s ease both; }
+.mo-sheet { width: 100%; max-width: 520px; background: #1a1613; border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; padding: 10px 16px calc(18px + env(safe-area-inset-bottom)); max-height: 80vh; overflow: auto; animation: mo-up .28s cubic-bezier(.2,1,.3,1) both; }
+@media (min-width: 640px) { .mo-wrap { align-items: center; } .mo-sheet { border-radius: 22px; border-bottom: 1px solid var(--line); } .mo-grab { display: none; } }
+@keyframes mo-up { from { transform: translateY(40px); opacity: 0; } }
+.mo-grab { width: 40px; height: 4px; border-radius: 9px; background: var(--line-2); margin: 0 auto 10px; }
+.mo-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.mo-head h3 { font-family: var(--display); font-size: 1.5rem; letter-spacing: .03em; margin: 0; font-weight: 400; }
+.mo-x { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--cream); cursor: pointer; }
+.mo-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; color: var(--cream); text-decoration: none; }
+.mo-row:hover { border-color: var(--line-2); }
+.mo-row small { display: block; color: var(--muted); font-size: .8rem; margin-top: 2px; }
+.mo-chip { font-size: .72rem; font-weight: 800; padding: 4px 9px; border-radius: 999px; white-space: nowrap; background: var(--card-2); color: var(--muted); }
+.mo-chip.now, .mo-chip.wait { background: rgba(242,161,58,.16); color: #ffc777; }
+.mo-chip.ok { background: rgba(63,191,98,.14); color: #7fe09a; }
+.mo-chip.go { background: rgba(63,191,98,.22); color: #b8f5c8; }
+.mo-chip.off { background: rgba(226,55,45,.14); color: #ffb3ad; }
+.mo-hint { color: var(--muted); font-size: .78rem; margin: 6px 2px 0; }
+@media (prefers-reduced-motion: reduce) { .otrack li.st-now i, .mo-wrap, .mo-sheet { animation: none; } }
+/* With the 🧾 button there's one more icon in the bar: drop the wordmark on phones when the Order button is there too. */
+@media (max-width: 430px) { .nav:has(.nav-orders):has(.btn-sm) .nav-name { display: none; } }
+@media (max-width: 340px) { .nav:has(.nav-orders) .lang-toggle button { padding-left: 6px; padding-right: 6px; } .nav:has(.nav-orders) .nav-right { gap: 4px; } }
