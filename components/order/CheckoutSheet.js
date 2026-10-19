@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { DIET_FLAGS, lineSummary, money } from '../../lib/menu';
 import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
@@ -7,6 +8,12 @@ export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
   hasItems, fee, cardFee, subtotal, total, err, busy, place, onClose,
 }) {
+  // Esc closes the checkout popup (tapping outside or Back already did)
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div className="sheet-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet" role="dialog" aria-modal="true">
