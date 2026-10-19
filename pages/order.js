@@ -174,6 +174,13 @@ export default function OrderPage({ settings, adminMode }) {
     setFlash(editIdx != null ? 'updated' : { added: addN });
     setTimeout(() => setFlash(null), 1300);
     setEditIdx(null);
+    // After adding a set, jump back up to the builder for the next one; once the box is complete
+    // (plan size reached, or the 8-meal minimum on "any amount") stay down by the box + checkout bar.
+    if (editIdx == null) {
+      const after = mealCount + addN;
+      const complete = planTarget ? after >= planTarget : after >= MIN_MEALS;
+      if (!complete) setTimeout(() => builderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
     setBProtein(null);
     setBCarb(null);
     setBVeg(null);
