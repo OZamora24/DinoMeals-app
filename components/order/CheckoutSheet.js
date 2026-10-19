@@ -91,6 +91,7 @@ export default function CheckoutSheet({
                 </button>
               ))}
             </div>
+            {info.fulfillment === 'delivery' && <p className="muted small delivery-fee-note">{t('delivery_fee_pay_note')}</p>}
           </fieldset>
 
           <fieldset className="fs">
