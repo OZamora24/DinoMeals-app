@@ -97,6 +97,7 @@ export default function Admin() {
     setLoginErr('');
     try {
       await api('/api/login', { method: 'POST', body: { password: pw } });
+      setPw('');
       loadSettings();
     } catch (e2) {
       setLoginErr(e2.message);
@@ -155,7 +156,7 @@ export default function Admin() {
         <form onSubmit={login} className="login-card">
           <span className="nav-badge xl spin"><img src="/logo-mark.png" alt="" /></span>
           <h1 className="display">Kitchen</h1>
-          <input className="input" type="password" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />
+          <input className="input" type="password" autoComplete="current-password" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />
           {loginErr && <div className="error">{loginErr}</div>}
           <button className="btn btn-red btn-block">Log in</button>
           <Link href="/" className="muted small">← DinoMeals</Link>
@@ -168,7 +169,7 @@ export default function Admin() {
 
   return (
     <div className="admin-wrap">
-      <IdleLogout active={!!authed} onLogout={() => { setAuthed(false); setLoginErr('You were logged out after 30 minutes of inactivity. Log in again.'); }} />
+      <IdleLogout active={!!authed} onLogout={() => { setPw(''); setAuthed(false); setLoginErr('You were logged out after 30 minutes of inactivity. Log in again.'); }} />
       <header className="admin-top">
         <Link href="/" className="nav-brand">
           <span className="nav-badge spin"><img src="/logo-mark.png" alt="" /></span>
@@ -291,7 +292,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
             {f === 'quote' ? 'Custom quotes' : f[0].toUpperCase() + f.slice(1)}
           </button>
         ))}
-        <input className="input search" placeholder="Search name / phone / #" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="input search" name="order-search" autoComplete="off" data-lpignore="true" data-1p-ignore placeholder="Search name / phone / #" value={q} onChange={(e) => setQ(e.target.value)} />
         <a className="btn btn-ghost btn-sm" href={`/api/export?week=${week}`}>Export Excel</a>
       </div>
       {/* Phone: search + export on top, tabs underneath */}
@@ -299,7 +300,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
         <div className="ord-search">
           <label className="search-box">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-            <input placeholder="Search name, phone or #" value={q} onChange={(e) => setQ(e.target.value)} inputMode="search" />
+            <input name="order-search" autoComplete="off" data-lpignore="true" data-1p-ignore placeholder="Search name, phone or #" value={q} onChange={(e) => setQ(e.target.value)} inputMode="search" />
             {q && <button type="button" className="search-x" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
           </label>
           <a className="icon-btn" href={`/api/export?week=${week}`} title="Export Excel" aria-label="Export Excel">
