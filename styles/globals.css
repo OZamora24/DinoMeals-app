@@ -611,6 +611,10 @@ label .input { margin-top: 6px; font-weight: 500; }
 .ocard { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--red); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .ocard.is-paid { border-left-color: var(--ok); }
 .ocard.st-cancelled { opacity: .5; }
+/* finished orders fade back so the active ones stand out; full strength again on hover/tap-in. The fade animates when you mark one Done. */
+.ocard { transition: opacity .35s ease; }
+.ocard.st-done { opacity: .5; }
+.ocard.st-done:hover, .ocard.st-done:focus-within { opacity: .95; }
 .ocard.st-quote { border-left-color: var(--warn); }
 .oc-head { display: flex; justify-content: space-between; gap: 10px; }
 .oc-head h3 { margin: 2px 0; font-size: 1.1rem; }
