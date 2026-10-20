@@ -1049,3 +1049,11 @@ label .input { margin-top: 6px; font-weight: 500; }
 .promo-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); color: var(--muted); }
 .promo-preview { position: absolute; top: 12px; left: 14px; font-size: .68rem; font-weight: 900; letter-spacing: .14em; color: var(--ember, #ff8a3d); }
 @media (prefers-reduced-motion: reduce) { .promo-backdrop, .promo-card { animation: none; } }
+
+/* dino logo shown after tapping a notification (before the message card) */
+.promo-intro { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; background: radial-gradient(110% 70% at 50% 30%, #3a1612, #121110 62%); animation: fade .25s ease both; }
+.promo-intro .nav-badge.xl { width: 128px; height: 128px; animation: intro-pop .55s cubic-bezier(.2, 1.2, .4, 1) both; }
+.promo-intro.out { animation: intro-out .45s ease forwards; pointer-events: none; }
+@keyframes intro-pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes intro-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .promo-intro, .promo-intro .nav-badge.xl { animation: none; } }

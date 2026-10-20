@@ -31,6 +31,7 @@ const SOUND_SRC = '/sounds/splash.mp3';
 // a link to /order from the home page. Skipped for reduced motion. Timeline in ms.
 const FX = { navigateAt: 1500, revealAt: 1750, revealMs: 700, maxWait: 4000 };
 const FX_KEY = 'dino_fossil';
+const INTRO = { holdMs: 1300, fadeMs: 450 }; // dino-logo moment shown after tapping a notification
 const FX_SOUND = '/sounds/fossil.mp3';
 
 const safe = (fn, fallback = null) => {
@@ -54,6 +55,7 @@ export default function App({ Component, pageProps }) {
   const audio = useRef(null);
   const [fx, setFx] = useState(null); // null | run | reveal
   const fxBusy = useRef(false);
+  const [intro, setIntro] = useState(null); // null | in | out  (the dino logo shown after a notification tap)
   const [promo, setPromo] = useState(null); // message card shown after tapping a notification
   const pendingPromo = useRef(null); // id from /?promo=<id> or a notification tap, waiting for the splash to finish
 
@@ -195,14 +197,15 @@ export default function App({ Component, pageProps }) {
     if (!data) return;
     const reduced = safe(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, false);
     if (reduced) { setPromo(data); return; }
+    // Just the dino logo (no footprints, no stomp sound): it pops in, holds a moment, then fades out
+    // to reveal the message card that is already waiting underneath.
     fxBusy.current = true;
-    if (local.get('dino_sound') !== 'off') safe(() => new Audio(FX_SOUND).play().catch(() => {}));
-    setFx('run');
-    setTimeout(() => setPromo(data), FX.revealAt - 100); // the card is ready underneath as the mud opens
+    setIntro('in');
+    setTimeout(() => setPromo(data), INTRO.holdMs - 150);
     setTimeout(() => {
-      setFx('reveal');
-      setTimeout(() => { setFx(null); fxBusy.current = false; }, FX.revealMs);
-    }, FX.revealAt);
+      setIntro('out');
+      setTimeout(() => { setIntro(null); fxBusy.current = false; }, INTRO.fadeMs);
+    }, INTRO.holdMs);
   };
   useEffect(() => {
     if (isAdmin) return undefined;
@@ -272,6 +275,11 @@ export default function App({ Component, pageProps }) {
       </div>
       <FossilTransition phase={fx} />
       {promo && <PromoModal promo={promo} onClose={() => setPromo(null)} />}
+      {intro && (
+        <div className={`promo-intro ${intro}`} aria-hidden="true">
+          <span className="nav-badge xl spin"><img src="/logo-mark.png" alt="" /></span>
+        </div>
+      )}
       {phase !== 'gone' && (
         <SplashScreen
           phase={phase}
