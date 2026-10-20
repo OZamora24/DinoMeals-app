@@ -231,6 +231,8 @@ export default function Admin() {
 function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
+  const [doneOpen, setDoneOpen] = useState(false); // the Completed drop-down
+  const [doneFlash, setDoneFlash] = useState(false);
   const live = orders.filter((o) => o.status !== 'cancelled');
   const stats = {
     orders: live.length,
@@ -247,6 +249,21 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
     if (q && !`${o.customer_name} ${o.phone} ${o.order_no}`.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
+  // Finished orders move into their own "Completed" drop-down automatically (status Done).
+  const active = shown.filter((o) => o.status !== 'done');
+  const completed = shown.filter((o) => o.status === 'done');
+  const prevDone = useRef(completed.length);
+  useEffect(() => {
+    if (completed.length > prevDone.current) {
+      setDoneFlash(true); // a card just moved down: pulse the Completed header so it's clear where it went
+      const t = setTimeout(() => setDoneFlash(false), 1600);
+      prevDone.current = completed.length;
+      return () => clearTimeout(t);
+    }
+    prevDone.current = completed.length;
+    return undefined;
+  }, [completed.length]);
+  const showDone = doneOpen || (!!q && completed.length > 0); // searching opens it so a match is never hidden
 
   return (
     <>
@@ -267,11 +284,30 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
       </div>
       {loading && <p className="muted">Loading…</p>}
       {!loading && shown.length === 0 && <p className="muted empty">No orders here yet.</p>}
+      {!loading && shown.length > 0 && active.length === 0 && <p className="muted empty">All caught up: every order here is completed.</p>}
       <div className="order-cards">
-        {shown.map((o) => (
+        {active.map((o) => (
           <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />
         ))}
       </div>
+      {completed.length > 0 && (
+        <section className={`done-sec ${showDone ? 'is-open' : ''} ${doneFlash ? 'flash' : ''}`}>
+          <button className="done-head" onClick={() => setDoneOpen((v) => !v)} aria-expanded={showDone}>
+            <span className="msg-chev" aria-hidden="true">▸</span>
+            <b>Completed</b>
+            <span className="done-count">{completed.length}</span>
+          </button>
+          <div className={`msg-acc ${showDone ? 'open' : ''}`} aria-hidden={!showDone}>
+            <div className="msg-acc-in">
+              <div className="order-cards">
+                {completed.map((o) => (
+                  <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
     </>
   );
 }

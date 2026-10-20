@@ -1015,3 +1015,12 @@ label .input { margin-top: 6px; font-weight: 500; }
 .msg-acc.open .msg-acc-in { padding-top: 12px; }
 .msg-acc:not(.open) .msg-acc-in { visibility: hidden; transition: visibility 0s .3s; }
 @media (prefers-reduced-motion: reduce) { .msg-acc, .msg-chev { transition: none; } }
+
+/* Orders tab: Completed drop-down (orders marked Done move here by themselves) */
+.done-sec { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 12px; }
+.done-head { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; padding: 8px 2px; color: var(--text); font: inherit; font-size: 1.02rem; cursor: pointer; text-align: left; border-radius: 10px; transition: background .4s ease; }
+.done-sec.is-open .msg-chev { transform: rotate(90deg); }
+.done-count { min-width: 26px; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line-2); color: var(--muted); font-weight: 900; font-size: .8rem; display: inline-flex; align-items: center; justify-content: center; }
+.done-sec.flash .done-head { background: rgba(71, 194, 122, .18); }
+.done-sec.flash .done-count { background: #3fbf62; border-color: #3fbf62; color: #0b1a0f; }
+.done-sec .msg-acc.open .msg-acc-in { padding-top: 8px; }
