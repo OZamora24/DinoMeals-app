@@ -241,6 +241,17 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
     revenue: live.reduce((a, o) => a + Number(o.total || 0), 0),
     owed: live.filter((o) => !o.paid).reduce((a, o) => a + Number(o.total || 0), 0),
   };
+  // Filter chips with live counts (cancelled orders aren't counted).
+  // Phone tabs: All / Unpaid / Pickup / Delivery (+ Quotes only when there are custom quotes, or it's selected).
+  const PHONE_TABS = [['all', 'All'], ['unpaid', 'Unpaid'], ['pickup', 'Pickup'], ['delivery', 'Delivery']];
+  const counts = {
+    all: live.length,
+    unpaid: live.filter((o) => !o.paid).length,
+    pickup: live.filter((o) => o.fulfillment === 'pickup').length,
+    delivery: live.filter((o) => o.fulfillment === 'delivery').length,
+    quote: live.filter((o) => o.status === 'quote').length,
+  };
+  if (counts.quote > 0 || filter === 'quote') PHONE_TABS.push(['quote', 'Quotes']);
   const shown = orders.filter((o) => {
     if (filter === 'unpaid' && (o.paid || o.status === 'cancelled')) return false;
     if (filter === 'pickup' && o.fulfillment !== 'pickup') return false;
@@ -273,7 +284,8 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
         <Stat label="Sales" value={money(stats.revenue)} />
         <Stat label="Still owed" value={money(stats.owed)} hot={stats.owed > 0} />
       </div>
-      <div className="filter-row">
+      {/* Computer: original row (filters + search + Export Excel) */}
+      <div className="filter-row desk-only">
         {['all', 'unpaid', 'pickup', 'delivery', 'quote'].map((f) => (
           <button key={f} className={`chip sm ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
             {f === 'quote' ? 'Custom quotes' : f[0].toUpperCase() + f.slice(1)}
@@ -282,8 +294,28 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
         <input className="input search" placeholder="Search name / phone / #" value={q} onChange={(e) => setQ(e.target.value)} />
         <a className="btn btn-ghost btn-sm" href={`/api/export?week=${week}`}>Export Excel</a>
       </div>
+      {/* Phone: search + export on top, tabs underneath */}
+      <div className="ord-tools phone-only">
+        <div className="ord-search">
+          <label className="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input placeholder="Search name, phone or #" value={q} onChange={(e) => setQ(e.target.value)} inputMode="search" />
+            {q && <button type="button" className="search-x" onClick={() => setQ('')} aria-label="Clear search">✕</button>}
+          </label>
+          <a className="icon-btn" href={`/api/export?week=${week}`} title="Export Excel" aria-label="Export Excel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 19h16" /></svg>
+          </a>
+        </div>
+        <div className="ord-tabs" role="tablist" aria-label="Filter orders">
+          {PHONE_TABS.map(([f, label]) => (
+            <button key={f} role="tab" aria-selected={filter === f} className={`${filter === f ? 'on' : ''} ${f === 'unpaid' && counts.unpaid > 0 ? 'warn' : ''}`} onClick={() => setFilter(f)}>
+              {label}<small>{counts[f]}</small>
+            </button>
+          ))}
+        </div>
+      </div>
       {loading && <p className="muted">Loading…</p>}
-      {!loading && shown.length === 0 && <p className="muted empty">No orders here yet.</p>}
+      {!loading && shown.length === 0 && <p className="muted empty">{q || filter !== 'all' ? 'No orders match.' : 'No orders here yet.'}</p>}
       {!loading && shown.length > 0 && active.length === 0 && <p className="muted empty">All caught up: every order here is completed.</p>}
       <div className="order-cards">
         {active.map((o) => (

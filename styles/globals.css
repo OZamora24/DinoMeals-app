@@ -1057,3 +1057,23 @@ label .input { margin-top: 6px; font-weight: 500; }
 @keyframes intro-pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
 @keyframes intro-out { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .promo-intro, .promo-intro .nav-badge.xl { animation: none; } }
+
+/* ---------- Admin orders (phone): search + export, tabs underneath. Computer keeps the original row. ---------- */
+.phone-only { display: none; }
+@media (max-width: 640px) { .desk-only { display: none !important; } .phone-only { display: block; } }
+.ord-tools { margin-bottom: 14px; }
+.ord-search { display: flex; gap: 8px; align-items: center; }
+.search-box { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; margin: 0; background: var(--bg-2); border: 1.5px solid var(--line); border-radius: 14px; padding: 0 12px; height: 46px; color: var(--muted); }
+.search-box:focus-within { border-color: var(--red); box-shadow: 0 0 0 3px rgba(226,55,45,.18); }
+.search-box svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.search-box input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--cream); font: inherit; font-size: 16px; }
+.search-box input::placeholder { color: var(--muted); }
+.search-x { border: 0; background: var(--card-2); color: var(--muted); width: 26px; height: 26px; border-radius: 50%; font-size: 12px; cursor: pointer; flex: none; }
+.icon-btn { flex: none; height: 46px; width: 46px; border-radius: 14px; border: 1.5px solid var(--line-2); background: var(--bg-2); color: var(--cream); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ord-tabs { display: flex; gap: 8px; margin-top: 10px; }
+.ord-tabs button { flex: 1; min-width: 0; border: 1.5px solid var(--line); background: var(--bg-2); color: var(--cream); font: 800 .8rem Manrope, sans-serif; padding: 8px 2px 6px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ord-tabs button small { font-size: .7rem; font-weight: 800; color: var(--muted); }
+.ord-tabs button.warn small { color: #f2a13a; }
+.ord-tabs button.on { background: rgba(226,55,45,.16); border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); color: #fff; }
+.ord-tabs button.on small { color: #fff; }
