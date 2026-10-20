@@ -1038,3 +1038,14 @@ label .input { margin-top: 6px; font-weight: 500; }
 /* top bar with the 🔔 and 📲 buttons: tighten on phones; hide the written name on the narrowest ones (the logo stays) */
 @media (max-width: 400px) { .nav { gap: 6px; padding-left: 12px; padding-right: 12px; } .nav .nav-right { gap: 5px; } .nav .nav-name { font-size: .98rem; } .nav .lang-toggle button { padding: 5px 7px; } .nav .btn-sm { padding: 8px 10px; font-size: .8rem; } .nav-brand { gap: 6px; } }
 @media (max-width: 370px) { .nav .nav-name { display: none; } }
+
+/* ---------- customer promo pop-up ---------- */
+.promo-backdrop { position: fixed; inset: 0; z-index: 7000; background: rgba(0,0,0,.62); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 18px; animation: fade .25s ease both; }
+.promo-card { position: relative; width: 100%; max-width: 400px; text-align: center; background: radial-gradient(120% 80% at 50% 0%, #3a1612, #1b1514 62%); border: 1px solid var(--line-2, #3a332d); border-radius: 22px; padding: 30px 22px 22px; box-shadow: 0 30px 70px rgba(0,0,0,.6); animation: up .35s cubic-bezier(.2,.9,.3,1) both; }
+.promo-card .nav-badge { margin: 0 auto 10px; }
+.promo-title { margin: 6px 0 8px; font-size: 1.9rem; line-height: 1.05; color: var(--cream); }
+.promo-body { margin: 0 0 18px; color: #d6cdbf; white-space: pre-line; }
+.promo-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.promo-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); color: var(--muted); }
+.promo-preview { position: absolute; top: 12px; left: 14px; font-size: .68rem; font-weight: 900; letter-spacing: .14em; color: var(--ember, #ff8a3d); }
+@media (prefers-reduced-motion: reduce) { .promo-backdrop, .promo-card { animation: none; } }

@@ -442,7 +442,7 @@ export function SettingsTab({ settings, save, week }) {
 // ---------- Messages: notifications sent to customers' phones ----------
 const blankPopup = () => ({
   id: `m${Date.now().toString(36)}`, title: '', body: '', title_es: '', body_es: '',
-  cta_label: '', cta_label_es: '', cta_url: '', active: true, notify: true, notified_at: 0, start: '', end: '', updated: Date.now(),
+  cta_label: '', cta_label_es: '', cta_url: '', active: false, notify: true, notified_at: 0, start: '', end: '', updated: Date.now(),
 });
 const POPUP_TEXT_KEYS = ['title', 'body', 'title_es', 'body_es'];
 const sentLabel = (p) => (p.notified_at ? `Sent ${new Date(p.notified_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })} to ${p.notified_count || 0} phone${p.notified_count === 1 ? '' : 's'}` : '');
@@ -506,35 +506,33 @@ export function MessagesTab({ settings, save, reload }) {
     try {
       await save({ popups: stamped });
       setOpen(new Set()); // saved: every message folds back into its drop-down
-      // A message that is ON and has not gone out yet is sent to customers' phones now.
-      const toSend = stamped.filter((p) => p.active && !p.notified_at);
-      if (toSend.length) await notifyPhones(toSend, stamped);
+      setNote('Saved. Turn a message ON to send it to customers.');
     } finally { setBusy(false); }
   }
-  async function notifyPhones(items, all) {
-    const ids = new Set(items.map((p) => p.id));
-    if (!phones) {
-      // Nobody to send to yet. Remember that, so it does not ask again on every later save.
-      if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, notified_at: Date.now(), notified_count: 0 } : p)) });
-      setNote('Saved. Nobody has turned on notifications yet, so nothing was sent. Customers turn them on with the 🔔 in the app.');
-      return;
+  // ON sends the saved message to customers' phones right away; OFF just turns it off. Save changes is
+  // only for typing or editing a message, so a message must be saved (and have no unsaved edits) first.
+  async function toggleActive(p) {
+    if (busy) return;
+    if (dirty) { setNote('Press Save changes first, then turn the message ON or OFF.'); return; }
+    if (!saved.some((x) => x.id === p.id)) { setNote('Save the message first (Save changes), then turn it ON to send it.'); return; }
+    setBusy(true);
+    try {
+      if (p.active) {
+        await save({ popups: saved.map((x) => (x.id === p.id ? { ...x, active: false } : x)) });
+        setNote('Turned OFF. Nothing was sent.');
+      } else {
+        await sendNow(p, true);
+      }
+    } finally { setBusy(false); }
+  }
+  async function sendNow(p, activate) {
+    try {
+      const j = await api('/api/popup-notify', { method: 'POST', body: { id: p.id, activate: !!activate } });
+      if (j.ok) setNote(phones ? `ON: sent to ${j.sent} phone${j.sent === 1 ? '' : 's'}.` : 'ON. Nobody has turned on notifications yet, so nothing was sent. Customers turn them on with the 🔔 in the app.');
+      else setNote(j.error === 'push_not_configured' ? 'Notifications are not set up on the server yet.' : `Could not send: ${j.error || 'unknown error'}`);
+    } catch (e) {
+      setNote(`Could not send: ${e.message}`);
     }
-    const names = items.map((p) => `"${p.title || 'New message'}"`).join(', ');
-    if (!window.confirm(`Send ${names} as a notification to ${phones} customer phone${phones === 1 ? '' : 's'} now?\n\nOK = send now\nCancel = save it as OFF (not sent)`)) {
-      // Cancel: keep it as an OFF draft so it does not ask again; turn it ON when you are ready.
-      if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, active: false } : p)) });
-      setNote('Saved as OFF. Nothing was sent. Turn it ON and Save when you want it to go out.');
-      return;
-    }
-    let sent = 0;
-    let failed = 0;
-    for (const p of items) {
-      try {
-        const j = await api('/api/popup-notify', { method: 'POST', body: { id: p.id } });
-        if (j.ok) sent += j.sent; else failed += 1;
-      } catch { failed += 1; }
-    }
-    setNote(failed ? `Sent to ${sent} phone${sent === 1 ? '' : 's'}; ${failed} message${failed === 1 ? '' : 's'} could not be sent.` : `Notification sent to ${sent} phone${sent === 1 ? '' : 's'}.`);
     if (reload) await reload();
   }
   const remove = (id) => { if (window.confirm('Delete this message for good?')) setList((l) => l.filter((p) => p.id !== id)); };
@@ -542,7 +540,7 @@ export function MessagesTab({ settings, save, reload }) {
     <div className="settings">
       <section className="set-card wide">
         <h3>Customer notifications</h3>
-        <p className="small">Write the message customers get as a notification on their phone (the DinoMeals app on their Home Screen, or Chrome on Android). When a message is <b>ON</b> and you press Save, it is sent. Turn it OFF and ON again to send it another time.</p>
+        <p className="small">Write the message customers get as a notification on their phone (the DinoMeals app on their Home Screen, or Chrome on Android). Use <b>Save changes</b> only when you type or edit a message. Turning a message <b>ON</b> sends it to customers right away. Tapping the notification opens the app with the dino transition and shows the message.</p>
         <div className="row-actions">
           <button className="btn btn-ghost btn-sm" disabled={list.length >= 12} onClick={addNew}>+ New message</button>
           <button className="btn btn-red btn-sm" disabled={!dirty || busy} onClick={commit}>{busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
@@ -560,7 +558,7 @@ export function MessagesTab({ settings, save, reload }) {
                 <span className="msg-chev" aria-hidden="true">▸</span>
                 <span className="msg-title"><b>{p.title || 'New message'}</b>{p.notified_at > 0 && <small className="muted"> · sent</small>}</span>
               </button>
-              <button className={`onoff ${p.active ? 'on' : ''}`} onClick={() => upd(p.id, p.active ? { active: false } : { active: true, notified_at: 0 })} aria-pressed={p.active} title={p.active ? 'ON: sent when you Save' : 'OFF: not sent'}>{p.active ? 'ON' : 'OFF'}</button>
+              <button className={`onoff ${p.active ? 'on' : ''}`} onClick={() => toggleActive(p)} disabled={busy} aria-pressed={p.active} title={p.active ? 'ON: customers were sent this. Tap to turn OFF.' : 'OFF: tap to turn ON and send it to customers now.'}>{p.active ? 'ON' : 'OFF'}</button>
             </div>
             <div className={`msg-acc ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen}>
               <div className="msg-acc-in">
@@ -576,7 +574,7 @@ export function MessagesTab({ settings, save, reload }) {
                 <div className="row-actions">
                   <button className="btn btn-ghost btn-sm" onClick={() => setPreview(p)}>Preview</button>
                   {saved.some((x) => x.id === p.id) && p.active && !dirty && (
-                    <button className="btn btn-ghost btn-sm" onClick={() => { if (window.confirm(`Send "${p.title || 'this message'}" to ${phones} customer phone${phones === 1 ? '' : 's'} again?`)) notifyPhones([p]); }}>{p.notified_at ? 'Send again' : 'Send now'}</button>
+                    <button className="btn btn-ghost btn-sm" disabled={busy} onClick={async () => { setBusy(true); try { await sendNow(p, false); } finally { setBusy(false); } }}>{p.notified_at ? 'Send again' : 'Send now'}</button>
                   )}
                   <button className="btn btn-ghost btn-sm" onClick={() => remove(p.id)}>Delete</button>
                 </div>

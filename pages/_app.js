@@ -11,6 +11,7 @@ import '../styles/globals.css';
 import '../styles/splash-extra.css';
 import SplashScreen from '../components/SplashScreen';
 import FossilTransition from '../components/FossilTransition';
+import { PromoModal } from '../components/PromoPopup';
 
 // Splash rules
 //  - First visit: "Tap to enter" gate, then the full splash with the
@@ -53,6 +54,8 @@ export default function App({ Component, pageProps }) {
   const audio = useRef(null);
   const [fx, setFx] = useState(null); // null | run | reveal
   const fxBusy = useRef(false);
+  const [promo, setPromo] = useState(null); // message card shown after tapping a notification
+  const pendingPromo = useRef(null); // id from /?promo=<id> or a notification tap, waiting for the splash to finish
 
   const label = router.pathname === '/order' ? 'LOADING THE MENU' : 'FIRING UP THE SMOKER';
 
@@ -180,6 +183,59 @@ export default function App({ Component, pageProps }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
+  // Tapping a notification opens /?promo=<id> (or messages the open app): play the dino transition,
+  // then show the message as a pop-up. Waits for the splash to finish first.
+  const startPromo = async (id) => {
+    if (!id || fxBusy.current) return;
+    let data = null;
+    try {
+      const r = await fetch(`/api/promo?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      if (r.ok) data = (await r.json()).promo;
+    } catch {}
+    if (!data) return;
+    const reduced = safe(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, false);
+    if (reduced) { setPromo(data); return; }
+    fxBusy.current = true;
+    if (local.get('dino_sound') !== 'off') safe(() => new Audio(FX_SOUND).play().catch(() => {}));
+    setFx('run');
+    setTimeout(() => setPromo(data), FX.revealAt - 100); // the card is ready underneath as the mud opens
+    setTimeout(() => {
+      setFx('reveal');
+      setTimeout(() => { setFx(null); fxBusy.current = false; }, FX.revealMs);
+    }, FX.revealAt);
+  };
+  useEffect(() => {
+    if (isAdmin) return undefined;
+    const id = new URLSearchParams(window.location.search).get('promo');
+    if (id) {
+      pendingPromo.current = id;
+      safe(() => {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('promo');
+        window.history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+      });
+    }
+    const onMsg = (e) => {
+      if (e.data && e.data.type === 'dino-promo-open' && e.data.id) {
+        pendingPromo.current = e.data.id;
+        if (phaseRef.current === 'gone') { const next = pendingPromo.current; pendingPromo.current = null; startPromo(next); }
+      }
+    };
+    safe(() => navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', onMsg));
+    return () => safe(() => navigator.serviceWorker && navigator.serviceWorker.removeEventListener('message', onMsg));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const phaseRef = useRef(phase);
+  useEffect(() => {
+    phaseRef.current = phase;
+    if (phase === 'gone' && pendingPromo.current) {
+      const id = pendingPromo.current;
+      pendingPromo.current = null;
+      startPromo(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   const enter = (withSound) => {
     if (withSound && !muted) {
       const a = getAudio();
@@ -215,6 +271,7 @@ export default function App({ Component, pageProps }) {
         <Component {...pageProps} />
       </div>
       <FossilTransition phase={fx} />
+      {promo && <PromoModal promo={promo} onClose={() => setPromo(null)} />}
       {phase !== 'gone' && (
         <SplashScreen
           phase={phase}

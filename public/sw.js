@@ -23,7 +23,7 @@ self.addEventListener('push', (event) => {
         renotify: true,
         requireInteraction: !!data.sticky,
         vibrate: [200, 100, 200],
-        data: { url: data.url || (promo ? '/' : '/admin'), kind: data.kind || 'order' },
+        data: { url: data.url || (promo ? '/' : '/admin'), kind: data.kind || 'order', promoId: data.id || '' },
       }),
       // Tell any open admin tab to refresh its list and play the chime (new orders only).
       promo
@@ -44,8 +44,11 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {
         if (promo) {
-          // customers: bring the app/site forward (not the kitchen page)
-          if (!c.url.includes('/admin') && 'focus' in c) return c.focus();
+          // customers: bring the app/site forward (not the kitchen page) and tell it which message to show
+          if (!c.url.includes('/admin') && 'focus' in c) {
+            if (d.promoId) c.postMessage({ type: 'dino-promo-open', id: d.promoId });
+            return c.focus();
+          }
         } else if (c.url.includes('/admin') && 'focus' in c) return c.focus();
       }
       return self.clients.openWindow(url);

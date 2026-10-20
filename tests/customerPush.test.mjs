@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promoPayload, deliverPromo, cleanSubscription, isAllowedEndpoint } from '../lib/pushPayload.js';
-import { cleanPopups } from '../lib/popups.js';
+import { cleanPopups, publicPromo } from '../lib/popups.js';
 
 const popup = { id: 'm1', title: 'Pick up reminder', body: 'Pickup is Sunday 3–8 PM.\nPlease bring your order # .', title_es: 'Recordatorio', body_es: 'La recogida es el domingo.' };
 
@@ -10,7 +10,8 @@ test('promo payload: language, clipping, opens the home page, tagged as a promo'
   assert.equal(en.title, 'Pick up reminder');
   assert.equal(en.body, 'Pickup is Sunday 3–8 PM. Please bring your order # .'); // line breaks flattened
   assert.equal(en.kind, 'promo');
-  assert.equal(en.url, '/');
+  assert.equal(en.url, '/?promo=m1'); // tapping opens the app on this message
+  assert.equal(en.id, 'm1');
   assert.equal(en.tag, 'promo-m1');
   const es = promoPayload(popup, 'es');
   assert.equal(es.title, 'Recordatorio');
@@ -67,4 +68,17 @@ test('messages keep their sent-state settings', () => {
   assert.equal(q.notify, false);
   assert.equal(q.notified_at, 0);
   assert.equal(cleanPopups([{ title: 'default' }])[0].notify, true); // notifying is the default
+});
+
+test('the card shown after tapping a notification: only sent + ON messages, only their words', () => {
+  const list = [
+    { id: 'sent', title: 'Hi', body: 'There', title_es: 'Hola', body_es: 'Alla', active: true, notified_at: 1700000000000, notify: true, start: '2026-01-01' },
+    { id: 'draft', title: 'Draft', body: 'x', active: true, notified_at: 0 },
+    { id: 'off', title: 'Off', body: 'x', active: false, notified_at: 1700000000000 },
+  ];
+  assert.deepEqual(publicPromo(list, 'sent'), { id: 'sent', title: 'Hi', body: 'There', title_es: 'Hola', body_es: 'Alla' });
+  assert.equal(publicPromo(list, 'draft'), null); // never sent: not public
+  assert.equal(publicPromo(list, 'off'), null);
+  assert.equal(publicPromo(list, 'nope'), null);
+  assert.equal(publicPromo(undefined, 'sent'), null);
 });
