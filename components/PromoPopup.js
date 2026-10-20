@@ -34,7 +34,7 @@ export function PromoModal({ popup, lang = 'en', onClose, preview = false }) {
           {popup.cta_url && ctaLabel && (internal
             ? <Link href={popup.cta_url} className="btn btn-red" onClick={onClose}>{ctaLabel}</Link>
             : <a href={popup.cta_url} className="btn btn-red" target="_blank" rel="noreferrer" onClick={onClose}>{ctaLabel}</a>)}
-          <button className="btn btn-ghost" onClick={onClose}>{es ? 'Cerrar' : 'Close'}</button>
+          <button className={popup.cta_url && ctaLabel ? 'btn btn-ghost' : 'btn btn-red'} onClick={onClose}>{popup.cta_url && ctaLabel ? (es ? 'Cerrar' : 'Close') : (es ? 'Entendido' : 'Got it')}</button>
         </div>
       </div>
     </div>
