@@ -1,6 +1,20 @@
 {
   "crons": [
-    { "path": "/api/cron/reminder?when=pdt", "schedule": "0 23 * * 4" },
-    { "path": "/api/cron/reminder?when=pst", "schedule": "0 0 * * 5" }
+    {
+      "path": "/api/cron/reminder?when=pdt",
+      "schedule": "0 23 * * 4"
+    },
+    {
+      "path": "/api/cron/reminder?when=pst",
+      "schedule": "0 0 * * 5"
+    },
+    {
+      "path": "/api/cron/weekly-report?when=pdt",
+      "schedule": "0 3 * * 2"
+    },
+    {
+      "path": "/api/cron/weekly-report?when=pst",
+      "schedule": "0 4 * * 2"
+    }
   ]
 }

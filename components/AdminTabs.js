@@ -5,6 +5,7 @@ import {
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
+import { PromoModal } from './PromoPopup';
 
 const STATUS = ['new', 'quote', 'confirmed', 'cooking', 'ready', 'done', 'cancelled'];
 export const SOURCE_LABEL = { web: 'Website', dm: 'IG DM', text: 'Text', call: 'Call', repeat: 'Repeat' };
@@ -338,6 +339,8 @@ export function SettingsTab({ settings, save, week }) {
         <p className="muted small">Opted-in orders show a <b>Texts ✓</b> tag. Pages: <a href="/privacy" target="_blank" rel="noreferrer">Privacy</a> · <a href="/terms" target="_blank" rel="noreferrer">Terms</a> · <a href="/sms" target="_blank" rel="noreferrer">SMS opt-in</a></p>
       </section>
 
+      <ReportCard settings={settings} />
+
       <section className="set-card">
         <h3>Ordering</h3>
         <label className="switch-row">
@@ -434,5 +437,104 @@ export function SettingsTab({ settings, save, week }) {
         <button className="btn btn-red" onClick={() => save({ macros: s.macros, allergens: s.allergens })}>Save macros & allergens</button>
       </section>
     </div>
+  );
+}
+
+// ---------- Messages: promo / discount pop-ups customers see (home + order pages) ----------
+const blankPopup = () => ({
+  id: `m${Date.now().toString(36)}`, title: '', body: '', title_es: '', body_es: '',
+  cta_label: 'Order now', cta_label_es: 'Ordenar ahora', cta_url: '/order', active: true, start: '', end: '', updated: Date.now(),
+});
+const POPUP_TEXT_KEYS = ['title', 'body', 'title_es', 'body_es', 'cta_label', 'cta_label_es', 'cta_url'];
+
+export function MessagesTab({ settings, save }) {
+  const saved = settings.popups || [];
+  const [list, setList] = useState(saved);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setList(settings.popups || []), [settings.popups]);
+  const upd = (id, patch) => setList((l) => l.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  const dirty = JSON.stringify(list) !== JSON.stringify(saved);
+  async function commit() {
+    setBusy(true);
+    const before = new Map(saved.map((p) => [p.id, p]));
+    const stamped = list.map((p) => {
+      const old = before.get(p.id);
+      const changed = !old || POPUP_TEXT_KEYS.some((k) => (old[k] || '') !== (p[k] || ''));
+      return changed ? { ...p, updated: Date.now() } : p; // an edited message shows again to people who closed the old one
+    });
+    try { await save({ popups: stamped }); } finally { setBusy(false); }
+  }
+  const remove = (id) => { if (window.confirm('Delete this message for good?')) setList((l) => l.filter((p) => p.id !== id)); };
+  return (
+    <div className="settings">
+      <section className="set-card wide">
+        <h3>Customer pop-up messages</h3>
+        <p className="small">Write a promo or discount message and customers see it as a pop-up on the home and order pages. Each person sees a message once; edit it and it shows again. Turn a message off or set an end date when the promo is over.</p>
+        <div className="row-actions">
+          <button className="btn btn-ghost btn-sm" disabled={list.length >= 12} onClick={() => setList((l) => [blankPopup(), ...l])}>+ New message</button>
+          <button className="btn btn-red btn-sm" disabled={!dirty || busy} onClick={commit}>{busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
+        </div>
+      </section>
+      {list.length === 0 && <section className="set-card wide"><p className="muted">No messages yet. Tap "+ New message".</p></section>}
+      {list.map((p) => (
+        <section className="set-card wide msg-card" key={p.id}>
+          <label className="switch-row">
+            <span><b>{p.title || 'New message'}</b><br /><small className="muted">{p.active ? 'Showing to customers' : 'Off — customers do not see it'}</small></span>
+            <button className={`switch ${p.active ? 'on' : ''}`} onClick={() => upd(p.id, { active: !p.active })} aria-label="Show to customers" />
+          </label>
+          <label>Title<input className="input" maxLength={80} value={p.title} onChange={(e) => upd(p.id, { title: e.target.value })} placeholder="10% off this week!" /></label>
+          <label>Message<textarea className="input" rows={3} maxLength={600} value={p.body} onChange={(e) => upd(p.id, { body: e.target.value })} placeholder="Order 12 or more meals by Friday and get 10% off. Mention this message when you pay." /></label>
+          <div className="grid2">
+            <label>Button text (optional)<input className="input" maxLength={30} value={p.cta_label} onChange={(e) => upd(p.id, { cta_label: e.target.value })} /></label>
+            <label>Button goes to<input className="input" maxLength={200} value={p.cta_url} onChange={(e) => upd(p.id, { cta_url: e.target.value })} placeholder="/order" /></label>
+          </div>
+          <div className="grid2">
+            <label>Show from (optional)<input className="input" type="date" value={p.start || ''} onChange={(e) => upd(p.id, { start: e.target.value })} /></label>
+            <label>Show until (optional)<input className="input" type="date" value={p.end || ''} onChange={(e) => upd(p.id, { end: e.target.value })} /></label>
+          </div>
+          <details>
+            <summary className="small">Spanish version (optional — shown to customers using ES)</summary>
+            <label>Título<input className="input" maxLength={80} value={p.title_es} onChange={(e) => upd(p.id, { title_es: e.target.value })} /></label>
+            <label>Mensaje<textarea className="input" rows={3} maxLength={600} value={p.body_es} onChange={(e) => upd(p.id, { body_es: e.target.value })} /></label>
+            <label>Texto del botón<input className="input" maxLength={30} value={p.cta_label_es} onChange={(e) => upd(p.id, { cta_label_es: e.target.value })} /></label>
+          </details>
+          <div className="row-actions">
+            <button className="btn btn-ghost btn-sm" onClick={() => setPreview(p)}>Preview</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => remove(p.id)}>Delete</button>
+          </div>
+        </section>
+      ))}
+      {preview && <PromoModal popup={preview} lang="en" preview onClose={() => setPreview(null)} />}
+    </div>
+  );
+}
+
+// ---------- Weekly sales report card (Menu & settings) ----------
+function ReportCard({ settings }) {
+  const mail = settings._mail || {};
+  const [state, setState] = useState({ busy: false, msg: '' });
+  async function sendNow() {
+    setState({ busy: true, msg: '' });
+    try {
+      const j = await api('/api/report', { method: 'POST', body: {} });
+      setState({ busy: false, msg: j.ok ? `Sent to ${j.to}: ${j.week} (${j.orders} orders, ${j.weeks} weekly tab${j.weeks === 1 ? '' : 's'}).` : j.error === 'email_not_configured' ? 'Email is not set up yet (RESEND_API_KEY is missing in Vercel).' : `Could not send: ${j.error || 'unknown error'}` });
+    } catch (e) {
+      setState({ busy: false, msg: `Could not send: ${e.message}` });
+    }
+  }
+  return (
+    <section className="set-card wide">
+      <h3>Weekly sales report</h3>
+      <p className="small">
+        {mail.configured
+          ? <><b className="ok-text">ON</b> — every Monday at 8 PM Pacific, last week's sales (Monday to Sunday) are emailed to <b>{mail.to}</b> as an Excel file: that week's Orders + Summary, plus one tab per week so far.</>
+          : <><b className="warn-text">OFF</b> — the email service is not connected yet. Once the key is added in Vercel, a report goes to <b>{mail.to || 'dinomealsllc@gmail.com'}</b> every Monday at 8 PM Pacific.</>}
+      </p>
+      <div className="row-actions">
+        <button className="btn btn-ghost btn-sm" disabled={state.busy} onClick={sendNow}>{state.busy ? 'Sending…' : "Email last week's report now"}</button>
+      </div>
+      {state.msg && <p className="small">{state.msg}</p>}
+    </section>
   );
 }

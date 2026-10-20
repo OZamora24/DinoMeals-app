@@ -4,9 +4,10 @@ import { prettyDate, addDays, money } from '../lib/menu';
 import { ORDERS_WARN, ORDERS_ACT } from '../lib/limits';
 import { playChime, soundEnabled, localNotify } from '../lib/alerts';
 import AlertsButton from '../components/AlertsButton';
+import IdleLogout from '../components/IdleLogout';
 import OrderEditor from '../components/OrderEditor';
-import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X } from '../components/Icons';
-import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab } from '../components/AdminTabs';
+import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
+import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
 const TABS = [
   ['orders', 'Orders', List],
@@ -14,6 +15,7 @@ const TABS = [
   ['pay', 'Payments', Money],
   ['route', 'Delivery', Route],
   ['regulars', 'Regulars', Users],
+  ['messages', 'Messages', Bolt],
   ['settings', 'Menu & settings', Gear],
 ];
 export default function Admin() {
@@ -166,6 +168,7 @@ export default function Admin() {
 
   return (
     <div className="admin-wrap">
+      <IdleLogout active={!!authed} onLogout={() => { setAuthed(false); setLoginErr('You were logged out after 30 minutes of inactivity. Log in again.'); }} />
       <header className="admin-top">
         <Link href="/" className="nav-brand">
           <span className="nav-badge spin"><img src="/logo-mark.png" alt="" /></span>
@@ -215,6 +218,7 @@ export default function Admin() {
         {tab === 'pay' && <PayTab orders={live} patch={patch} settings={settings} />}
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
         {tab === 'regulars' && <RegularsTab week={week} weekOrders={orders} repeat={repeat} />}
+        {tab === 'messages' && <MessagesTab settings={settings} save={saveSettings} />}
         {tab === 'settings' && <SettingsTab settings={settings} save={saveSettings} week={week} />}
       </main>
 

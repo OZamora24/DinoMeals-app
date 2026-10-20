@@ -11,6 +11,7 @@ import '../styles/globals.css';
 import '../styles/splash-extra.css';
 import SplashScreen from '../components/SplashScreen';
 import FossilTransition from '../components/FossilTransition';
+import PromoPopup from '../components/PromoPopup';
 
 // Splash rules
 //  - First visit: "Tap to enter" gate, then the full splash with the
@@ -215,6 +216,7 @@ export default function App({ Component, pageProps }) {
         <Component {...pageProps} />
       </div>
       <FossilTransition phase={fx} />
+      {!isAdmin && phase === 'gone' && (router.pathname === '/' || router.pathname === '/order') && <PromoPopup />}
       {phase !== 'gone' && (
         <SplashScreen
           phase={phase}
