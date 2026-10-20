@@ -481,13 +481,24 @@ export function MessagesTab({ settings, save, reload }) {
       setOpen(new Set()); // saved: every message folds back into its drop-down
       // Messages that are ON, inside their dates and not pushed yet go out as phone notifications.
       const toSend = stamped.filter((p) => p.active && p.notify && !p.notified_at && inWindow(p));
-      if (toSend.length) await notifyPhones(toSend);
+      if (toSend.length) await notifyPhones(toSend, stamped);
     } finally { setBusy(false); }
   }
-  async function notifyPhones(items) {
-    if (!phones) { setNote('Saved. Nobody has turned on notifications yet, so customers will see the pop-up when they open the app or website.'); return; }
+  async function notifyPhones(items, all) {
+    const ids = new Set(items.map((p) => p.id));
+    if (!phones) {
+      // Nobody to notify yet. Remember that, so the message does not ask again on every later save.
+      if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, notified_at: Date.now(), notified_count: 0 } : p)) });
+      setNote('Saved. Nobody has turned on notifications yet, so customers will see the pop-up when they open the app or website.');
+      return;
+    }
     const names = items.map((p) => `"${p.title || 'New message'}"`).join(', ');
-    if (!window.confirm(`Send ${names} as a phone notification to ${phones} customer phone${phones === 1 ? '' : 's'} now?\n\nOK = send now\nCancel = keep the message but do not send`)) { setNote('Saved. Notification not sent.'); return; }
+    if (!window.confirm(`Send ${names} as a phone notification to ${phones} customer phone${phones === 1 ? '' : 's'} now?\n\nOK = send now\nCancel = keep the message but do not send`)) {
+      // Cancel: do not ask again for these messages (the "Send notification now" button stays available).
+      if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, notify: false } : p)) });
+      setNote('Saved. Notification not sent.');
+      return;
+    }
     let sent = 0;
     let failed = 0;
     for (const p of items) {
