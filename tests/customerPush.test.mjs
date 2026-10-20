@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promoPayload, deliverPromo, cleanSubscription, isAllowedEndpoint } from '../lib/pushPayload.js';
-import { cleanPopups, activePopups } from '../lib/popups.js';
+import { cleanPopups } from '../lib/popups.js';
 
 const popup = { id: 'm1', title: 'Pick up reminder', body: 'Pickup is Sunday 3–8 PM.\nPlease bring your order # .', title_es: 'Recordatorio', body_es: 'La recogida es el domingo.' };
 
@@ -56,7 +56,7 @@ test('customer subscriptions: only real push services, both keys required', () =
   assert.ok(cleanSubscription({ endpoint: 'https://fcm.googleapis.com/x', keys: { p256dh: 'a', auth: 'b' } }));
 });
 
-test('messages keep their notify settings; the public copy never includes them', () => {
+test('messages keep their sent-state settings', () => {
   const [p, q] = cleanPopups([
     { id: 'a', title: 'On', notify: true, notified_at: 1700000000000, notified_count: 12 },
     { id: 'b', title: 'Quiet', notify: false },
@@ -67,6 +67,4 @@ test('messages keep their notify settings; the public copy never includes them',
   assert.equal(q.notify, false);
   assert.equal(q.notified_at, 0);
   assert.equal(cleanPopups([{ title: 'default' }])[0].notify, true); // notifying is the default
-  const pub = activePopups([p, q], '2026-10-20');
-  assert.ok(pub.every((x) => !('notify' in x) && !('notified_at' in x) && !('notified_count' in x)));
 });

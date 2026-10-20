@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import { mondayOf, previousWeek, weekLabel, sheetName, weekStats, buildWeeklyReportWorkbook, reportEmail, runWeeklyReport } from '../lib/weeklyReport.js';
 import { sendMail, mailStatus } from '../lib/mailer.js';
-import { cleanPopups, activePopups } from '../lib/popups.js';
+import { cleanPopups } from '../lib/popups.js';
 
 const order = (no, cook, o = {}) => ({
   order_no: no, customer_name: `C${no}`, phone: '(909) 555-0100', status: 'new', paid: false, total: 100, subtotal: 100,
@@ -97,29 +97,22 @@ test('mailer: off without a key, posts to Resend with the attachment, reports AP
   assert.deepEqual(bad, { ok: false, error: 'domain not verified' });
 });
 
-test('pop-ups: cleaned, capped, links limited, only active in-date ones go public', () => {
+test('messages: cleaned, capped, limited to what a phone notification can show', () => {
   const list = cleanPopups([
-    { id: 'a1', title: '  10% off  ', body: 'Order by Friday', cta_label: 'Order now', cta_url: '/order', active: true, start: '2026-10-01', end: '2026-10-31', updated: 5 },
+    { id: 'a1', title: '  Pick up reminder  ', body: 'Pickup is Sunday', active: true, updated: 5 },
     { id: 'a1', title: 'dup id', body: '', active: true }, // duplicate id gets a new one
-    { title: '', body: '' }, // nothing to show: dropped
-    { title: 'Bad link', cta_label: 'Go', cta_url: 'javascript:alert(1)', active: false },
-    { title: 'Proto-relative', cta_url: '//evil.com' },
+    { title: '', body: '' }, // nothing to send: dropped
+    { title: 'Off draft', active: false },
     { title: 'x'.repeat(500), body: 'y'.repeat(5000) },
     'junk', null,
   ], 111);
-  assert.equal(list.length, 5);
-  assert.equal(list[0].title, '10% off');
+  assert.equal(list.length, 4);
+  assert.equal(list[0].title, 'Pick up reminder');
   assert.equal(list[0].updated, 5);
   assert.notEqual(list[1].id, 'a1');
-  assert.equal(list[2].cta_url, '');
-  assert.equal(list[3].cta_url, '');
-  assert.equal(list[4].title.length, 80);
-  assert.equal(list[4].body.length, 600);
+  assert.equal(list[2].active, false);
+  assert.equal(list[3].title.length, 60); // notification title limit
+  assert.equal(list[3].body.length, 180); // notification body limit
   assert.equal(cleanPopups(Array.from({ length: 30 }, (_, i) => ({ title: `t${i}` }))).length, 12);
   assert.deepEqual(cleanPopups('nope'), []);
-  const pub = activePopups(list, '2026-10-20');
-  assert.deepEqual(pub.map((p) => p.title), ['10% off', 'dup id', 'Proto-relative', list[4].title]); // the switched-off one is not public
-  assert.equal(activePopups(list, '2026-11-02').some((p) => p.title === '10% off'), false); // after the end date
-  assert.equal(activePopups(list, '2026-09-30').some((p) => p.title === '10% off'), false); // before the start date
-  assert.ok(!('active' in pub[0]) && !('start' in pub[0])); // admin-only fields stay private
 });

@@ -5,7 +5,6 @@ import {
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
-import { PromoModal } from './PromoPopup';
 
 const STATUS = ['new', 'quote', 'confirmed', 'cooking', 'ready', 'done', 'cancelled'];
 export const SOURCE_LABEL = { web: 'Website', dm: 'IG DM', text: 'Text', call: 'Call', repeat: 'Repeat' };
@@ -440,16 +439,44 @@ export function SettingsTab({ settings, save, week }) {
   );
 }
 
-// ---------- Messages: reminder pop-ups customers see (home + order pages) ----------
+// ---------- Messages: notifications sent to customers' phones ----------
 const blankPopup = () => ({
   id: `m${Date.now().toString(36)}`, title: '', body: '', title_es: '', body_es: '',
   cta_label: '', cta_label_es: '', cta_url: '', active: true, notify: true, notified_at: 0, start: '', end: '', updated: Date.now(),
 });
-const laToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-const inWindow = (p) => (!p.start || p.start <= laToday()) && (!p.end || p.end >= laToday());
-const sentLabel = (p) => (p.notified_at ? `Notification sent ${new Date(p.notified_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })} to ${p.notified_count || 0} phone${p.notified_count === 1 ? '' : 's'}` : '');
-const POPUP_TEXT_KEYS = ['title', 'body', 'title_es', 'body_es', 'cta_label', 'cta_label_es', 'cta_url'];
-const shortDate = (k) => (k ? new Date(`${k}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
+const POPUP_TEXT_KEYS = ['title', 'body', 'title_es', 'body_es'];
+const sentLabel = (p) => (p.notified_at ? `Sent ${new Date(p.notified_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })} to ${p.notified_count || 0} phone${p.notified_count === 1 ? '' : 's'}` : '');
+
+// How the notification will look on a phone's lock screen.
+function PushPreview({ popup, onClose }) {
+  const [es, setEs] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const title = (es && popup.title_es) || popup.title || 'DinoMeals';
+  const body = (es && popup.body_es) || popup.body || '';
+  return (
+    <div className="pv-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pv-card" role="dialog" aria-modal="true" aria-label="Notification preview">
+        <p className="small muted">This is how it looks on a phone ({es ? 'Spanish' : 'English'}).</p>
+        <div className="pv-notif">
+          <span className="pv-icon"><img src="/icon-192.png" alt="" /></span>
+          <div className="pv-text">
+            <div className="pv-app">DINOMEALS · now</div>
+            <b>{title.length > 60 ? `${title.slice(0, 59)}…` : title}</b>
+            <div>{body.length > 180 ? `${body.slice(0, 179)}…` : body}</div>
+          </div>
+        </div>
+        <div className="row-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => setEs((v) => !v)}>{es ? 'Show English' : 'Show Spanish'}</button>
+          <button className="btn btn-red btn-sm" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function MessagesTab({ settings, save, reload }) {
   const saved = settings.popups || [];
@@ -474,29 +501,29 @@ export function MessagesTab({ settings, save, reload }) {
     const stamped = list.map((p) => {
       const old = before.get(p.id);
       const changed = !old || POPUP_TEXT_KEYS.some((k) => (old[k] || '') !== (p[k] || ''));
-      return changed ? { ...p, updated: Date.now() } : p; // an edited message shows again to people who closed the old one
+      return changed ? { ...p, updated: Date.now() } : p;
     });
     try {
       await save({ popups: stamped });
       setOpen(new Set()); // saved: every message folds back into its drop-down
-      // Messages that are ON, inside their dates and not pushed yet go out as phone notifications.
-      const toSend = stamped.filter((p) => p.active && p.notify && !p.notified_at && inWindow(p));
+      // A message that is ON and has not gone out yet is sent to customers' phones now.
+      const toSend = stamped.filter((p) => p.active && !p.notified_at);
       if (toSend.length) await notifyPhones(toSend, stamped);
     } finally { setBusy(false); }
   }
   async function notifyPhones(items, all) {
     const ids = new Set(items.map((p) => p.id));
     if (!phones) {
-      // Nobody to notify yet. Remember that, so the message does not ask again on every later save.
+      // Nobody to send to yet. Remember that, so it does not ask again on every later save.
       if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, notified_at: Date.now(), notified_count: 0 } : p)) });
-      setNote('Saved. Nobody has turned on notifications yet, so customers will see the pop-up when they open the app or website.');
+      setNote('Saved. Nobody has turned on notifications yet, so nothing was sent. Customers turn them on with the 🔔 in the app.');
       return;
     }
     const names = items.map((p) => `"${p.title || 'New message'}"`).join(', ');
-    if (!window.confirm(`Send ${names} as a phone notification to ${phones} customer phone${phones === 1 ? '' : 's'} now?\n\nOK = send now\nCancel = keep the message but do not send`)) {
-      // Cancel: do not ask again for these messages (the "Send notification now" button stays available).
-      if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, notify: false } : p)) });
-      setNote('Saved. Notification not sent.');
+    if (!window.confirm(`Send ${names} as a notification to ${phones} customer phone${phones === 1 ? '' : 's'} now?\n\nOK = send now\nCancel = save it as OFF (not sent)`)) {
+      // Cancel: keep it as an OFF draft so it does not ask again; turn it ON when you are ready.
+      if (all) await save({ popups: all.map((p) => (ids.has(p.id) ? { ...p, active: false } : p)) });
+      setNote('Saved as OFF. Nothing was sent. Turn it ON and Save when you want it to go out.');
       return;
     }
     let sent = 0;
@@ -514,47 +541,42 @@ export function MessagesTab({ settings, save, reload }) {
   return (
     <div className="settings">
       <section className="set-card wide">
-        <h3>Customer pop-up messages</h3>
-        <p className="small">Write a reminder and customers who visit see it as a pop-up on the home and order pages. Each person sees a message once; edit it and it shows again. Switch a message OFF or set an end date when it is over.</p>
+        <h3>Customer notifications</h3>
+        <p className="small">Write the message customers get as a notification on their phone (the DinoMeals app on their Home Screen, or Chrome on Android). When a message is <b>ON</b> and you press Save, it is sent. Turn it OFF and ON again to send it another time.</p>
         <div className="row-actions">
           <button className="btn btn-ghost btn-sm" disabled={list.length >= 12} onClick={addNew}>+ New message</button>
           <button className="btn btn-red btn-sm" disabled={!dirty || busy} onClick={commit}>{busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
         </div>
-        <p className="small muted">{phones} customer phone{phones === 1 ? ' has' : 's have'} notifications on. A message that is ON also goes to those phones as a notification when you save it.</p>
+        <p className="small muted">{phones} customer phone{phones === 1 ? ' has' : 's have'} notifications on. Customers turn them on with the 🔔 in the app.</p>
         {note && <p className="small" role="status">{note}</p>}
       </section>
       {list.length === 0 && <section className="set-card wide"><p className="muted">No messages yet. Tap "+ New message".</p></section>}
       {list.map((p) => {
         const isOpen = open.has(p.id);
-        const when = p.start || p.end ? `${shortDate(p.start) || 'now'} – ${shortDate(p.end) || 'no end'}` : '';
         return (
           <section className={`set-card wide msg-card ${isOpen ? 'is-open' : ''}`} key={p.id}>
             <div className="msg-head">
               <button className="msg-toggle" onClick={() => toggleOpen(p.id)} aria-expanded={isOpen}>
                 <span className="msg-chev" aria-hidden="true">▸</span>
-                <span className="msg-title"><b>{p.title || 'New message'}</b>{when && <small className="muted"> · {when}</small>}</span>
+                <span className="msg-title"><b>{p.title || 'New message'}</b>{p.notified_at > 0 && <small className="muted"> · sent</small>}</span>
               </button>
-              <button className={`onoff ${p.active ? 'on' : ''}`} onClick={() => upd(p.id, p.active ? { active: false } : { active: true, notified_at: 0 })} aria-pressed={p.active} title={p.active ? 'Customers can see this message' : 'Hidden from customers'}>{p.active ? 'ON' : 'OFF'}</button>
+              <button className={`onoff ${p.active ? 'on' : ''}`} onClick={() => upd(p.id, p.active ? { active: false } : { active: true, notified_at: 0 })} aria-pressed={p.active} title={p.active ? 'ON: sent when you Save' : 'OFF: not sent'}>{p.active ? 'ON' : 'OFF'}</button>
             </div>
             <div className={`msg-acc ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen}>
               <div className="msg-acc-in">
-                <label>Title<input className="input" maxLength={80} value={p.title} onChange={(e) => upd(p.id, { title: e.target.value })} placeholder="Friendly reminder" /></label>
-                <label>Message<textarea className="input" rows={3} maxLength={600} value={p.body} onChange={(e) => upd(p.id, { body: e.target.value })} placeholder="Orders close Friday at 11:59 PM. Pay by Friday evening so we can start cooking." /></label>
-                <div className="grid2">
-                  <label>Show from (optional)<input className="input" type="date" value={p.start || ''} onChange={(e) => upd(p.id, { start: e.target.value })} /></label>
-                  <label>Show until (optional)<input className="input" type="date" value={p.end || ''} onChange={(e) => upd(p.id, { end: e.target.value })} /></label>
-                </div>
-                <label className="check"><input type="checkbox" checked={p.notify !== false} onChange={(e) => upd(p.id, { notify: e.target.checked })} /> Also send as a phone notification when this message is turned ON</label>
+                <label>Title<input className="input" maxLength={60} value={p.title} onChange={(e) => upd(p.id, { title: e.target.value })} placeholder="Pick up reminder" /></label>
+                <label>Message<textarea className="input" rows={3} maxLength={180} value={p.body} onChange={(e) => upd(p.id, { body: e.target.value })} placeholder="Pickup is Sunday 3–8 PM. See you then! 🦖" /></label>
+                <p className="small muted">{(p.body || '').length}/180 characters (phones cut longer messages off).</p>
                 {p.notified_at > 0 && <p className="small muted">{sentLabel(p)}</p>}
                 <details>
-                  <summary className="small">Spanish version (optional — shown to customers using ES)</summary>
-                  <label>Título<input className="input" maxLength={80} value={p.title_es} onChange={(e) => upd(p.id, { title_es: e.target.value })} /></label>
-                  <label>Mensaje<textarea className="input" rows={3} maxLength={600} value={p.body_es} onChange={(e) => upd(p.id, { body_es: e.target.value })} /></label>
+                  <summary className="small">Spanish version (optional — sent to customers using ES)</summary>
+                  <label>Título<input className="input" maxLength={60} value={p.title_es} onChange={(e) => upd(p.id, { title_es: e.target.value })} /></label>
+                  <label>Mensaje<textarea className="input" rows={3} maxLength={180} value={p.body_es} onChange={(e) => upd(p.id, { body_es: e.target.value })} /></label>
                 </details>
                 <div className="row-actions">
                   <button className="btn btn-ghost btn-sm" onClick={() => setPreview(p)}>Preview</button>
-                  {saved.some((x) => x.id === p.id) && p.active && inWindow(p) && !dirty && (
-                    <button className="btn btn-ghost btn-sm" onClick={() => { if (window.confirm(`Send "${p.title || 'this message'}" to ${phones} customer phone${phones === 1 ? '' : 's'} again?`)) notifyPhones([p]); }}>{p.notified_at ? 'Send notification again' : 'Send notification now'}</button>
+                  {saved.some((x) => x.id === p.id) && p.active && !dirty && (
+                    <button className="btn btn-ghost btn-sm" onClick={() => { if (window.confirm(`Send "${p.title || 'this message'}" to ${phones} customer phone${phones === 1 ? '' : 's'} again?`)) notifyPhones([p]); }}>{p.notified_at ? 'Send again' : 'Send now'}</button>
                   )}
                   <button className="btn btn-ghost btn-sm" onClick={() => remove(p.id)}>Delete</button>
                 </div>
@@ -563,7 +585,7 @@ export function MessagesTab({ settings, save, reload }) {
           </section>
         );
       })}
-      {preview && <PromoModal popup={preview} lang="en" preview onClose={() => setPreview(null)} />}
+      {preview && <PushPreview popup={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }
