@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import HomeScreenGuide, { isStandalone } from './HomeScreenGuide';
+import NotifyBell from './NotifyBell';
 import MyOrders from './MyOrders';
 
 const SEEN = 'dino_a2hs_seen';
@@ -35,6 +36,7 @@ export default function SiteNav({ lang, setLang, t, cta = true, spin = false }) 
       </Link>
       <div className="nav-right">
         {!admin && <MyOrders lang={lang} />}
+        <NotifyBell lang={lang} />
         {showApp && (
           <button className={`nav-app ${fresh ? 'fresh' : ''}`} onClick={openGuide} aria-label={lang === 'es' ? 'Agregar a la pantalla de inicio' : 'Add to Home Screen'} title={lang === 'es' ? 'Agregar a inicio' : 'Get the app'}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.6" /><path d="M12 7.5v7M9 11.8l3 3 3-3" /><path d="M10.5 18.5h3" /></svg>

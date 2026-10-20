@@ -12,6 +12,7 @@ self.addEventListener('push', (event) => {
     data = { title: 'DinoMeals', body: event.data ? event.data.text() : '' };
   }
   const title = data.title || 'DinoMeals';
+  const promo = data.kind === 'promo'; // a customer promo / reminder (not a new-order alert)
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(title, {
@@ -22,23 +23,30 @@ self.addEventListener('push', (event) => {
         renotify: true,
         requireInteraction: !!data.sticky,
         vibrate: [200, 100, 200],
-        data: { url: data.url || '/admin' },
+        data: { url: data.url || (promo ? '/' : '/admin'), kind: data.kind || 'order' },
       }),
-      // Tell any open admin tab to refresh its list and play the chime.
-      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-        list.forEach((c) => c.postMessage({ type: 'dino-order' }));
-      }),
+      // Tell any open admin tab to refresh its list and play the chime (new orders only).
+      promo
+        ? Promise.resolve()
+        : self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+            list.forEach((c) => c.postMessage({ type: 'dino-order' }));
+          }),
     ])
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/admin';
+  const d = event.notification.data || {};
+  const promo = d.kind === 'promo';
+  const url = d.url || (promo ? '/' : '/admin');
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {
-        if (c.url.includes('/admin') && 'focus' in c) return c.focus();
+        if (promo) {
+          // customers: bring the app/site forward (not the kitchen page)
+          if (!c.url.includes('/admin') && 'focus' in c) return c.focus();
+        } else if (c.url.includes('/admin') && 'focus' in c) return c.focus();
       }
       return self.clients.openWindow(url);
     })

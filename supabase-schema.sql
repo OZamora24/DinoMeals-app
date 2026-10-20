@@ -66,3 +66,13 @@ alter table sms_reminders enable row level security;
 alter table orders add column if not exists view_token text not null
   default substr(replace(gen_random_uuid()::text, '-', ''), 1, 12);
 create unique index if not exists orders_view_token_key on orders (view_token);
+
+-- Customers who turned on notifications in the app / website (promo + reminder pop-ups from /admin -> Messages).
+create table if not exists customer_push (
+  endpoint text primary key,
+  p256dh text not null,
+  auth text not null,
+  lang text not null default 'en',
+  created_at timestamptz not null default now()
+);
+alter table customer_push enable row level security;

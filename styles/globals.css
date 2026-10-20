@@ -1024,3 +1024,13 @@ label .input { margin-top: 6px; font-weight: 500; }
 .done-sec.flash .done-head { background: rgba(71, 194, 122, .18); }
 .done-sec.flash .done-count { background: #3fbf62; border-color: #3fbf62; color: #0b1a0f; }
 .done-sec .msg-acc.open .msg-acc-in { padding-top: 8px; }
+
+/* 🔔 customer notifications button (top bar) */
+.nav-bell { position: relative; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); display: grid; place-items: center; flex: none; padding: 0; }
+.nav-bell svg { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-bell.on { border-color: var(--red); background: rgba(226, 55, 45, .16); }
+.nav-bell.on svg { stroke: var(--cream); }
+.nav-bell.fresh::after { content: ''; position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--bg); animation: a2hs-ping 1.8s ease-out infinite; }
+.nav-bell-toast { position: fixed; z-index: 400; top: 72px; left: 12px; right: 12px; max-width: 420px; margin: 0 auto; padding: 12px 14px; border-radius: 14px; background: var(--cream); color: #1a1210; font-weight: 700; font-size: .9rem; text-align: center; box-shadow: 0 14px 40px rgba(0,0,0,.5); animation: up .3s cubic-bezier(.2,.9,.3,1) both; }
+@media (max-width: 430px) { .nav-bell { width: 34px; height: 34px; } .nav-bell svg { width: 18px; height: 18px; } }
+@media (prefers-reduced-motion: reduce) { .nav-bell.fresh::after, .nav-bell-toast { animation: none; } }

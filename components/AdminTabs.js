@@ -443,13 +443,18 @@ export function SettingsTab({ settings, save, week }) {
 // ---------- Messages: reminder pop-ups customers see (home + order pages) ----------
 const blankPopup = () => ({
   id: `m${Date.now().toString(36)}`, title: '', body: '', title_es: '', body_es: '',
-  cta_label: '', cta_label_es: '', cta_url: '', active: true, start: '', end: '', updated: Date.now(),
+  cta_label: '', cta_label_es: '', cta_url: '', active: true, notify: true, notified_at: 0, start: '', end: '', updated: Date.now(),
 });
+const laToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+const inWindow = (p) => (!p.start || p.start <= laToday()) && (!p.end || p.end >= laToday());
+const sentLabel = (p) => (p.notified_at ? `Notification sent ${new Date(p.notified_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })} to ${p.notified_count || 0} phone${p.notified_count === 1 ? '' : 's'}` : '');
 const POPUP_TEXT_KEYS = ['title', 'body', 'title_es', 'body_es', 'cta_label', 'cta_label_es', 'cta_url'];
 const shortDate = (k) => (k ? new Date(`${k}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
 
-export function MessagesTab({ settings, save }) {
+export function MessagesTab({ settings, save, reload }) {
   const saved = settings.popups || [];
+  const phones = settings._push_customers || 0; // customers who turned on notifications
+  const [note, setNote] = useState('');
   const [list, setList] = useState(saved);
   const [open, setOpen] = useState(() => new Set()); // which message drop-downs are open
   const [preview, setPreview] = useState(null);
@@ -474,7 +479,25 @@ export function MessagesTab({ settings, save }) {
     try {
       await save({ popups: stamped });
       setOpen(new Set()); // saved: every message folds back into its drop-down
+      // Messages that are ON, inside their dates and not pushed yet go out as phone notifications.
+      const toSend = stamped.filter((p) => p.active && p.notify && !p.notified_at && inWindow(p));
+      if (toSend.length) await notifyPhones(toSend);
     } finally { setBusy(false); }
+  }
+  async function notifyPhones(items) {
+    if (!phones) { setNote('Saved. Nobody has turned on notifications yet, so customers will see the pop-up when they open the app or website.'); return; }
+    const names = items.map((p) => `"${p.title || 'New message'}"`).join(', ');
+    if (!window.confirm(`Send ${names} as a phone notification to ${phones} customer phone${phones === 1 ? '' : 's'} now?\n\nOK = send now\nCancel = keep the message but do not send`)) { setNote('Saved. Notification not sent.'); return; }
+    let sent = 0;
+    let failed = 0;
+    for (const p of items) {
+      try {
+        const j = await api('/api/popup-notify', { method: 'POST', body: { id: p.id } });
+        if (j.ok) sent += j.sent; else failed += 1;
+      } catch { failed += 1; }
+    }
+    setNote(failed ? `Sent to ${sent} phone${sent === 1 ? '' : 's'}; ${failed} message${failed === 1 ? '' : 's'} could not be sent.` : `Notification sent to ${sent} phone${sent === 1 ? '' : 's'}.`);
+    if (reload) await reload();
   }
   const remove = (id) => { if (window.confirm('Delete this message for good?')) setList((l) => l.filter((p) => p.id !== id)); };
   return (
@@ -486,6 +509,8 @@ export function MessagesTab({ settings, save }) {
           <button className="btn btn-ghost btn-sm" disabled={list.length >= 12} onClick={addNew}>+ New message</button>
           <button className="btn btn-red btn-sm" disabled={!dirty || busy} onClick={commit}>{busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</button>
         </div>
+        <p className="small muted">{phones} customer phone{phones === 1 ? ' has' : 's have'} notifications on. A message that is ON also goes to those phones as a notification when you save it.</p>
+        {note && <p className="small" role="status">{note}</p>}
       </section>
       {list.length === 0 && <section className="set-card wide"><p className="muted">No messages yet. Tap "+ New message".</p></section>}
       {list.map((p) => {
@@ -498,7 +523,7 @@ export function MessagesTab({ settings, save }) {
                 <span className="msg-chev" aria-hidden="true">▸</span>
                 <span className="msg-title"><b>{p.title || 'New message'}</b>{when && <small className="muted"> · {when}</small>}</span>
               </button>
-              <button className={`onoff ${p.active ? 'on' : ''}`} onClick={() => upd(p.id, { active: !p.active })} aria-pressed={p.active} title={p.active ? 'Customers can see this message' : 'Hidden from customers'}>{p.active ? 'ON' : 'OFF'}</button>
+              <button className={`onoff ${p.active ? 'on' : ''}`} onClick={() => upd(p.id, p.active ? { active: false } : { active: true, notified_at: 0 })} aria-pressed={p.active} title={p.active ? 'Customers can see this message' : 'Hidden from customers'}>{p.active ? 'ON' : 'OFF'}</button>
             </div>
             <div className={`msg-acc ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen}>
               <div className="msg-acc-in">
@@ -508,6 +533,8 @@ export function MessagesTab({ settings, save }) {
                   <label>Show from (optional)<input className="input" type="date" value={p.start || ''} onChange={(e) => upd(p.id, { start: e.target.value })} /></label>
                   <label>Show until (optional)<input className="input" type="date" value={p.end || ''} onChange={(e) => upd(p.id, { end: e.target.value })} /></label>
                 </div>
+                <label className="check"><input type="checkbox" checked={p.notify !== false} onChange={(e) => upd(p.id, { notify: e.target.checked })} /> Also send as a phone notification when this message is turned ON</label>
+                {p.notified_at > 0 && <p className="small muted">{sentLabel(p)}</p>}
                 <details>
                   <summary className="small">Spanish version (optional — shown to customers using ES)</summary>
                   <label>Título<input className="input" maxLength={80} value={p.title_es} onChange={(e) => upd(p.id, { title_es: e.target.value })} /></label>
@@ -515,6 +542,9 @@ export function MessagesTab({ settings, save }) {
                 </details>
                 <div className="row-actions">
                   <button className="btn btn-ghost btn-sm" onClick={() => setPreview(p)}>Preview</button>
+                  {saved.some((x) => x.id === p.id) && p.active && inWindow(p) && !dirty && (
+                    <button className="btn btn-ghost btn-sm" onClick={() => { if (window.confirm(`Send "${p.title || 'this message'}" to ${phones} customer phone${phones === 1 ? '' : 's'} again?`)) notifyPhones([p]); }}>{p.notified_at ? 'Send notification again' : 'Send notification now'}</button>
+                  )}
                   <button className="btn btn-ghost btn-sm" onClick={() => remove(p.id)}>Delete</button>
                 </div>
               </div>

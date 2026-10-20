@@ -218,7 +218,7 @@ export default function Admin() {
         {tab === 'pay' && <PayTab orders={live} patch={patch} settings={settings} />}
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
         {tab === 'regulars' && <RegularsTab week={week} weekOrders={orders} repeat={repeat} />}
-        {tab === 'messages' && <MessagesTab settings={settings} save={saveSettings} />}
+        {tab === 'messages' && <MessagesTab settings={settings} save={saveSettings} reload={loadSettings} />}
         {tab === 'settings' && <SettingsTab settings={settings} save={saveSettings} week={week} />}
       </main>
 
