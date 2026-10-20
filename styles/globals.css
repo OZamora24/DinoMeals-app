@@ -1077,3 +1077,10 @@ label .input { margin-top: 6px; font-weight: 500; }
 .ord-tabs button.warn small { color: #f2a13a; }
 .ord-tabs button.on { background: rgba(226,55,45,.16); border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); color: #fff; }
 .ord-tabs button.on small { color: #fff; }
+
+/* Flavor must be picked (grilled chicken, ground beef, burgers by the lb) */
+.flavor-row.need { border: 1.5px dashed #f2a13a; border-radius: 14px; padding: 8px 10px; background: rgba(242,161,58,.07); }
+.need-label { color: #f2a13a; font-weight: 800; }
+.need-label.small { font-size: .78rem; margin-right: 4px; }
+.need-tag { display: inline-block; margin-left: 8px; font-size: .7rem; font-weight: 800; color: #1a1000; background: #f2a13a; border-radius: 99px; padding: 2px 8px; vertical-align: 2px; }
+.cb-warn { color: #f2a13a; font-size: .72rem; font-weight: 700; margin-top: 2px; max-width: 220px; line-height: 1.25; }

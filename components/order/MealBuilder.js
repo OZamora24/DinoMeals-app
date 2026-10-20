@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 
 export default function MealBuilder({
   lang, t, soldOut, builderRef, editIdx, setEditIdx,
-  bProtein, setBProtein, bFlavor, setBFlavor, bCarb, setBCarb, bVeg, setBVeg, bOz, setBOz,
+  bProtein, setBProtein, bFlavor, setBFlavor, flavorMissing, bCarb, setBCarb, bVeg, setBVeg, bOz, setBOz,
   bP, builderUnit, builderMacros, builderAllergens, pickProtein, addSet,
   plan, setPlanId, planQty, setPlanQty, addN, mealCount, anyQty, setAnyQty, goCustom,
 }) {
@@ -74,10 +74,10 @@ export default function MealBuilder({
           })}
         </div>
         {bP?.flavors && (
-          <div className="flavor-row">
-            <span className="muted small">{t('flavor')}:</span>
-            {bP.flavors.filter((f) => f.id !== 'plain').map((f) => (
-              <button key={f.id} className={`chip ${bFlavor === f.id ? 'on' : ''}`} onClick={() => setBFlavor(bFlavor === f.id ? 'plain' : f.id)}>
+          <div className={`flavor-row ${flavorMissing ? 'need' : ''}`}>
+            <span className="muted small">{flavorMissing ? <b className="need-label">{t('pick_flavor')}</b> : `${t('flavor')}:`}</span>
+            {bP.flavors.map((f) => (
+              <button key={f.id} className={`chip ${bFlavor === f.id ? 'on' : ''}`} onClick={() => setBFlavor(f.id)}>
                 {lang === 'es' ? f.es : f.name}
                 {f.extra ? <em>+${f.extra}</em> : null}
               </button>
@@ -149,7 +149,7 @@ export default function MealBuilder({
             </>
           ) : (
             <div className="muted">
-              {[!bProtein && t('step_protein'), !bCarb && t('step_carb'), !bVeg && t('step_veg')].filter(Boolean).join(' · ')}
+              {[!bProtein && t('step_protein'), flavorMissing && t('pick_flavor'), !bCarb && t('step_carb'), !bVeg && t('step_veg')].filter(Boolean).join(' · ')}
             </div>
           )}
         </div>

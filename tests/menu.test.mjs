@@ -369,3 +369,24 @@ test('grilled chicken is $12 and has the free Pollo Asado flavor, per meal and p
   const { mealMacros } = await import('../lib/orderForm.js');
   assert.equal(mealMacros({ protein: 'chicken', flavor: 'polloasado', carb: 'whiterice', veg: 'broccoli' }, macros).cal, 410);
 });
+
+test('flavored proteins need a flavor picked (Juan, Oct 20)', async () => {
+  const M = await import('../lib/menu.js');
+  const meal = (o) => ({ carb: 'whiterice', veg: 'broccoli', count: 8, ...o });
+  assert.equal(M.needsFlavor(meal({ protein: 'chicken' })), true);
+  assert.equal(M.needsFlavor(meal({ protein: 'chicken', flavor: 'plain' })), false);
+  assert.equal(M.needsFlavor(meal({ protein: 'groundbeef', flavor: 'bogus' })), true);
+  assert.equal(M.needsFlavor(meal({ protein: 'tritip' })), false);
+  assert.equal(M.needsFlavor({ type: 'lb', kind: 'protein', item: 'burgers', lbs: 2 }), true);
+  assert.equal(M.needsFlavor({ type: 'lb', kind: 'protein', item: 'burgers', flavor: 'smoked', lbs: 2 }), false);
+  assert.equal(M.needsFlavor({ type: 'lb', kind: 'carb', item: 'whiterice', lbs: 2 }), false);
+  // server: web orders are refused without a flavor, admin orders are not
+  assert.equal(M.priceCart({ meals: [meal({ protein: 'chicken' })] }, [], { requireFlavor: true }).error, 'need_flavor');
+  assert.equal(M.priceCart({ meals: [meal({ protein: 'chicken', flavor: 'teriyaki' })] }, [], { requireFlavor: true }).ok, true);
+  assert.equal(M.priceCart({ meals: [meal({ protein: 'chicken' })] }, []).ok, true);
+  assert.equal(M.priceCart({ lbs: [{ kind: 'protein', item: 'groundbeef', lbs: 4 }] }, [], { requireFlavor: true }).error, 'need_flavor');
+  // the kitchen sees every flavor, Classic/Seasoned included
+  assert.equal(M.proteinLabel('chicken', 'plain'), 'Grilled Chicken Breast · Classic');
+  assert.equal(M.proteinLabel('groundbeef', 'plain', 'es'), 'Carne Molida · Sazonada');
+  assert.equal(M.proteinLabel('chicken'), 'Grilled Chicken Breast');
+});

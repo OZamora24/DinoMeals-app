@@ -16,8 +16,9 @@ export default function LbMenu({ lang, t, soldOut, lbs, lbCount, lbFlavor, setLb
           <h3 className="menu-cat"><I size={18} /> {title}</h3>
           {list.map((x) => {
             const flavors = kind === 'protein' ? x.lbFlavors || x.flavors : null;
-            const fl = flavors ? lbFlavor[x.id] || flavors[0].id : undefined;
-            const unit = lbUnitPrice({ kind, item: x.id, flavor: fl });
+            const fl = flavors ? lbFlavor[x.id] || null : undefined; // no default flavor
+            const needFl = !!flavors && !fl;
+            const unit = lbUnitPrice({ kind, item: x.id, flavor: fl || (flavors ? flavors[0].id : undefined) });
             const q = lbQty(kind, x.id, fl);
             const out = soldOut.has(x.id);
             // other flavors of the same item already in the cart
@@ -28,9 +29,10 @@ export default function LbMenu({ lang, t, soldOut, lbs, lbCount, lbFlavor, setLb
                   {kind === 'protein' && x.lbName ? (lang === 'es' ? x.lbEs : x.lbName) : nameOf(x, lang)}
                   <span className="lb-price">{out ? t('sold_out') : `${money(unit)} / lb`}</span>
                   {flavors && (
-                    <div className="flavor-row tight">
-                      {flavors.filter((f) => f.id !== 'plain').map((f) => (
-                        <button key={f.id} className={`chip sm ${fl === f.id ? 'on' : ''}`} onClick={() => setLbFlavor((s) => ({ ...s, [x.id]: fl === f.id ? 'plain' : f.id }))}>
+                    <div className={`flavor-row tight ${needFl ? 'need' : ''}`}>
+                      {needFl && <b className="need-label small">{t('pick_flavor')}</b>}
+                      {flavors.map((f) => (
+                        <button key={f.id} className={`chip sm ${fl === f.id ? 'on' : ''}`} onClick={() => setLbFlavor((s) => ({ ...s, [x.id]: f.id }))}>
                           {lang === 'es' ? f.es : f.name}{f.extra ? <em>+${f.extra}</em> : null}
                         </button>
                       ))}
@@ -43,7 +45,7 @@ export default function LbMenu({ lang, t, soldOut, lbs, lbCount, lbFlavor, setLb
                   )}
                 </div>
                 {!out && (
-                  <Stepper value={q} unit="lb" onDec={() => setLb(kind, x.id, fl, Math.max(0, q - 1))} onInc={() => setLb(kind, x.id, fl, q + 1)} />
+                  <Stepper value={q} unit="lb" onDec={() => setLb(kind, x.id, fl, Math.max(0, q - 1))} onInc={() => setLb(kind, x.id, fl, q + 1)} incDisabled={needFl} />
                 )}
               </div>
             );

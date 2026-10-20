@@ -1,4 +1,4 @@
-import { CARBS, VEGGIES, ALLERGEN_LABELS, MIN_MEALS, mealLineCount, byId, nameOf, proteinLabel, mealUnitPrice, ozTag, allergensFor, money } from '../../lib/menu';
+import { CARBS, VEGGIES, ALLERGEN_LABELS, MIN_MEALS, mealLineCount, byId, nameOf, proteinLabel, mealUnitPrice, ozTag, allergensFor, money, needsFlavor } from '../../lib/menu';
 import { Stepper, Meter } from './Controls';
 import { mealMacros } from '../../lib/orderForm';
 
@@ -38,7 +38,7 @@ export default function MealBox({ lang, t, settings, meals, mealCount, plan, rem
             return (
               <li key={i} className="box-item">
                 <div className="bi-main">
-                  <div className="bi-title">{proteinLabel(m.protein, m.flavor, lang)}</div>
+                  <div className="bi-title">{proteinLabel(m.protein, m.flavor, lang)}{needsFlavor(m) && <span className="need-tag">{t('pick_flavor')}</span>}</div>
                   <div className="bi-sub">{nameOf(byId(CARBS, m.carb), lang) || t('no_carb')} · {nameOf(byId(VEGGIES, m.veg), lang) || t('no_veg')}</div>
                   {ozTag(m, lang) && <div className="bi-sub">{ozTag(m, lang)}</div>}
                   <div className="bi-meta">

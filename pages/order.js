@@ -4,8 +4,7 @@ import Link from 'next/link';
 import SiteNav from '../components/SiteNav';
 import { useLang } from '../lib/i18n';
 import {
-  PROTEINS, NONE, MIN_MEALS, proteinLabel, MIN_LBS, MEAL_PLANS, planById, planForCount, mealLineCount, byId, mealUnitPrice, cleanOz, mealOz, PORTIONS, priceCart, allergensFor, prettyDate, money,
-} from '../lib/menu';
+  PROTEINS, NONE, MIN_MEALS, proteinLabel, MIN_LBS, MEAL_PLANS, planById, planForCount, mealLineCount, byId, mealUnitPrice, cleanOz, mealOz, PORTIONS, priceCart, allergensFor, prettyDate, money, cartNeedsFlavor } from '../lib/menu';
 import { getSettings } from '../lib/db';
 import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { isValidSession } from '../lib/adminSession';
@@ -45,7 +44,7 @@ export default function OrderPage({ settings, adminMode }) {
 
   // builder
   const [bProtein, setBProtein] = useState(null);
-  const [bFlavor, setBFlavor] = useState('plain');
+  const [bFlavor, setBFlavor] = useState(null); // must be picked for proteins with flavors
   const [bCarb, setBCarb] = useState(null);
   const [bVeg, setBVeg] = useState(null);
   const [bOz, setBOz] = useState({}); // non-standard oz picks: { protein?, carb?, veg? }
@@ -119,11 +118,13 @@ export default function OrderPage({ settings, adminMode }) {
   const total = hasItems ? subtotal + fee + cardFee : null;
   const mealsOk = mealCount === 0 || (planTarget ? mealCount === planTarget : mealCount >= MIN_MEALS);
   const lbsOk = lbCount === 0 || lbCount >= MIN_LBS;
-  const canCheckout = (hasItems && mealsOk && lbsOk) || (!hasItems && custom.trim().length > 3);
+  const flavorNeeded = cartNeedsFlavor({ meals, lbs });
+  const canCheckout = ((hasItems && mealsOk && lbsOk) || (!hasItems && custom.trim().length > 3)) && !flavorNeeded;
 
   // ---- builder helpers ----
   const bP = byId(PROTEINS, bProtein);
-  const builderUnit = bProtein && bCarb && bVeg ? mealUnitPrice({ protein: bProtein, flavor: bFlavor, carb: bCarb, veg: bVeg, oz: bOz }) : null;
+  const flavorMissing = !!(bProtein && byId(PROTEINS, bProtein)?.flavors && !bFlavor);
+  const builderUnit = bProtein && bCarb && bVeg && !flavorMissing ? mealUnitPrice({ protein: bProtein, flavor: bFlavor, carb: bCarb, veg: bVeg, oz: bOz }) : null;
   // Flavor rows (e.g. groundbeef:taco) can have their own macros; else the base protein's.
   const proteinMacros = bProtein ? macros[`${bProtein}:${bFlavor}`] || macros[bProtein] : null;
   // Macros are saved per standard portion; bigger portions scale them.
@@ -147,7 +148,7 @@ export default function OrderPage({ settings, adminMode }) {
   function pickProtein(id) {
     setBProtein(id);
     const p = byId(PROTEINS, id);
-    setBFlavor(p.flavors ? p.flavors[0].id : 'plain');
+    setBFlavor(null); // no default: the customer has to tap a flavor
   }
 
   function addSet() {
@@ -192,7 +193,7 @@ export default function OrderPage({ settings, adminMode }) {
     setTab('meals');
     setEditIdx(i);
     setBProtein(m.protein);
-    setBFlavor(m.flavor || 'plain');
+    setBFlavor(m.flavor || null);
     setBCarb(m.carb);
     setBVeg(m.veg);
     setBOz(m.oz || {});
@@ -322,7 +323,7 @@ export default function OrderPage({ settings, adminMode }) {
     setAnyQty(4);
     setLbFlavor({});
     setBProtein(null);
-    setBFlavor('plain');
+    setBFlavor(null);
     setBCarb(null);
     setBVeg(null);
     setBOz({});
@@ -402,6 +403,7 @@ export default function OrderPage({ settings, adminMode }) {
               bProtein={bProtein}
               setBProtein={setBProtein}
               bFlavor={bFlavor}
+              flavorMissing={flavorMissing}
               setBFlavor={setBFlavor}
               bCarb={bCarb}
               setBCarb={setBCarb}
@@ -473,6 +475,7 @@ export default function OrderPage({ settings, adminMode }) {
             {lbCount > 0 && `${lbCount} lb`}
             {!hasItems && (custom.trim() ? t('custom_tab') : t('your_box'))}
           </div>
+          {flavorNeeded && <div className="cb-warn">{t('pick_flavor_box')}</div>}
           <div className="cb-total">{hasItems ? money(subtotal) : custom.trim() ? t('quote') : '$0'}</div>
         </div>
         <button className="btn btn-red btn-lg" disabled={!canCheckout || closed} onClick={() => { setErr(''); setSheet(true); }}>
