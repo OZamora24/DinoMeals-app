@@ -6,6 +6,8 @@ import { playChime, soundEnabled, localNotify } from '../lib/alerts';
 import AlertsButton from '../components/AlertsButton';
 import IdleLogout from '../components/IdleLogout';
 import OrderEditor from '../components/OrderEditor';
+import LabelsButton from '../components/LabelsButton';
+import { labelCount } from '../lib/labelSpots';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
@@ -230,6 +232,7 @@ export default function Admin() {
 
 /* =========================== ORDERS =========================== */
 function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
+  const weekLabels = orders.filter((o) => o.status !== 'cancelled').reduce((n, o) => n + labelCount(o), 0);
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
   const [doneOpen, setDoneOpen] = useState(false); // the Completed drop-down
@@ -294,6 +297,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
         ))}
         <input className="input search" name="order-search" autoComplete="off" data-lpignore="true" data-1p-ignore placeholder="Search name / phone / #" value={q} onChange={(e) => setQ(e.target.value)} />
         <a className="btn btn-ghost btn-sm" href={`/api/export?week=${week}`}>Export Excel</a>
+        <LabelsButton href={`/api/labels?week=${week}`} count={weekLabels} label="🏷️ All labels" title="Every order's labels for this cook day, back to back" />
       </div>
       {/* Phone: search + export on top, tabs underneath */}
       <div className="ord-tools phone-only">
@@ -306,6 +310,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
           <a className="icon-btn" href={`/api/export?week=${week}`} title="Export Excel" aria-label="Export Excel">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 19h16" /></svg>
           </a>
+          <LabelsButton href={`/api/labels?week=${week}`} count={weekLabels} label="🏷️" className="icon-btn" title="All labels for this cook day" />
         </div>
         <div className="ord-tabs" role="tablist" aria-label="Filter orders">
           {PHONE_TABS.map(([f, label]) => (
@@ -398,6 +403,7 @@ function OrderCard({ o, patch, edit, remove, repeat, week }) {
         </div>
         <div className="oc-actions">
           <button className="btn btn-ghost btn-sm" title="Change the customer, items, delivery or payment" onClick={() => setEditing(true)}>Edit</button>
+          <LabelsButton href={`/api/labels?id=${encodeURIComponent(o.id)}`} count={labelCount(o)} />
           <button className="btn btn-ghost btn-sm" title="Copy this order into next week" onClick={() => repeat([o.id], addDays(week, 7))}><Repeat size={14} /> Next week</button>
           <span className="oc-pair">
             {o.status !== 'cancelled' && (

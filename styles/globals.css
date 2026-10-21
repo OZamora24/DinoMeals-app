@@ -1084,3 +1084,20 @@ label .input { margin-top: 6px; font-weight: 500; }
 .need-label.small { font-size: .78rem; margin-right: 4px; }
 .need-tag { display: inline-block; margin-left: 8px; font-size: .7rem; font-weight: 800; color: #1a1000; background: #f2a13a; border-radius: 99px; padding: 2px 8px; vertical-align: 2px; }
 .cb-warn { color: #f2a13a; font-size: .72rem; font-weight: 700; margin-top: 2px; max-width: 220px; line-height: 1.25; }
+
+/* Print labels sheet picker (admin) */
+.ls-sheet { max-width: 460px; }
+.ls-body { padding: 16px 18px calc(18px + var(--safe-b, 0px)); }
+.ls-q { margin: 0 0 12px; color: var(--muted); text-align: center; }
+.ls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; background: #f4f1ec; border-radius: 12px; padding: 14px 22px; max-width: 300px; margin: 0 auto; }
+.ls-spot { aspect-ratio: 3 / 2; border-radius: 8px; border: 1.5px dashed #b9b2a8; background: #fff; color: #6d655b; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font: inherit; padding: 0; }
+.ls-spot b { font-size: 1.05rem; }
+.ls-spot small { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; min-height: 1em; }
+.ls-spot.used { background: repeating-linear-gradient(45deg, #ddd6cc 0 6px, #e9e3da 6px 12px); border-style: solid; border-color: #cfc7bc; color: #8b8379; }
+.ls-spot.print { background: rgba(226, 55, 45, .14); border: 2px solid var(--red, #e2372d); color: #b3221a; }
+.ls-sum { margin: 14px 2px 0; text-align: center; line-height: 1.5; }
+.ls-left { color: #f2a13a; font-size: .92rem; margin-top: 4px; }
+.ls-left.ok { color: #4cc38a; }
+.ls-actions { display: flex; gap: 10px; margin-top: 16px; }
+.ls-actions .btn { flex: 1; justify-content: center; }
+.icon-btn { font-size: 1.1rem; }
