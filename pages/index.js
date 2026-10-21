@@ -1,3 +1,4 @@
+import Seo, { businessJsonLd } from '../components/Seo';
 import Link from 'next/link';
 import { useState } from 'react';
 import SiteNav from '../components/SiteNav';
@@ -27,6 +28,15 @@ export default function Home({ settings }) {
 
   return (
     <div className="page home">
+      <Seo
+        title={lang === 'es' ? 'DinoMeals · Meal prep ahumado y a la parrilla en Riverside, CA' : 'DinoMeals · Smoked & Grilled Meal Prep in Riverside, CA'}
+        description={lang === 'es'
+          ? 'Meal prep con mordida: tri-tip ahumado, pollo a la parrilla, camarones al ajo y más, porcionado para tu semana. Arma tu caja, paga por adelantado y recoge el domingo o pide entrega en Riverside, CA.'
+          : 'Meal prep with bite: smoked tri-tip, grilled chicken, garlic butter shrimp and more, portioned for your week. Build your box, pay ahead, Sunday pickup or delivery in Riverside, CA.'}
+        path="/"
+        lang={lang}
+        jsonLd={businessJsonLd(settings)}
+      />
       <SiteNav lang={lang} setLang={setLang} t={t} />
 
       {settings.announcement ? <div className="announce">{settings.announcement}</div> : null}

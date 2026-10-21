@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { prettyDate, addDays, money } from '../lib/menu';
@@ -150,11 +151,12 @@ export default function Admin() {
     say('Saved');
   }
 
-  if (authed === null) return <div className="admin-wrap"><p className="muted pad">Loading…</p></div>;
+  if (authed === null) return <div className="admin-wrap"><Head><meta name="robots" content="noindex, nofollow" /></Head><p className="muted pad">Loading…</p></div>;
 
   if (!authed) {
     return (
       <div className="admin-login">
+        <Head><meta name="robots" content="noindex, nofollow" /></Head>
         <form onSubmit={login} className="login-card">
           <span className="nav-badge xl spin"><img src="/logo-mark.png" alt="" /></span>
           <h1 className="display">Kitchen</h1>
@@ -171,6 +173,7 @@ export default function Admin() {
 
   return (
     <div className="admin-wrap">
+      <Head><meta name="robots" content="noindex, nofollow" /></Head>
       <IdleLogout active={!!authed} onLogout={() => { setPw(''); setAuthed(false); setLoginErr('You were logged out after 30 minutes of inactivity. Log in again.'); }} />
       <header className="admin-top">
         <Link href="/" className="nav-brand">

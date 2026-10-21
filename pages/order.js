@@ -1,3 +1,4 @@
+import Seo from '../components/Seo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -342,6 +343,15 @@ export default function OrderPage({ settings, adminMode }) {
   // =================== BUILDER ===================
   return (
     <div className="page order-page">
+      <Seo
+        title={lang === 'es' ? 'Ordena tu meal prep · DinoMeals Riverside' : 'Order Meal Prep Online · DinoMeals Riverside'}
+        description={lang === 'es'
+          ? 'Arma tu caja de meal prep: elige proteína, carbohidrato y verdura, o compra por libra. Planes de 8 a 16 comidas, recoge el domingo o pide entrega en Riverside, CA.'
+          : 'Build your meal prep box: pick a protein, carb and veggie, or shop by the pound. Plans of 8 to 16 meals, Sunday pickup or delivery in Riverside, CA.'}
+        path="/order"
+        lang={lang}
+        noindex={adminMode}
+      />
       <SiteNav lang={lang} setLang={setLang} t={t} cta={false} spin />
 
       {adminMode && (
