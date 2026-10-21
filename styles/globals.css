@@ -875,10 +875,9 @@ label .input { margin-top: 6px; font-weight: 500; }
 /* Cancel + Delete always stay side by side, even when the action buttons wrap on a phone */
 .oc-pair { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
 /* Edit / Next week / Cancel / Delete fit on ONE row at every size (phones and the 3-column desktop grid); Cancel and Delete stay side by side. Only screens under 350px wrap, and then the pair wraps together */
-.oc-actions { gap: 5px; flex-wrap: nowrap; }
+.oc-actions { gap: 5px; flex-wrap: wrap; } /* wraps now: the Labels button made it 5 buttons, too wide for one phone row */
 .oc-actions .btn-sm { padding: 7px 9px; font-size: .78rem; gap: 4px; white-space: nowrap; }
 .oc-pair { gap: 5px; }
-@media (max-width: 350px) { .oc-actions { flex-wrap: wrap; } }
 
 /* ---------- Chef Rex pop-up (order confirmation) ---------- */
 .rex-pop{position:fixed;right:0;bottom:0;z-index:60;display:flex;align-items:flex-end;pointer-events:none;--w:132px;padding-bottom:env(safe-area-inset-bottom)}
