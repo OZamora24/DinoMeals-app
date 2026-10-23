@@ -76,3 +76,7 @@ create table if not exists customer_push (
   created_at timestamptz not null default now()
 );
 alter table customer_push enable row level security;
+
+-- Custom-quote orders: meals entered in the admin label editor (any oz/gram amounts),
+-- used only to print labels. [{ protein, flavor, carb, veg, amt: {protein:[7,'oz'],...}, count }]
+alter table orders add column if not exists label_lines jsonb not null default '[]'::jsonb;

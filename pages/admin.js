@@ -8,7 +8,7 @@ import AlertsButton from '../components/AlertsButton';
 import IdleLogout from '../components/IdleLogout';
 import OrderEditor from '../components/OrderEditor';
 import LabelsButton from '../components/LabelsButton';
-import { labelCount } from '../lib/labelSpots';
+import { labelCount, isCustomOrder } from '../lib/labelSpots';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
@@ -219,7 +219,7 @@ export default function Admin() {
       </nav>
 
       <main className="admin-main">
-        {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />}
+        {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={settings.macros} />}
         {tab === 'cook' && <CookTab orders={live} week={week} />}
         {tab === 'pay' && <PayTab orders={live} patch={patch} settings={settings} />}
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
@@ -234,7 +234,7 @@ export default function Admin() {
 }
 
 /* =========================== ORDERS =========================== */
-function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
+function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros }) {
   const weekLabels = orders.filter((o) => o.status !== 'cancelled').reduce((n, o) => n + labelCount(o), 0);
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
@@ -328,7 +328,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
       {!loading && shown.length > 0 && active.length === 0 && <p className="muted empty">All caught up: every order here is completed.</p>}
       <div className="order-cards">
         {active.map((o) => (
-          <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />
+          <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
         ))}
       </div>
       {completed.length > 0 && (
@@ -342,7 +342,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
             <div className="msg-acc-in">
               <div className="order-cards">
                 {completed.map((o) => (
-                  <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} />
+                  <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
                 ))}
               </div>
             </div>
@@ -353,7 +353,7 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week }) {
   );
 }
 
-function OrderCard({ o, patch, edit, remove, repeat, week }) {
+function OrderCard({ o, patch, edit, remove, repeat, week, macros }) {
   const [quote, setQuote] = useState(o.total ?? '');
   const [editing, setEditing] = useState(false);
   const flags = [...(o.diet || []).map(dietLabel), o.allergy_notes].filter(Boolean);
@@ -406,7 +406,8 @@ function OrderCard({ o, patch, edit, remove, repeat, week }) {
         </div>
         <div className="oc-actions">
           <button className="btn btn-ghost btn-sm" title="Change the customer, items, delivery or payment" onClick={() => setEditing(true)}>Edit</button>
-          <LabelsButton href={`/api/labels?id=${encodeURIComponent(o.id)}`} count={labelCount(o)} />
+          <LabelsButton href={`/api/labels?id=${encodeURIComponent(o.id)}`} count={labelCount(o)}
+            custom={isCustomOrder(o) ? o : null} macros={macros} onSaveLines={(label_lines) => patch(o.id, { label_lines })} />
           <button className="btn btn-ghost btn-sm" title="Copy this order into next week" onClick={() => repeat([o.id], addDays(week, 7))}><Repeat size={14} /> Next week</button>
           <span className="oc-pair">
             {o.status !== 'cancelled' && (

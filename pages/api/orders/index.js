@@ -6,6 +6,7 @@ import { buildOrderRow, repriceOrder, normalizePhone, PAY, STATUSES, clean } fro
 import { sendOrderText } from '../../../lib/sms';
 import { upsertReminder } from '../../../lib/db';
 import { publicOrder } from '../../../lib/orderView';
+import { cleanLabelLines } from '../../../lib/labelSpots';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
@@ -80,6 +81,8 @@ export default async function handler(req, res) {
       if ('delivery_notes' in p) patch.delivery_notes = clean(p.delivery_notes, 300);
       if ('allergy_notes' in p) patch.allergy_notes = clean(p.allergy_notes, 500);
       if ('custom_request' in p) patch.custom_request = clean(p.custom_request, 1500);
+      // Label editor for custom orders: the meals to print labels for (doesn't change the price).
+      if ('label_lines' in p) patch.label_lines = cleanLabelLines(p.label_lines);
       if (patch.fulfillment === 'delivery' || (!patch.fulfillment && cur.fulfillment === 'delivery')) {
         const addr = 'address' in patch ? patch.address : cur.address;
         const zip = 'zip' in patch ? patch.zip : cur.zip;
