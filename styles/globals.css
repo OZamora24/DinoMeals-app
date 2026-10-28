@@ -1179,3 +1179,15 @@ label .input { margin-top: 6px; font-weight: 500; }
 .site-pop-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .site-pop-fields .full { grid-column: 1 / -1; }
 .promo-dates { display: flex; gap: 6px; }
+
+/* "App built by" credit (footer) */
+.credit { display: flex; align-items: center; gap: 12px; background: #1b1916; border: 1px solid var(--line, #342f2a); border-radius: 16px; padding: 12px 14px; }
+.credit-mk { width: 40px; height: 40px; flex: none; border-radius: 11px; background: linear-gradient(135deg, #e2372d, #8a1c16); display: grid; place-items: center; font-family: var(--display); color: #fff; font-size: 1.15rem; letter-spacing: .03em; }
+.credit-tx { flex: 1; min-width: 0; line-height: 1.25; }
+.credit-tx small { display: block; color: #8d8478; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.credit-tx b { color: var(--cream, #f4ede0); font-size: .95rem; }
+.credit-lk { display: flex; gap: 8px; flex: none; }
+.credit-lk a { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line-2, #463f38); border-radius: 99px; padding: 7px 11px; color: var(--cream, #f4ede0); font-size: .78rem; font-weight: 700; text-decoration: none; }
+.credit-lk a:hover { border-color: var(--red, #e2372d); }
+.credit-lk svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+@media (min-width: 800px) { .credit { grid-column: 1 / -1; max-width: 520px; } }
