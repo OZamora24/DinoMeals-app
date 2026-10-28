@@ -14,3 +14,6 @@ Claude outputs/
 
 # large working media (not used by the app)
 Sounds/
+
+# Claude Code personal settings
+.claude/settings.local.json
