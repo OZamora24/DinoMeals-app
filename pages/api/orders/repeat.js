@@ -38,6 +38,8 @@ export default async function handler(req, res) {
           status: hasItems ? 'new' : 'quote',
           source: 'repeat',
           route_pos: null,
+          promo: null, // promo codes are one-time: the repeat is full price
+          discount: 0,
         })
       );
     }

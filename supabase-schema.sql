@@ -80,3 +80,7 @@ alter table customer_push enable row level security;
 -- Custom-quote orders: meals entered in the admin label editor (any oz/gram amounts),
 -- used only to print labels. [{ protein, flavor, carb, veg, amt: {protein:[7,'oz'],...}, count }]
 alter table orders add column if not exists label_lines jsonb not null default '[]'::jsonb;
+
+-- Promo codes: the code an order used ({code, type, value}) and the $ taken off the food subtotal.
+alter table orders add column if not exists promo jsonb;
+alter table orders add column if not exists discount numeric not null default 0;

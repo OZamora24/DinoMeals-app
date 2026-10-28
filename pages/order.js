@@ -19,6 +19,7 @@ import MealBox from '../components/order/MealBox';
 import LbMenu from '../components/order/LbMenu';
 import ExtrasPanel from '../components/order/ExtrasPanel';
 import CheckoutSheet from '../components/order/CheckoutSheet';
+import { promoDiscount, normCode } from '../lib/promo';
 
 export async function getServerSideProps({ req, query }) {
   const s = await getSettings();
@@ -56,6 +57,8 @@ export default function OrderPage({ settings, adminMode }) {
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [promo, setPromo] = useState(null); // { code, type, value } once a code checks out
+  const [promoMsg, setPromoMsg] = useState('');
   const [done, setDone] = useState(null);
 
   // admin extras
@@ -116,7 +119,8 @@ export default function OrderPage({ settings, adminMode }) {
   const fee = info.fulfillment === 'delivery' && hasItems ? Number(settings.delivery_fee) || 0 : 0;
   const subtotal = hasItems ? Math.round(priced.subtotal * 100) / 100 : 0;
   const cardFee = info.payment_method === 'card' && hasItems ? Number(settings.card_fee) || 0 : 0;
-  const total = hasItems ? subtotal + fee + cardFee : null;
+  const discount = hasItems ? promoDiscount(promo, subtotal) : 0;
+  const total = hasItems ? Math.round((subtotal - discount + fee + cardFee) * 100) / 100 : null;
   const mealsOk = mealCount === 0 || (planTarget ? mealCount === planTarget : mealCount >= MIN_MEALS);
   const lbsOk = lbCount === 0 || lbCount >= MIN_LBS;
   const flavorNeeded = cartNeedsFlavor({ meals, lbs });
@@ -268,6 +272,25 @@ export default function OrderPage({ settings, adminMode }) {
     setTimeout(() => setFlash(null), 1500);
   }
 
+  // ---- promo code ----
+  async function applyPromo(raw, quiet = false) {
+    const code = normCode(raw);
+    if (!code) return;
+    setPromoMsg('');
+    try {
+      const r = await fetch(`/api/promo-code?code=${encodeURIComponent(code)}`);
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.promo) { setPromo(j.promo); return; }
+      if (!quiet) setPromoMsg(r.status === 429 ? t('err_generic') : t('promo_bad'));
+    } catch {
+      if (!quiet) setPromoMsg(t('err_generic'));
+    }
+  }
+  // Links like dinomeals.app/order?code=LAUNCH10 apply the code automatically.
+  useEffect(() => {
+    if (router.isReady && router.query.code) applyPromo(String(router.query.code), true);
+  }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- submit ----
   async function place() {
     if (!adminMode) primeSizzle(); // unlock Chef Rex's sizzle while we still have the tap
@@ -279,12 +302,14 @@ export default function OrderPage({ settings, adminMode }) {
         custom_request: custom,
         ...info,
         total,
+        promo_code: promo ? promo.code : '',
         lang,
         ...(adminMode ? { as_admin: true, source: adm.source, paid: adm.paid, cook_date: adm.cook_date } : {}),
       };
       const r = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const j = await r.json();
       if (!r.ok) {
+        if (j.error === 'promo_invalid') { setPromo(null); setPromoMsg(t('promo_bad')); }
         setErr(t(`err_${j.error}`) !== `err_${j.error}` ? t(`err_${j.error}`) : t('err_generic'));
         return;
       }
@@ -511,6 +536,11 @@ export default function OrderPage({ settings, adminMode }) {
           cardFee={cardFee}
           subtotal={subtotal}
           total={total}
+          discount={discount}
+          promo={promo}
+          promoMsg={promoMsg}
+          applyPromo={applyPromo}
+          removePromo={() => { setPromo(null); setPromoMsg(''); }}
           err={err}
           busy={busy}
           place={place}

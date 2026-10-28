@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { DIET_FLAGS, lineSummary, money } from '../../lib/menu';
 import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
@@ -6,7 +6,7 @@ import SmsConsent from '../SmsConsent';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
-  hasItems, fee, cardFee, subtotal, total, err, busy, place, onClose,
+  hasItems, fee, cardFee, subtotal, total, discount = 0, promo, promoMsg, applyPromo, removePromo, err, busy, place, onClose,
 }) {
   // Esc closes the checkout popup (tapping outside or Back already did)
   useEffect(() => {
@@ -123,11 +123,15 @@ export default function CheckoutSheet({
                 <li className="custom-li"><span>✎ {custom.trim()}</span><b>{hasItems ? '' : t('quote')}</b></li>
               )}
             </ul>
+            {hasItems && (settings.promo_on || promo) && (
+              <PromoBox t={t} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} />
+            )}
             {hasItems && (
               <div className="totals">
-                {(fee > 0 || cardFee > 0) && (
+                {(fee > 0 || cardFee > 0 || discount > 0) && (
                   <>
                     <div><span>{t('subtotal')}</span><span>{money(subtotal)}</span></div>
+                    {discount > 0 && <div className="promo-line"><span>{t('promo_line')} {promo?.code}</span><span>−{money(discount)}</span></div>}
                     {fee > 0 && <div><span>{t('delivery_fee')}</span><span>{money(fee)}</span></div>}
                     {cardFee > 0 && <div><span>{t('card_fee')}</span><span>{money(cardFee)}</span></div>}
                   </>
@@ -146,6 +150,29 @@ export default function CheckoutSheet({
           <p className="legal-line"><a href="/privacy" target="_blank" rel="noreferrer">{t('privacy')}</a> · <a href="/terms" target="_blank" rel="noreferrer">{t('terms')}</a></p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PromoBox({ t, promo, promoMsg, applyPromo, removePromo, discount }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (promo) {
+    return (
+      <div className="promo-box on">
+        <span className="promo-tag">🏷 {promo.code}</span>
+        <span className="promo-off">−{money(discount)}</span>
+        <button type="button" className="link" onClick={removePromo}>{t('promo_remove')}</button>
+      </div>
+    );
+  }
+  return (
+    <div className="promo-box">
+      <form onSubmit={async (e) => { e.preventDefault(); setBusy(true); await applyPromo(code); setBusy(false); }}>
+        <input className="input" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder={t('promo_ph')} aria-label={t('promo')} autoCapitalize="characters" autoComplete="off" maxLength={20} />
+        <button type="submit" className="btn btn-ghost btn-sm" disabled={!code.trim() || busy}>{t('promo_apply')}</button>
+      </form>
+      {promoMsg && <p className="promo-msg">{promoMsg}</p>}
     </div>
   );
 }

@@ -407,6 +407,8 @@ export function SettingsTab({ settings, save, week }) {
         <button className="btn btn-red btn-sm" onClick={() => save({ pickup_window: s.pickup_window, delivery_window: s.delivery_window, pickup_address: s.pickup_address, kitchen_address: s.kitchen_address, delivery_fee: s.delivery_fee, delivery_fee_note: s.delivery_fee_note, delivery_zips: s.delivery_zips })}>Save</button>
       </section>
 
+      <PromoCard settings={settings} save={save} />
+
       <section className="set-card wide">
         <h3>Menu: sold out · macros · allergens</h3>
         <p className="muted small">Macros are per portion (protein {PORTIONS.protein}oz, carb {PORTIONS.carb}oz, veggie {PORTIONS.veg}oz). Flavor rows can have their own numbers; leave them blank to use the base protein's. The order page adds them up per meal once every part has numbers. Allergen labels: double-check these — customers see them.</p>
@@ -571,6 +573,18 @@ export function MessagesTab({ settings, save, reload }) {
                   <label>Título<input className="input" maxLength={60} value={p.title_es} onChange={(e) => upd(p.id, { title_es: e.target.value })} /></label>
                   <label>Mensaje<textarea className="input" rows={3} maxLength={180} value={p.body_es} onChange={(e) => upd(p.id, { body_es: e.target.value })} /></label>
                 </details>
+                <div className="site-pop">
+                  <label className="check-row"><input type="checkbox" checked={!!p.site} onChange={(e) => upd(p.id, { site: e.target.checked })} /> <span><b>Also pop up on the website</b><br /><small className="muted">While it's ON, everyone who opens the home or order page sees it once (on each phone/computer).</small></span></label>
+                  {p.site && (
+                    <div className="site-pop-fields">
+                      <label>Show from (optional)<input className="input" type="date" value={p.start || ''} onChange={(e) => upd(p.id, { start: e.target.value })} /></label>
+                      <label>Until (optional)<input className="input" type="date" value={p.end || ''} onChange={(e) => upd(p.id, { end: e.target.value })} /></label>
+                      <label>Button text (optional)<input className="input" maxLength={30} value={p.cta_label || ''} onChange={(e) => upd(p.id, { cta_label: e.target.value })} placeholder="Order now" /></label>
+                      <label>Button text (Spanish)<input className="input" maxLength={30} value={p.cta_label_es || ''} onChange={(e) => upd(p.id, { cta_label_es: e.target.value })} placeholder="Ordenar" /></label>
+                      <label className="full">Button goes to (optional)<input className="input" value={p.cta_url || ''} onChange={(e) => upd(p.id, { cta_url: e.target.value.trim() })} placeholder="/order?code=LAUNCH10" /></label>
+                    </div>
+                  )}
+                </div>
                 <div className="row-actions">
                   <button className="btn btn-ghost btn-sm" onClick={() => setPreview(p)}>Preview</button>
                   {saved.some((x) => x.id === p.id) && p.active && !dirty && (
@@ -613,6 +627,53 @@ function ReportCard({ settings }) {
         <button className="btn btn-ghost btn-sm" disabled={state.busy} onClick={sendNow}>{state.busy ? 'Sending…' : "Email last week's report now"}</button>
       </div>
       {state.msg && <p className="small">{state.msg}</p>}
+    </section>
+  );
+}
+
+/* Promo codes customers type at checkout (or get from a ?code= link). */
+function PromoCard({ settings, save }) {
+  const [list, setList] = useState(settings.promo_codes || []);
+  const [copied, setCopied] = useState('');
+  useEffect(() => setList(settings.promo_codes || []), [settings.promo_codes]);
+  const upd = (i, p) => setList((l) => l.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const copy = async (code) => {
+    try { await navigator.clipboard.writeText(`${origin}/order?code=${code}`); setCopied(code); setTimeout(() => setCopied(''), 1500); } catch {}
+  };
+  const dirty = JSON.stringify(list) !== JSON.stringify(settings.promo_codes || []);
+  return (
+    <section className="set-card wide">
+      <h3>Promo codes</h3>
+      <p className="muted small">Customers type the code at checkout, or open your link with the code already applied. The discount comes off the food (not delivery or card fees). Codes are checked again when the order is placed, so a code you switch off stops working right away. The order, receipt and Excel show the code and the $ off. Start/end dates are Pacific days (both included).</p>
+      {list.length === 0 && <p className="small">No codes yet.</p>}
+      <div className="promo-list">
+        {list.map((p, i) => (
+          <div className={`promo-row ${p.active === false ? 'off' : ''}`} key={i}>
+            <input className="input" value={p.code} placeholder="LAUNCH10" maxLength={20} onChange={(e) => upd(i, { code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} aria-label="Code" />
+            <span className="promo-val">
+              <input className="input xs" inputMode="decimal" value={p.value ?? ''} onChange={(e) => upd(i, { value: e.target.value.replace(/[^\d.]/g, '') })} aria-label="Amount" />
+              <select className="input xs" value={p.type || 'percent'} onChange={(e) => upd(i, { type: e.target.value })} aria-label="Type">
+                <option value="percent">% off</option>
+                <option value="amount">$ off</option>
+              </select>
+            </span>
+            <span className="promo-dates">
+              <label className="promo-end"><small>Starts (optional)</small><input className="input xs" type="date" value={p.starts || ''} onChange={(e) => upd(i, { starts: e.target.value })} /></label>
+              <label className="promo-end"><small>Ends (optional)</small><input className="input xs" type="date" value={p.ends || ''} onChange={(e) => upd(i, { ends: e.target.value })} /></label>
+            </span>
+            <button className={`switch sm ${p.active !== false ? 'on' : ''}`} onClick={() => upd(i, { active: p.active === false })} aria-label={p.active !== false ? 'On' : 'Off'} title={p.active !== false ? 'On' : 'Off'}><span /></button>
+            <span className="promo-acts">
+              {p.code && <button className="link small" onClick={() => copy(p.code)}>{copied === p.code ? 'Copied!' : 'Copy link'}</button>}
+              <button className="link small danger" onClick={() => setList((l) => l.filter((_, j) => j !== i))}>Remove</button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="promo-btns">
+        <button className="btn btn-ghost btn-sm" onClick={() => setList((l) => [...l, { code: '', type: 'percent', value: 10, active: true, starts: '', ends: '' }])}>+ Add code</button>
+        <button className="btn btn-red btn-sm" disabled={!dirty} onClick={() => save({ promo_codes: list })}>Save codes</button>
+      </div>
     </section>
   );
 }

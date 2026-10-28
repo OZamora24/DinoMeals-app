@@ -228,6 +228,20 @@ export default function App({ Component, pageProps }) {
     return () => safe(() => navigator.serviceWorker && navigator.serviceWorker.removeEventListener('message', onMsg));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Website pop-up (Messages → "Also pop up on the website"): once per device per message,
+  // on the home and order pages, after the splash. Skipped in kitchen (DM order) mode.
+  const showSitePopup = async () => {
+    if (!['/', '/order'].includes(router.pathname)) return;
+    if (new URLSearchParams(window.location.search).get('admin') === '1') return;
+    let data = null;
+    try {
+      const r = await fetch('/api/promo?site=1', { cache: 'no-store' });
+      if (r.ok) data = (await r.json()).promo;
+    } catch {}
+    if (!data || local.get(`dino_pop_${data.id}`)) return;
+    local.set(`dino_pop_${data.id}`, '1');
+    setTimeout(() => setPromo((cur) => cur || data), 600);
+  };
   const phaseRef = useRef(phase);
   useEffect(() => {
     phaseRef.current = phase;
@@ -235,6 +249,8 @@ export default function App({ Component, pageProps }) {
       const id = pendingPromo.current;
       pendingPromo.current = null;
       startPromo(id);
+    } else if (phase === 'gone' && !isAdmin) {
+      showSitePopup();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

@@ -8,6 +8,9 @@ import AlertsButton from '../components/AlertsButton';
 import IdleLogout from '../components/IdleLogout';
 import OrderEditor from '../components/OrderEditor';
 import LabelsButton from '../components/LabelsButton';
+import DinoHelper from '../components/DinoHelper';
+// Rex (the help pop-up) is built but switched off for now. Set to true to bring him back.
+const SHOW_REX = false;
 import { labelCount, isCustomOrder } from '../lib/labelSpots';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
@@ -174,6 +177,7 @@ export default function Admin() {
   return (
     <div className="admin-wrap">
       <Head><meta name="robots" content="noindex, nofollow" /></Head>
+      {SHOW_REX && authed && <DinoHelper />}
       <IdleLogout active={!!authed} onLogout={() => { setPw(''); setAuthed(false); setLoginErr('You were logged out after 30 minutes of inactivity. Log in again.'); }} />
       <header className="admin-top">
         <Link href="/" className="nav-brand">
@@ -381,6 +385,7 @@ function OrderCard({ o, patch, edit, remove, repeat, week, macros }) {
       <ul className="oc-items">
         {(o.items || []).map((l, i) => <li key={i}>{lineText(l)}</li>)}
       </ul>
+      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · −{money(Number(o.discount) || 0)}</div>}
       {o.custom_request && <div className="oc-custom">✎ {o.custom_request}</div>}
       {o.status === 'quote' && (
         <div className="quote-row">

@@ -38,10 +38,11 @@ export default function Receipt({ order, lang = 'en', badge = true }) {
       )}
       {!quote && (
         <div className="rc-tot">
-          {order.delivery_fee > 0 && (
+          {(order.delivery_fee > 0 || order.discount > 0) && (
             <>
               <div><span>{x.subtotal}</span><span>{money(order.subtotal)}</span></div>
-              <div><span>{x.fee}</span><span>{money(order.delivery_fee)}</span></div>
+              {order.discount > 0 && <div className="rc-promo"><span>{x.promo} {order.promo_code}</span><span>−{money(order.discount)}</span></div>}
+              {order.delivery_fee > 0 && <div><span>{x.fee}</span><span>{money(order.delivery_fee)}</span></div>}
             </>
           )}
           <div className="big"><span>{x.total}</span><span>{money(order.total)}</span></div>
