@@ -1191,3 +1191,4 @@ label .input { margin-top: 6px; font-weight: 500; }
 .credit-lk a:hover { border-color: var(--red, #e2372d); }
 .credit-lk svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
 @media (min-width: 800px) { .credit { grid-column: 1 / -1; max-width: 520px; } }
+.admin-wrap { padding-bottom: 110px; } /* room for Rex */
