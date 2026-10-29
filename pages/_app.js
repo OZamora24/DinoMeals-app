@@ -10,6 +10,7 @@ import '@fontsource/manrope/latin-800.css';
 import '../styles/globals.css';
 import '../styles/splash-extra.css';
 import SplashScreen from '../components/SplashScreen';
+import BuiltByOrlandoTab from '../components/BuiltByOrlandoTab';
 import FossilTransition from '../components/FossilTransition';
 import { PromoModal } from '../components/PromoPopup';
 
@@ -289,6 +290,7 @@ export default function App({ Component, pageProps }) {
       <div className={hidden ? 'app-hidden' : 'app-shown'}>
         <Component {...pageProps} />
       </div>
+      <BuiltByOrlandoTab />
       <FossilTransition phase={fx} />
       {promo && <PromoModal promo={promo} onClose={() => setPromo(null)} />}
       {intro && (
