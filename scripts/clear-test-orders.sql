@@ -1,77 +1,98 @@
--- DinoMeals: clear TEST orders before launch (Nov 1, 2026).
--- Run in Supabase: SQL Editor -> New query. NOTHING here runs automatically.
+-- DinoMeals: clear TEST orders before the Nov 1, 2026 launch.
+-- Run by hand in Supabase: SQL Editor -> New query -> paste -> run STEP 1 first, check it, then STEP 2.
 --
--- What it deletes (all three must be true):
---   1. order_no 1046-1059  OR  cook_date = 2026-10-25  (the Oct 25 test batch)
---   2. created before 2026-10-28 00:00 Pacific time (safety cutoff)
---   3. order_no is NOT 1060  (Gabi joto, $239 Zelle, Nov 1 cook - not confirmed real)
+-- What counts as a test order (Orlando confirmed):
+--   * order_no 1046 to 1059
+--   * order_no 1060 (Gabi joto, $239, Nov 1 cook) - TEST order, confirmed Oct 28
+--   * every order with cook_date 2026-10-25 (the fake Oct 25 batch)
 --
--- Schema notes: order items live INSIDE orders.items (jsonb), so there is no
--- child table to clean. sms_reminders and customer_push are not linked to orders
--- and are NOT touched.
+-- Safety rules built in:
+--   * CUTOFF: only orders created BEFORE 2026-10-28 00:00 Pacific can ever match.
+--     Anything created after that (including every real order) is untouchable.
+--   * #1060 is matched by order_no only, NOT by its Nov 1 cook_date, so a real
+--     Nov 1 order can never match. It must also be named Gabi... or it is skipped.
+--   * cook_date matching is the single day 2026-10-25, never a range.
+--   * Everything runs in one transaction with a guard that aborts if the count
+--     or the order numbers look wrong. It ends in ROLLBACK by default.
+--   * Orders table only: items are a jsonb column, there is no child table.
+--   * The order_no counter does NOT reset (first live order will be #1061 or higher). That is fine.
 
--- ============================================================
--- STEP 1: PREVIEW. Run this block ALONE first and read the list.
--- Expect 14 rows (1046-1059). Nothing else. #1060 must NOT appear.
--- ============================================================
+-- ===================== STEP 1: PREVIEW (read only) =====================
+-- Expect to see #1046 to #1060 and the Oct 25 batch. #1060 MUST be in this list.
+-- If anything looks like a real customer, STOP.
 select order_no, created_at at time zone 'America/Los_Angeles' as created_pt,
        cook_date, customer_name, total, payment_method, paid, status
 from orders
-where (order_no between 1046 and 1059 or cook_date = date '2026-10-25')
-  and created_at < timestamptz '2026-10-28 00:00:00-07'
-  and order_no <> 1060
+where created_at < (timestamp '2026-10-28 00:00' at time zone 'America/Los_Angeles')
+  and (
+        order_no between 1046 and 1059
+     or (order_no = 1060 and customer_name ilike 'gabi%')
+     or cook_date = date '2026-10-25'
+  )
 order by order_no;
 
--- Everything that will REMAIN (check #1060 is here and nothing else looks like a test):
-select order_no, created_at at time zone 'America/Los_Angeles' as created_pt,
-       cook_date, customer_name, total, payment_method, paid, status
+-- Same preview as a count (compare with the number of rows above):
+select count(*) as will_delete,
+       count(*) filter (where order_no = 1060) as includes_1060,
+       count(*) filter (where cook_date >= date '2026-11-01' and order_no <> 1060) as real_nov1_matches_must_be_0
 from orders
-where not ((order_no between 1046 and 1059 or cook_date = date '2026-10-25')
-  and created_at < timestamptz '2026-10-28 00:00:00-07'
-  and order_no <> 1060)
-order by order_no;
+where created_at < (timestamp '2026-10-28 00:00' at time zone 'America/Los_Angeles')
+  and (
+        order_no between 1046 and 1059
+     or (order_no = 1060 and customer_name ilike 'gabi%')
+     or cook_date = date '2026-10-25'
+  );
 
--- ============================================================
--- STEP 2: DELETE. Run this block ALONE, only after Step 1 looks right.
--- It is one transaction and ABORTS (deletes nothing) if:
---   - more than 20 rows would be deleted, or
---   - #1060 would be deleted, or
---   - any order created on/after the cutoff would be deleted.
--- Note: timestamptz cutoff uses -07 (Pacific daylight time; DST ends Nov 1).
--- ============================================================
+-- ===================== STEP 2: DELETE (one transaction) =====================
+-- Run this whole block at once. It ends with ROLLBACK so nothing is deleted until
+-- you are happy with the output: change the last line from ROLLBACK to COMMIT and run again.
 begin;
 
-create temp table _doomed on commit drop as
-select id, order_no, created_at
-from orders
-where (order_no between 1046 and 1059 or cook_date = date '2026-10-25')
-  and created_at < timestamptz '2026-10-28 00:00:00-07'
-  and order_no <> 1060;
-
 do $$
-declare n int;
+declare
+  n int;
+  bad int;
 begin
-  select count(*) into n from _doomed;
-  if n = 0 or n > 20 then
-    raise exception 'Abort: % rows matched (expected about 14). Nothing deleted.', n;
+  select count(*) into n
+  from orders
+  where created_at < (timestamp '2026-10-28 00:00' at time zone 'America/Los_Angeles')
+    and (
+          order_no between 1046 and 1059
+       or (order_no = 1060 and customer_name ilike 'gabi%')
+       or cook_date = date '2026-10-25'
+    );
+
+  -- Guard 1: nothing outside the test window may match.
+  select count(*) into bad
+  from orders
+  where created_at < (timestamp '2026-10-28 00:00' at time zone 'America/Los_Angeles')
+    and (
+          order_no between 1046 and 1059
+       or (order_no = 1060 and customer_name ilike 'gabi%')
+       or cook_date = date '2026-10-25'
+    )
+    and (order_no > 1060 or (cook_date >= date '2026-11-01' and order_no <> 1060));
+  if bad > 0 then
+    raise exception 'Aborting: % matched order(s) are outside the test window', bad;
   end if;
-  if exists (select 1 from _doomed where order_no = 1060
-             or created_at >= timestamptz '2026-10-28 00:00:00-07') then
-    raise exception 'Abort: #1060 or a post-cutoff order matched. Nothing deleted.';
+
+  -- Guard 2: sanity cap. Expected is about 15 to 30 test orders.
+  if n = 0 or n > 60 then
+    raise exception 'Aborting: % orders matched, expected between 1 and 60', n;
   end if;
 end $$;
 
-delete from orders where id in (select id from _doomed);
+delete from orders
+where created_at < (timestamp '2026-10-28 00:00' at time zone 'America/Los_Angeles')
+  and (
+        order_no between 1046 and 1059
+     or (order_no = 1060 and customer_name ilike 'gabi%')
+     or cook_date = date '2026-10-25'
+  )
+returning order_no, customer_name, cook_date, total;
 
-commit;
-
--- ============================================================
--- STEP 3: VERIFY. Only the orders you meant to keep should be left (#1060 etc.).
--- ============================================================
-select order_no, cook_date, customer_name, total, paid, status
+-- Check what is left: should only be orders created on/after the cutoff (or none yet).
+select order_no, created_at at time zone 'America/Los_Angeles' as created_pt, cook_date, customer_name
 from orders order by order_no;
 
--- LATER, once you confirm #1060 is a test, delete it separately:
---   delete from orders where order_no = 1060;
--- NOTE: order numbers are an identity counter and will NOT restart at 1001.
--- Live orders will continue from the next number. That is normal.
+rollback;  -- change to: commit;  once the output above looks right
