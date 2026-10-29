@@ -24,7 +24,8 @@ export default async function handler(req, res) {
       const hasItems = priced.ok;
       const fee = o.fulfillment === 'delivery' && hasItems ? Number(settings.delivery_fee) || 0 : 0;
       const cFee = o.payment_method === 'card' && hasItems ? Number(settings.card_fee) || 0 : 0;
-      const { id: _i, order_no: _n, created_at: _c, ...rest } = o;
+      // view_token has a unique index: the copy must get its own (the database makes a new one).
+      const { id: _i, order_no: _n, created_at: _c, view_token: _v, ...rest } = o;
       created.push(
         await insertOrder({
           ...rest,
