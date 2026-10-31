@@ -662,18 +662,34 @@ function PromoCard({ settings, save }) {
               <label className="promo-end"><small>Starts (optional)</small><input className="input xs" type="date" value={p.starts || ''} onChange={(e) => upd(i, { starts: e.target.value })} /></label>
               <label className="promo-end"><small>Ends (optional)</small><input className="input xs" type="date" value={p.ends || ''} onChange={(e) => upd(i, { ends: e.target.value })} /></label>
             </span>
-            <button className={`switch sm ${p.active !== false ? 'on' : ''}`} onClick={() => upd(i, { active: p.active === false })} aria-label={p.active !== false ? 'On' : 'Off'} title={p.active !== false ? 'On' : 'Off'}><span /></button>
-            <span className="promo-acts">
-              {p.code && <button className="link small" onClick={() => copy(p.code)}>{copied === p.code ? 'Copied!' : 'Copy link'}</button>}
-              <button className="link small danger" onClick={() => setList((l) => l.filter((_, j) => j !== i))}>Remove</button>
+            <span className="promo-ctl">
+              <button className={`switch sm ${p.active !== false ? 'on' : ''}`} onClick={() => upd(i, { active: p.active === false })} aria-label={p.active !== false ? 'On' : 'Off'} title={p.active !== false ? 'On' : 'Off'}><span /></button>
+              <PromoStatus p={p} />
+              <span className="promo-acts">
+                {p.code && <button className="link small" onClick={() => copy(p.code)}>{copied === p.code ? 'Copied!' : 'Copy link'}</button>}
+                <button className="link small danger" onClick={() => setList((l) => l.filter((_, j) => j !== i))}>Remove</button>
+              </span>
             </span>
           </div>
         ))}
       </div>
       <div className="promo-btns">
         <button className="btn btn-ghost btn-sm" onClick={() => setList((l) => [...l, { code: '', type: 'percent', value: 10, active: true, starts: '', ends: '' }])}>+ Add code</button>
-        <button className="btn btn-red btn-sm" disabled={!dirty} onClick={() => save({ promo_codes: list })}>Save codes</button>
+        <button className="btn btn-red btn-sm" disabled={!dirty} onClick={() => save({ promo_codes: list })}>{dirty ? 'Save codes' : 'Saved'}</button>
       </div>
+      {dirty && <p className="small warn-text">You have changes that aren't saved yet. Tap <b>Save codes</b>.</p>}
     </section>
   );
+}
+
+// "Live now" / "Starts Nov 1" / "Ended" / "Off" for one promo code (Pacific day).
+function PromoStatus({ p }) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const nice = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  let cls = 'on', txt = 'Live now';
+  if (p.active === false) { cls = 'off'; txt = 'Off'; }
+  else if (!(Number(p.value) > 0)) { cls = 'off'; txt = 'Needs an amount'; }
+  else if (p.ends && today > p.ends) { cls = 'off'; txt = 'Ended'; }
+  else if (p.starts && today < p.starts) { cls = 'soon'; txt = `Starts ${nice(p.starts)}`; }
+  return <span className={`promo-st ${cls}`}>{txt}</span>;
 }

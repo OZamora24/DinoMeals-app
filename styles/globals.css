@@ -1192,3 +1192,26 @@ label .input { margin-top: 6px; font-weight: 500; }
 .credit-lk svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
 @media (min-width: 800px) { .credit { grid-column: 1 / -1; max-width: 520px; } }
 .admin-wrap { padding-bottom: 110px; } /* room for Rex */
+
+/* Promo code rows: tidy on phones */
+.promo-row { grid-template-columns: minmax(120px, 1.1fr) auto minmax(240px, 1.2fr) auto; }
+.promo-val .input:last-child { min-width: 104px; }
+.promo-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.promo-dates .input { width: 100%; min-width: 0; }
+.promo-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.promo-acts { flex-direction: row; gap: 14px; }
+.promo-st { font-size: .72rem; font-weight: 800; border-radius: 99px; padding: 4px 10px; white-space: nowrap; }
+.promo-st.on { background: rgba(76,195,138,.15); color: #4cc38a; }
+.promo-st.soon { background: rgba(242,161,58,.15); color: #f2a13a; }
+.promo-st.off { background: rgba(255,255,255,.07); color: var(--muted); }
+@media (max-width: 640px) {
+  .promo-row { grid-template-columns: 1fr auto; row-gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line, #342f2a); }
+  .promo-dates, .promo-ctl { grid-column: 1 / -1; }
+  .promo-end { grid-column: auto; }
+}
+/* iPhone Safari gives buttons padding/margins that push the switch knob off-centre */
+.switch { -webkit-appearance: none; appearance: none; padding: 0; margin: 0; box-sizing: border-box; vertical-align: middle; line-height: 0; }
+.switch span { margin: 0; }
+.promo-ctl .switch { width: 50px; height: 30px; }
+.promo-ctl .switch span { width: 24px; height: 24px; top: 3px; left: 3px; }
+.promo-ctl .switch.on span { transform: translateX(20px); }
