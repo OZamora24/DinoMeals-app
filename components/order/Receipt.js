@@ -36,6 +36,9 @@ export default function Receipt({ order, lang = 'en', badge = true }) {
       {order.custom_request && (
         <div className="rc-row"><div>{x.custom}<small>{order.custom_request}</small></div></div>
       )}
+      {quote && order.promo_code && (
+        <div className="rc-row rc-promo"><div>🏷 {x.promo} {order.promo_code}<small>{x.promo_pending}</small></div><b>{order.promo_off}</b></div>
+      )}
       {!quote && (
         <div className="rc-tot">
           {(order.delivery_fee > 0 || order.discount > 0) && (

@@ -3,6 +3,7 @@ import { DIET_FLAGS, lineSummary, money } from '../../lib/menu';
 import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import SmsConsent from '../SmsConsent';
+import { promoLabel } from '../../lib/promo';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
@@ -123,8 +124,8 @@ export default function CheckoutSheet({
                 <li className="custom-li"><span>✎ {custom.trim()}</span><b>{hasItems ? '' : t('quote')}</b></li>
               )}
             </ul>
-            {hasItems && (settings.promo_on || promo) && (
-              <PromoBox t={t} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} />
+            {(hasItems || custom.trim()) && (settings.promo_on || promo) && (
+              <PromoBox t={t} lang={lang} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} pending={!hasItems} />
             )}
             {hasItems && (
               <div className="totals">
@@ -154,16 +155,21 @@ export default function CheckoutSheet({
   );
 }
 
-function PromoBox({ t, promo, promoMsg, applyPromo, removePromo, discount }) {
+// pending: a custom quote with no price yet. The code is saved on the order and
+// comes off when the price is set.
+function PromoBox({ t, lang, promo, promoMsg, applyPromo, removePromo, discount, pending }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   if (promo) {
     return (
-      <div className="promo-box on">
-        <span className="promo-tag">🏷 {promo.code}</span>
-        <span className="promo-off">−{money(discount)}</span>
-        <button type="button" className="link" onClick={removePromo}>{t('promo_remove')}</button>
-      </div>
+      <>
+        <div className="promo-box on">
+          <span className="promo-tag">🏷 {promo.code}</span>
+          <span className="promo-off">{pending ? promoLabel(promo, lang) : `−${money(discount)}`}</span>
+          <button type="button" className="link" onClick={removePromo}>{t('promo_remove')}</button>
+        </div>
+        {pending && <p className="promo-note">{t('promo_quote')}</p>}
+      </>
     );
   }
   return (

@@ -12,6 +12,7 @@ import DinoHelper from '../components/DinoHelper';
 // Rex (the help pop-up). Set to false to hide him.
 const SHOW_REX = true;
 import { labelCount, isCustomOrder } from '../lib/labelSpots';
+import { promoLabel, quotePrice } from '../lib/promo';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
@@ -385,12 +386,18 @@ function OrderCard({ o, patch, edit, remove, repeat, week, macros }) {
       <ul className="oc-items">
         {(o.items || []).map((l, i) => <li key={i}>{lineText(l)}</li>)}
       </ul>
-      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · −{money(Number(o.discount) || 0)}</div>}
+      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · {o.total == null ? promoLabel(o.promo) : `−${money(Number(o.discount) || 0)}`}</div>}
       {o.custom_request && <div className="oc-custom">✎ {o.custom_request}</div>}
       {o.status === 'quote' && (
         <div className="quote-row">
           <input className="input" inputMode="decimal" placeholder="Price $" value={quote} onChange={(e) => setQuote(e.target.value)} />
           <button className="btn btn-red btn-sm" onClick={() => patch(o.id, { total: quote, status: 'confirmed' })}>Set price</button>
+          {o.promo && o.promo.code && (
+            <p className="quote-promo">
+              Type the price <b>before</b> the discount. {o.promo.code} ({promoLabel(o.promo)}) comes off automatically
+              {Number(quote) > 0 ? <>: customer pays <b>{money(quotePrice(o.promo, quote).total)}</b></> : '.'}
+            </p>
+          )}
         </div>
       )}
       {o.notes && <div className="oc-notes">{o.notes}</div>}

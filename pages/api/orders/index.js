@@ -7,6 +7,7 @@ import { sendOrderText } from '../../../lib/sms';
 import { upsertReminder } from '../../../lib/db';
 import { publicOrder } from '../../../lib/orderView';
 import { cleanLabelLines } from '../../../lib/labelSpots';
+import { quotePrice } from '../../../lib/promo';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
@@ -101,6 +102,11 @@ export default async function handler(req, res) {
       const touchesMoney = 'cart' in p || patch.payment_method || patch.fulfillment;
       if ('total' in p) {
         patch.total = p.total === '' || p.total == null ? null : Math.max(0, Number(p.total) || 0);
+        // Custom quote that saved a promo code at checkout: the typed price is before the
+        // discount, so the code comes off automatically (shows on the receipt and export).
+        if (cur.promo && !(cur.items || []).length && !('cart' in p)) {
+          Object.assign(patch, patch.total == null ? { subtotal: null, discount: 0 } : quotePrice(cur.promo, patch.total));
+        }
       } else if (touchesMoney) {
         const r = repriceOrder(cur, patch, settings, 'cart' in p ? p.cart : null);
         if (r.error) return res.status(400).json({ error: r.error });

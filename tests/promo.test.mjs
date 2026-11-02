@@ -26,3 +26,10 @@ test('promo codes: clean, find, discount', () => {
   assert.equal(promoDiscount(null, 100), 0);
   assert.equal(promoLabel({ type: 'amount', value: 5 }), '$5 off');
 });
+
+test('promo on a custom quote: typed price is before the discount', async () => {
+  const { quotePrice } = await import('../lib/promo.js');
+  assert.deepEqual(quotePrice({ type: 'percent', value: 10 }, 150), { subtotal: 150, discount: 15, total: 135 });
+  assert.deepEqual(quotePrice({ type: 'amount', value: 5 }, '42.50'), { subtotal: 42.5, discount: 5, total: 37.5 });
+  assert.deepEqual(quotePrice({ type: 'amount', value: 50 }, 20), { subtotal: 20, discount: 20, total: 0 });
+});

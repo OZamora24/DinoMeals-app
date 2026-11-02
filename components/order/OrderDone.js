@@ -35,7 +35,7 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
             )}
           </div>
         )}
-        {done.items?.length > 0 && <Receipt order={done} lang={lang} badge={false} />}
+        {(done.items?.length > 0 || (quote && done.promo_code)) && <Receipt order={done} lang={lang} badge={false} />}
         {!adminMode && done.token && <ReceiptButtons order={done} lang={lang} />}
         {!adminMode && <SaveContact lang={lang} />}
         <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
