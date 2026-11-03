@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { labelCount, nextStart, sheetsUsed } from '../lib/labelSpots.js';
+import { labelCount, nextStart, sheetsUsed, customCookParts } from '../lib/labelSpots.js';
 import { orderLabels, bestByDate, buildLabelsDocx } from '../lib/labelsDocx.js';
 
 const settings = { macros: { chicken: { cal: 187, p: 35, c: 0, f: 4 }, cilantrorice: { cal: 145, p: 3, c: 32, f: 1 }, broccoli: { cal: 30, p: 3, c: 6, f: 0 } } };
@@ -53,4 +53,17 @@ test('custom label lines: oz/gram amounts scale the saved macros', async () => {
   assert.equal(l[0].serving, '7oz / 150g / 60g meal');
   assert.equal(l[0].title, 'Grilled Chicken Breast · Chipotle');
   assert.equal(l[9].serving, '8oz meal');
+});
+
+test('cook sheet: a custom line adds every part in cooked ounces, skipped carb/veg left out', () => {
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 0.01, `${a} != ${b}`);
+  const [p, c, v] = customCookParts({ protein: 'chicken', flavor: 'chipotle', carb: 'whiterice', veg: 'broccoli', count: 3, amt: { protein: [7, 'oz'], carb: [150, 'g'], veg: [60, 'g'] } });
+  assert.deepEqual([p.kind, p.id, p.flavor, p.meals], ['protein', 'chicken', 'chipotle', 3]);
+  near(p.oz, 21); // 3 meals x 7 oz
+  near(c.oz, 3 * 150 / 28.3495);
+  near(v.oz, 3 * 60 / 28.3495);
+  const only = customCookParts({ protein: 'groundbeef', flavor: 'taco', carb: 'none', veg: 'none', count: 2, amt: { protein: [8, 'oz'] } });
+  assert.equal(only.length, 1);
+  near(only[0].oz, 16);
+  assert.deepEqual(customCookParts({ protein: 'chicken', count: 0 }), []);
 });

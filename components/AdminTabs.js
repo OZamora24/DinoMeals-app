@@ -4,6 +4,7 @@ import {
   PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, DIET_FLAGS, mealOz,
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
+import { customCookParts } from '../lib/labelSpots';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
 
 const STATUS = ['new', 'quote', 'confirmed', 'cooking', 'ready', 'done', 'cancelled'];
@@ -57,6 +58,14 @@ export function CookTab({ orders, week }) {
         } else if (l.type === 'lb') {
           const key = l.kind === 'protein' ? `${l.item}:${l.flavor || ''}` : l.item;
           add(l.kind, key, lineLabel(l), 0, l.lbs * 16, l.lbs);
+        }
+      }
+      // Custom-quote orders: the meals entered in the label editor (oz / gram amounts).
+      for (const l of o.label_lines || []) {
+        for (const p of customCookParts(l)) {
+          if (p.kind === 'protein') containers += p.meals;
+          const label = p.kind === 'protein' ? proteinLabel(p.id, p.flavor) : nameOf(byId(p.kind === 'carb' ? CARBS : VEGGIES, p.id));
+          add(p.kind, p.kind === 'protein' ? `${p.id}:${p.flavor}` : p.id, label, p.meals, p.oz, 0);
         }
       }
     }
