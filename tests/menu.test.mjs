@@ -343,7 +343,7 @@ test("Juan's Oct 16 prices", async () => {
   assert.equal(unit({ protein: 'swchicken' }), 12);
   assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'chicken', flavor: 'teriyaki' }), 16);
   assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'taco' }), 20);
-  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'kbbq' }), 21);
+  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'groundbeef', flavor: 'kbbq' }), 20); // Korean BBQ no longer +$1
   // bigger portions: protein 6oz +2 / 8oz +4, carb 6oz +1 / 8oz +2.50, veg 5oz +1 / 6oz +1.50
   assert.equal(unit({ protein: 'chicken', oz: { protein: 6 } }), 14);
   assert.equal(unit({ protein: 'chicken', oz: { protein: 8 } }), 16);
@@ -374,7 +374,9 @@ test('flavored proteins need a flavor picked (Juan, Oct 20)', async () => {
   const M = await import('../lib/menu.js');
   const meal = (o) => ({ carb: 'whiterice', veg: 'broccoli', count: 8, ...o });
   assert.equal(M.needsFlavor(meal({ protein: 'chicken' })), true);
-  assert.equal(M.needsFlavor(meal({ protein: 'chicken', flavor: 'plain' })), false);
+  assert.equal(M.needsFlavor(meal({ protein: 'chicken', flavor: 'plain' })), true); // Classic was retired: re-pick
+  assert.equal(M.needsFlavor(meal({ protein: 'groundbeef', flavor: 'plain' })), true); // so was Seasoned
+  assert.equal(M.needsFlavor(meal({ protein: 'chicken', flavor: 'teriyaki' })), false);
   assert.equal(M.needsFlavor(meal({ protein: 'groundbeef', flavor: 'bogus' })), true);
   assert.equal(M.needsFlavor(meal({ protein: 'tritip' })), false);
   assert.equal(M.needsFlavor({ type: 'lb', kind: 'protein', item: 'burgers', lbs: 2 }), true);
@@ -385,8 +387,21 @@ test('flavored proteins need a flavor picked (Juan, Oct 20)', async () => {
   assert.equal(M.priceCart({ meals: [meal({ protein: 'chicken', flavor: 'teriyaki' })] }, [], { requireFlavor: true }).ok, true);
   assert.equal(M.priceCart({ meals: [meal({ protein: 'chicken' })] }, []).ok, true);
   assert.equal(M.priceCart({ lbs: [{ kind: 'protein', item: 'groundbeef', lbs: 4 }] }, [], { requireFlavor: true }).error, 'need_flavor');
-  // the kitchen sees every flavor, Classic/Seasoned included
+  // old orders keep reading right: the retired Classic/Seasoned still have labels and the same price
   assert.equal(M.proteinLabel('chicken', 'plain'), 'Grilled Chicken Breast · Classic');
   assert.equal(M.proteinLabel('groundbeef', 'plain', 'es'), 'Carne Molida · Sazonada');
   assert.equal(M.proteinLabel('chicken'), 'Grilled Chicken Breast');
+});
+
+test('retired flavors: Classic chicken and Seasoned beef are not offered, Korean BBQ is free', async () => {
+  const M = await import('../lib/menu.js');
+  const names = (id) => M.activeFlavors(M.byId(M.PROTEINS, id).flavors).map((f) => f.id);
+  assert.deepEqual(names('chicken'), ['chipotle', 'montreal', 'teriyaki', 'polloasado']);
+  assert.deepEqual(names('groundbeef'), ['taco', 'kbbq']);
+  assert.equal(M.mealUnitPrice({ protein: 'groundbeef', flavor: 'kbbq', carb: 'whiterice', veg: 'broccoli' }), 14);
+  // a stale flavor id never falls back to a retired one
+  assert.equal(M.flavorOf(M.byId(M.PROTEINS, 'chicken'), 'nope').id, 'chipotle');
+  assert.equal(M.flavorOf(M.byId(M.PROTEINS, 'chicken'), 'plain').name, 'Classic'); // old orders still resolve
+  // priced orders from before the change still price (admin / repeat paths don't require a flavor)
+  assert.equal(M.priceCart({ meals: [{ protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli', count: 8 }] }, []).ok, true);
 });

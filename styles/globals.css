@@ -548,6 +548,9 @@ label .input { margin-top: 6px; font-weight: 500; }
 .admin-fs legend { color: var(--warn); }
 .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .opt-grid.three { grid-template-columns: repeat(3, 1fr); }
+.cash-pop-backdrop { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fade .2s ease both; }
+.cash-pop { width: 100%; max-width: 360px; background: var(--bg); border: 1px solid var(--line-2); border-radius: 20px; padding: 22px 20px; display: grid; gap: 12px; text-align: center; justify-items: center; }
+.cash-pop p { margin: 0; font-size: 1.05rem; font-weight: 700; }
 .opt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; background: var(--bg-2); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px; }
 .opt svg { color: var(--muted); margin-bottom: 4px; }
 .opt b { font-size: .98rem; }

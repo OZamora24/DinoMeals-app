@@ -1,4 +1,4 @@
-import { PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, OZ_CHOICES, ozUpcharge, MEAL_PLANS, NONE, byId, nameOf, proteinLabel, money } from '../../lib/menu';
+import { PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, OZ_CHOICES, ozUpcharge, MEAL_PLANS, NONE, byId, nameOf, proteinLabel, activeFlavors, money } from '../../lib/menu';
 import { Flame, Grain, Leaf, Plus, X, Check } from '../../components/Icons';
 import { Stepper } from './Controls';
 import { useState } from 'react';
@@ -76,7 +76,7 @@ export default function MealBuilder({
         {bP?.flavors && (
           <div className={`flavor-row ${flavorMissing ? 'need' : ''}`}>
             <span className="muted small">{flavorMissing ? <b className="need-label">{t('pick_flavor')}</b> : `${t('flavor')}:`}</span>
-            {bP.flavors.map((f) => (
+            {activeFlavors(bP.flavors).map((f) => (
               <button key={f.id} className={`chip ${bFlavor === f.id ? 'on' : ''}`} onClick={() => setBFlavor(f.id)}>
                 {lang === 'es' ? f.es : f.name}
                 {f.extra ? <em>+${f.extra}</em> : null}

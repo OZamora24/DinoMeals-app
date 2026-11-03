@@ -19,7 +19,7 @@ create table if not exists orders (
   address text default '',
   zip text default '',
   delivery_notes text default '',
-  payment_method text not null,            -- zelle | cash | card
+  payment_method text not null,            -- zelle | cash | card | venmo
   paid boolean not null default false,
   paid_at timestamptz,
   status text not null default 'new',      -- new | quote | confirmed | cooking | ready | done | cancelled

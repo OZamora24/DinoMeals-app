@@ -1,23 +1,31 @@
-// "How to pay" lines for an unpaid order (Zelle / card links / cash). Shared by the
+// "How to pay" lines for an unpaid order (Zelle / Venmo / card links / cash). Shared by the
 // confirmation screen and the customer's order page.
 import { money } from '../../lib/menu';
 import { Card, Cash, Bolt } from '../Icons';
+import { cardLinks, venmoLink } from '../../lib/payLinks';
 
-// Card-type pay links from settings, labelled by where they go (Venmo / Cash App / card).
-export function payLinks(s) {
-  return [s.card_link, s.cashapp_link]
-    .map((h) => String(h || '').trim().split(/\s+/)[0])
-    .filter((h) => /^https?:\/\//.test(h))
-    .map((href) => ({ href, label: /venmo\./i.test(href) ? 'Venmo' : /cash\.app/i.test(href) ? 'Cash App' : /paypal\./i.test(href) ? 'PayPal' : '' }));
-}
+// Pay links live in lib/payLinks.js (Venmo and Card are separate options).
+export { cardLinks as payLinks } from '../../lib/payLinks';
 
 export default function PayInfo({ order, settings = {}, lang, t }) {
-  const links = payLinks(settings);
+  const links = cardLinks(settings);
+  const venmo = venmoLink(settings);
   return (
     <>
       {order.payment_method === 'zelle' && (
         <div className="pay-line"><Bolt size={18} /><div>{settings.zelle_info ? <>{t('pay_zelle')} <b>{settings.zelle_info}</b><br /><span className="muted">{t('memo')}: <b>#{order.order_no}</b></span></> : t('zelle_tbd')}</div></div>
       )}
+      {order.payment_method === 'venmo' &&
+        (venmo ? (
+          <div className="pay-links">
+            <a className="btn btn-red btn-block" href={venmo} target="_blank" rel="noreferrer">
+              <Card size={18} /> {t('pay_venmo')} · {money(order.total)}
+            </a>
+            <span className="muted small">{t('memo')}: <b>#{order.order_no}</b></span>
+          </div>
+        ) : (
+          <div className="pay-line"><Card size={18} /><div>{t('venmo_tbd')}</div></div>
+        ))}
       {order.payment_method === 'card' &&
         (links.length ? (
           <div className="pay-links">

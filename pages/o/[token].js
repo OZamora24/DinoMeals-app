@@ -25,7 +25,7 @@ export async function getServerSideProps({ params, res }) {
       return { props: { order: null, pay: {} } };
     }
     const s = await getSettings();
-    const pay = { zelle_info: s.zelle_info || '', card_link: s.card_link || '', cashapp_link: s.cashapp_link || '', cash_info: s.cash_info || '' };
+    const pay = { zelle_info: s.zelle_info || '', card_link: s.card_link || '', venmo_link: s.venmo_link || '', cashapp_link: s.cashapp_link || '', cash_info: s.cash_info || '' };
     return { props: { order: publicOrder(o), pay } };
   } catch (e) {
     console.error('order page', e?.message);

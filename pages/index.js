@@ -4,7 +4,7 @@ import { useState } from 'react';
 import SiteNav from '../components/SiteNav';
 import Footer from '../components/Footer';
 import { useLang } from '../lib/i18n';
-import { PROTEINS, CARBS, VEGGIES, nameOf, prettyDate, money, PORTIONS } from '../lib/menu';
+import { PROTEINS, CARBS, VEGGIES, nameOf, prettyDate, money, PORTIONS, activeFlavors } from '../lib/menu';
 import { getSettings } from '../lib/db';
 import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { Flame, Grain, Leaf, Box, Card, Truck, Arrow, Repeat } from '../components/Icons';
@@ -139,7 +139,7 @@ export default function Home({ settings }) {
             <h3 className="menu-cat"><Flame size={18} /> {t('proteins')}</h3>
             <ul className="menu-list">
               {PROTEINS.filter((p) => mode === 'meal' || p.lb != null).map((p) => {
-                const flavors = mode === 'lb' ? p.lbFlavors || p.flavors : p.flavors;
+                const flavors = activeFlavors(mode === 'lb' ? p.lbFlavors || p.flavors : p.flavors);
                 return (
                   <li key={p.id} className={soldOut.has(p.id) ? 'is-out' : ''}>
                     <div className="mi-name">

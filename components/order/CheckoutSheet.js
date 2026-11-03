@@ -151,6 +151,16 @@ export default function CheckoutSheet({
           <p className="legal-line"><a href="/privacy" target="_blank" rel="noreferrer">{t('privacy')}</a> · <a href="/terms" target="_blank" rel="noreferrer">{t('terms')}</a></p>
         </div>
       </div>
+      {cashPop && (
+        <div className="cash-pop-backdrop" onClick={(e) => e.target === e.currentTarget && setCashPop(false)}>
+          <div className="cash-pop" role="alertdialog" aria-modal="true" aria-label={t('cash')}>
+            <Cash size={28} />
+            <p>{t('cash_pop', CONTACT_PHONE)}</p>
+            <a className="btn btn-ghost btn-block" href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a>
+            <button className="btn btn-red btn-block" onClick={() => setCashPop(false)}>{t('cash_pop_ok')}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

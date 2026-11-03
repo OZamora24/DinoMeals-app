@@ -5,6 +5,7 @@ import {
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
 import { customCookParts } from '../lib/labelSpots';
+import { venmoLink, cardLinks } from '../lib/payLinks';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
 
 const STATUS = ['new', 'quote', 'confirmed', 'cooking', 'ready', 'done', 'cancelled'];
@@ -137,10 +138,10 @@ export function PayTab({ orders, patch, settings }) {
   const paid = priced.filter((o) => o.paid);
   const unpaid = priced.filter((o) => !o.paid);
   const sum = (l) => l.reduce((a, o) => a + Number(o.total || 0), 0);
-  const byMethod = ['zelle', 'cash', 'card'].map((m) => ({ m, paid: sum(paid.filter((o) => o.payment_method === m)), owed: sum(unpaid.filter((o) => o.payment_method === m)) }));
+  const byMethod = ['zelle', 'venmo', 'cash', 'card'].map((m) => ({ m, paid: sum(paid.filter((o) => o.payment_method === m)), owed: sum(unpaid.filter((o) => o.payment_method === m)) }));
   const reminder = (o) =>
     `Hi ${o.customer_name.split(' ')[0]}! DinoMeals here 🦖 Your order #${o.order_no} (${money(o.total)}) is on the list for Sunday. Payment is due before we cook — ` +
-    (o.payment_method === 'zelle' && settings.zelle_info ? `Zelle to ${settings.zelle_info} (memo #${o.order_no}).` : o.payment_method === 'card' && settings.card_link ? `pay here: ${settings.card_link}` : `let me know when it's sent.`) +
+    (o.payment_method === 'zelle' && settings.zelle_info ? `Zelle to ${settings.zelle_info} (memo #${o.order_no}).` : o.payment_method === 'venmo' && venmoLink(settings) ? `Venmo: ${venmoLink(settings)}` : o.payment_method === 'card' && cardLinks(settings)[0] ? `pay here: ${cardLinks(settings)[0].href}` : `let me know when it's sent.`) +
     ' Thank you!';
   return (
     <div>
@@ -391,11 +392,12 @@ export function SettingsTab({ settings, save, week }) {
       <section className="set-card">
         <h3>Payment info (shown after checkout)</h3>
         <label>Zelle (name / phone / email)<input className="input" value={s.zelle_info} onChange={(e) => set('zelle_info', e.target.value)} placeholder="Juan Carlos · (909) 555-0000" /></label>
-        <label>Card / Venmo payment link (optional)<input className="input" value={s.card_link} onChange={(e) => set('card_link', e.target.value)} placeholder="https://venmo.com/… or https://square.link/…" /></label>
+        <label>Venmo payment link (optional)<input className="input" value={s.venmo_link || ''} onChange={(e) => set('venmo_link', e.target.value)} placeholder="https://venmo.com/u/yourname" /></label>
+        <label>Card payment link (optional)<input className="input" value={s.card_link} onChange={(e) => set('card_link', e.target.value)} placeholder="https://square.link/…" /></label>
         <label>Cash App link (optional)<input className="input" value={s.cashapp_link || ''} onChange={(e) => set('cashapp_link', e.target.value)} placeholder="https://cash.app/$yourtag" /></label>
         <label>Cash instructions<input className="input" value={s.cash_info} onChange={(e) => set('cash_info', e.target.value)} /></label>
         <label>Card fee ($ added to the total when a customer pays by card)<input className="input" inputMode="decimal" value={s.card_fee} onChange={(e) => set('card_fee', e.target.value)} /></label>
-        <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, card_link: s.card_link, cashapp_link: s.cashapp_link, cash_info: s.cash_info, card_fee: s.card_fee })}>Save</button>
+        <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, venmo_link: s.venmo_link, card_link: s.card_link, cashapp_link: s.cashapp_link, cash_info: s.cash_info, card_fee: s.card_fee })}>Save</button>
       </section>
 
       <section className="set-card">

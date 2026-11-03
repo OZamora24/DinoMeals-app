@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LABELS_PER_SHEET, clampSpot, nextStart, sheetsUsed, cleanLabelLines, customMacros } from '../lib/labelSpots';
-import { PROTEINS, CARBS, VEGGIES, NONE, PORTIONS } from '../lib/menu';
+import { PROTEINS, CARBS, VEGGIES, NONE, PORTIONS, activeFlavors } from '../lib/menu';
 
 // 🏷️ Labels: pick where on the sheet to start, then download the Word file.
 // The app remembers where the last print ended (on this device), so a partly used
@@ -13,7 +13,7 @@ const readNext = () => { try { return clampSpot(localStorage.getItem(KEY) || 1);
 const saveNext = (n) => { try { localStorage.setItem(KEY, String(n)); } catch {} };
 
 const newLine = () => ({
-  protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli', count: 1,
+  protein: 'chicken', flavor: 'chipotle', carb: 'whiterice', veg: 'broccoli', count: 1,
   amt: { protein: [PORTIONS.protein, 'oz'], carb: [PORTIONS.carb, 'oz'], veg: [PORTIONS.veg, 'oz'] },
 });
 // Editor keeps amounts for every part (even when "None" is picked) so switching back keeps the number.
@@ -39,7 +39,7 @@ function LineEditor({ line, macros, onChange, onRemove }) {
     <div className="cl-line">
       <div className="cl-row">
         <label>Protein</label>
-        <select className="input" value={line.protein} onChange={(e) => onChange({ ...line, protein: e.target.value, flavor: PROTEINS.find((x) => x.id === e.target.value)?.flavors?.[0]?.id })}>
+        <select className="input" value={line.protein} onChange={(e) => onChange({ ...line, protein: e.target.value, flavor: PROTEINS.find((x) => x.id === e.target.value)?.flavors && activeFlavors(PROTEINS.find((x) => x.id === e.target.value).flavors)[0].id })}>
           {PROTEINS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
         <Amount value={line.amt.protein} onChange={(v) => setAmt('protein', v)} />
@@ -48,7 +48,7 @@ function LineEditor({ line, macros, onChange, onRemove }) {
         <div className="cl-row">
           <label>Flavor</label>
           <select className="input" value={line.flavor} onChange={(e) => set('flavor', e.target.value)}>
-            {p.flavors.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            {p.flavors.filter((f) => !f.hidden || f.id === line.flavor).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
           <span className="cl-amt" />
         </div>

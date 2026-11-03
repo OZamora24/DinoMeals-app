@@ -1,4 +1,4 @@
-import { PROTEINS, CARBS, VEGGIES, MIN_LBS, nameOf, proteinLabel, lbUnitPrice, money } from '../../lib/menu';
+import { PROTEINS, CARBS, VEGGIES, MIN_LBS, nameOf, proteinLabel, activeFlavors, lbUnitPrice, money } from '../../lib/menu';
 import { Flame, Grain, Leaf } from '../../components/Icons';
 import { Stepper, Meter } from './Controls';
 
@@ -15,7 +15,7 @@ export default function LbMenu({ lang, t, soldOut, lbs, lbCount, lbFlavor, setLb
         <div className="lb-group" key={kind}>
           <h3 className="menu-cat"><I size={18} /> {title}</h3>
           {list.map((x) => {
-            const flavors = kind === 'protein' ? x.lbFlavors || x.flavors : null;
+            const flavors = kind === 'protein' ? activeFlavors(x.lbFlavors || x.flavors) : null;
             const fl = flavors ? lbFlavor[x.id] || null : undefined; // no default flavor
             const needFl = !!flavors && !fl;
             const unit = lbUnitPrice({ kind, item: x.id, flavor: fl || (flavors ? flavors[0].id : undefined) });

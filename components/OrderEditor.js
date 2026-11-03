@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  PROTEINS, CARBS, VEGGIES, NONE, DIET_FLAGS, byId, flavorOf, lineLabel, mealLineCount, mealUnitPrice, ozTag, priceCart, money,
+  PROTEINS, CARBS, VEGGIES, NONE, DIET_FLAGS, byId, flavorOf, activeFlavors, lineLabel, mealLineCount, mealUnitPrice, ozTag, priceCart, money,
 } from '../lib/menu';
 import { linesToCart, cartKey } from '../lib/cart';
 import { formatPhone } from '../lib/orderForm';
@@ -43,7 +43,7 @@ export default function OrderEditor({ order, onSave, onClose }) {
   const setMeal = (i, patch) => setMeals((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)));
   const pickProtein = (i, id) => {
     const p = byId(PROTEINS, id);
-    setMeal(i, { protein: id, flavor: p.flavors ? p.flavors[0].id : undefined });
+    setMeal(i, { protein: id, flavor: p.flavors ? activeFlavors(p.flavors)[0].id : undefined });
   };
   const addMeal = () => setMeals((ms) => [...ms, { protein: PROTEINS[0].id, flavor: undefined, carb: CARBS[0].id, veg: VEGGIES[0].id, count: 1 }]);
 
@@ -98,7 +98,7 @@ export default function OrderEditor({ order, onSave, onClose }) {
                     </select>
                     {p?.flavors ? (
                       <select className="input" value={flavorOf(p, m.flavor)?.id} onChange={(e) => setMeal(i, { flavor: e.target.value })}>
-                        {p.flavors.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                        {activeFlavors(p.flavors).concat(p.flavors.filter((x) => x.hidden && x.id === m.flavor)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                       </select>
                     ) : <span />}
                     <select className="input" value={m.carb} onChange={(e) => setMeal(i, { carb: e.target.value })}>
@@ -171,7 +171,7 @@ export default function OrderEditor({ order, onSave, onClose }) {
           <fieldset className="fs">
             <legend>Payment</legend>
             <div className="chips">
-              {['zelle', 'cash', 'card'].map((k) => (
+              {['zelle', 'venmo', 'cash', 'card'].map((k) => (
                 <button key={k} className={`chip sm ${f.payment_method === k ? 'on' : ''}`} onClick={() => set('payment_method', k)}>{k[0].toUpperCase() + k.slice(1)}</button>
               ))}
             </div>
