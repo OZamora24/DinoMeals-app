@@ -9,12 +9,16 @@ export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
   hasItems, fee, cardFee, subtotal, total, discount = 0, promo, promoMsg, applyPromo, removePromo, err, busy, place, onClose,
 }) {
-  // Esc closes the checkout popup (tapping outside or Back already did)
+  const [cashPop, setCashPop] = useState(false);
+  // Esc closes the cash popup first, then the checkout popup (tapping outside or Back already did)
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (cashPop) setCashPop(false); else onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, cashPop]);
   return (
     <div className="sheet-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet" role="dialog" aria-modal="true">
@@ -84,9 +88,9 @@ export default function CheckoutSheet({
           <fieldset className="fs">
             <legend>{t('payment')}</legend>
             <p className="muted small">{t('pay_note')}</p>
-            <div className="opt-grid three">
-              {[['zelle', Bolt], ['cash', Cash], ['card', Card]].map(([k, I]) => (
-                <button key={k} className={`opt ${info.payment_method === k ? 'on' : ''}`} onClick={() => setInfo({ ...info, payment_method: k })}>
+            <div className="opt-grid">
+              {[['zelle', Bolt], ['venmo', Card], ['card', Card], ['cash', Cash]].map(([k, I]) => (
+                <button key={k} className={`opt ${info.payment_method === k ? 'on' : ''}`} onClick={() => { setInfo({ ...info, payment_method: k }); if (k === 'cash') setCashPop(true); }}>
                   <I size={22} /><b>{t(k)}</b>
                   {k === 'card' && Number(settings.card_fee) > 0 && <span>+{money(settings.card_fee)} {t('fee')}</span>}
                 </button>
