@@ -15,7 +15,9 @@ export default function LbMenu({ lang, t, soldOut, lbs, lbCount, lbFlavor, setLb
         <div className="lb-group" key={kind}>
           <h3 className="menu-cat"><I size={18} /> {title}</h3>
           {list.map((x) => {
-            const flavors = kind === 'protein' ? activeFlavors(x.lbFlavors || x.flavors) : null;
+            // Only proteins that actually have flavors get a flavor row (empty list = no flavors).
+            const flavorList = kind === 'protein' ? activeFlavors(x.lbFlavors || x.flavors) : [];
+            const flavors = flavorList.length ? flavorList : null;
             const fl = flavors ? lbFlavor[x.id] || null : undefined; // no default flavor
             const needFl = !!flavors && !fl;
             const unit = lbUnitPrice({ kind, item: x.id, flavor: fl || (flavors ? flavors[0].id : undefined) });

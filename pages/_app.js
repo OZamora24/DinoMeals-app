@@ -13,6 +13,8 @@ import SplashScreen from '../components/SplashScreen';
 import BuiltByOrlandoTab from '../components/BuiltByOrlandoTab';
 import FossilTransition from '../components/FossilTransition';
 import { PromoModal } from '../components/PromoPopup';
+import CrashGuard, { CrashTest } from '../components/CrashGuard';
+import { reportClientError, isStaleAssetError, canAutoReload, reloadNow } from '../lib/clientErrors';
 
 // Splash rules
 //  - First visit: "Tap to enter" gate, then the full splash with the
@@ -69,6 +71,23 @@ export default function App({ Component, pageProps }) {
     }
     return audio.current;
   };
+
+  // Safety net: report any uncaught error; an old-version "missing file" error reloads once.
+  useEffect(() => {
+    if (isAdmin) return undefined;
+    const handle = (err, where) => {
+      reportClientError(err, where);
+      if (isStaleAssetError(err && (err.message || err)) && canAutoReload()) reloadNow();
+    };
+    const onError = (e) => handle(e.error || { message: e.message }, 'window');
+    const onRejection = (e) => handle(e.reason || { message: 'unhandled rejection' }, 'promise');
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, [isAdmin]);
 
   // Decide which splash this visit gets.
   useEffect(() => {
@@ -288,7 +307,10 @@ export default function App({ Component, pageProps }) {
         <meta name="apple-mobile-web-app-title" content={isAdmin ? 'Kitchen' : 'DinoMeals'} />
       </Head>
       <div className={hidden ? 'app-hidden' : 'app-shown'}>
-        <Component {...pageProps} />
+        <CrashGuard where={router.pathname}>
+          <CrashTest />
+          <Component {...pageProps} />
+        </CrashGuard>
       </div>
       <BuiltByOrlandoTab />
       <FossilTransition phase={fx} />

@@ -1221,3 +1221,14 @@ label .input { margin-top: 6px; font-weight: 500; }
 .promo-ctl .switch { width: 50px; height: 30px; }
 .promo-ctl .switch span { width: 24px; height: 24px; top: 3px; left: 3px; }
 .promo-ctl .switch.on span { transform: translateX(20px); }
+
+/* ---- Crash safety net (components/CrashGuard.js, pages/_error.js) ---- */
+.crash { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px 22px; text-align: center; background: #121010; color: #f4ece1; }
+.crash .nav-badge { margin-bottom: 8px; }
+.crash-title { font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1.05; margin: 0; }
+.crash-sub { margin: 0; color: #b8aa98; font-weight: 600; }
+.crash-text { margin: 10px 0 0; max-width: 420px; line-height: 1.45; }
+.crash-tip { margin: 6px 0 0; max-width: 420px; font-size: .9rem; line-height: 1.45; color: #f2a13a; background: rgba(242,161,58,.08); border: 1px solid rgba(242,161,58,.35); border-radius: 12px; padding: 10px 12px; }
+.crash-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+.crash-contact { margin-top: 14px; font-size: .9rem; color: #b8aa98; }
+.crash-contact a { color: #f4ece1; font-weight: 700; }
