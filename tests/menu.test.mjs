@@ -402,6 +402,11 @@ test('retired flavors: Classic chicken and Seasoned beef are not offered, Korean
   // a stale flavor id never falls back to a retired one
   assert.equal(M.flavorOf(M.byId(M.PROTEINS, 'chicken'), 'nope').id, 'chipotle');
   assert.equal(M.flavorOf(M.byId(M.PROTEINS, 'chicken'), 'plain').name, 'Classic'); // old orders still resolve
+  // by the lb: burgers no longer offer Classic, but old Classic lb orders still price
+  const burgers = M.byId(M.PROTEINS, 'burgers');
+  assert.deepEqual(M.activeFlavors(burgers.lbFlavors).map((f) => f.id), ['smashed', 'smoked']);
+  assert.equal(M.needsFlavor({ type: 'lb', kind: 'protein', item: 'burgers', flavor: 'plain', lbs: 2 }), true);
+  assert.equal(M.lbUnitPrice({ kind: 'protein', item: 'burgers', flavor: 'plain' }), 21);
   // priced orders from before the change still price (admin / repeat paths don't require a flavor)
   assert.equal(M.priceCart({ meals: [{ protein: 'chicken', flavor: 'plain', carb: 'whiterice', veg: 'broccoli', count: 8 }] }, []).ok, true);
 });
