@@ -12,6 +12,7 @@ import { useLang } from '../../lib/i18n';
 import { prettyDate } from '../../lib/menu';
 import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import { VIEW_TXT, rememberOrder } from '../../lib/orderView';
+import ShareReferral from '../../components/order/ShareReferral';
 
 export async function getServerSideProps({ params, res }) {
   const { getOrderByToken, getSettings } = await import('../../lib/db');
@@ -26,7 +27,11 @@ export async function getServerSideProps({ params, res }) {
     }
     const s = await getSettings();
     const pay = { zelle_info: s.zelle_info || '', card_link: s.card_link || '', venmo_link: s.venmo_link || '', cashapp_link: s.cashapp_link || '', cash_info: s.cash_info || '' };
-    return { props: { order: publicOrder(o), pay } };
+    const { codeFor } = await import('../../lib/referralCode');
+    const { referralConfig } = await import('../../lib/referral');
+    const rc = referralConfig(s);
+    const ref = rc.on && o.status !== 'cancelled' ? { code: codeFor(o.phone_digits, o.customer_name), newPct: rc.new_pct, creditPct: rc.credit_pct } : null;
+    return { props: { order: publicOrder(o), pay, ref } };
   } catch (e) {
     console.error('order page', e?.message);
     res.statusCode = 500;
@@ -34,7 +39,7 @@ export async function getServerSideProps({ params, res }) {
   }
 }
 
-export default function OrderPage({ order, pay }) {
+export default function OrderPage({ order, pay, ref = null }) {
   const { lang, setLang, t } = useLang();
   const x = VIEW_TXT[lang] || VIEW_TXT.en;
   useEffect(() => {
@@ -72,6 +77,7 @@ export default function OrderPage({ order, pay }) {
             )}
             <Receipt order={order} lang={lang} />
             <ReceiptButtons order={order} lang={lang} />
+            {ref && <ShareReferral code={ref.code} lang={lang} newPct={ref.newPct} creditPct={ref.creditPct} />}
             <OrderAgain order={order} lang={lang} />
             <SaveContact lang={lang} />
             <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>

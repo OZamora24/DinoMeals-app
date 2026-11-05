@@ -15,6 +15,10 @@ function lineParts(l, lang, x) {
 export default function Receipt({ order, lang = 'en', badge = true }) {
   const x = VIEW_TXT[lang] || VIEW_TXT.en;
   const quote = order.total == null;
+  const rewardPart = (order.reward && Number(order.reward.discount)) || 0;
+  const refPart = (order.referral && Number(order.referral.discount)) || 0;
+  const creditPart = (order.ref_credit && Number(order.ref_credit.discount)) || 0;
+  const promoPart = Math.round(((Number(order.discount) || 0) - rewardPart - refPart - creditPart) * 100) / 100;
   return (
     <div className="receipt">
       <div className="rc-head">
@@ -36,6 +40,9 @@ export default function Receipt({ order, lang = 'en', badge = true }) {
       {order.custom_request && (
         <div className="rc-row"><div>{x.custom}<small>{order.custom_request}</small></div></div>
       )}
+      {quote && order.reward && (
+        <div className="rc-row rc-promo"><div>🎁 {x.reward}<small>{x.promo_pending}</small></div><b>{order.reward.label}</b></div>
+      )}
       {quote && order.promo_code && (
         <div className="rc-row rc-promo"><div>🏷 {x.promo} {order.promo_code}<small>{x.promo_pending}</small></div><b>{order.promo_off}</b></div>
       )}
@@ -44,7 +51,10 @@ export default function Receipt({ order, lang = 'en', badge = true }) {
           {(order.delivery_fee > 0 || order.discount > 0) && (
             <>
               <div><span>{x.subtotal}</span><span>{money(order.subtotal)}</span></div>
-              {order.discount > 0 && <div className="rc-promo"><span>{x.promo} {order.promo_code}</span><span>−{money(order.discount)}</span></div>}
+              {promoPart > 0 && <div className="rc-promo"><span>{x.promo} {order.promo_code}</span><span>−{money(promoPart)}</span></div>}
+              {rewardPart > 0 && <div className="rc-promo"><span>🎁 {x.reward} · {order.reward.label}</span><span>−{money(rewardPart)}</span></div>}
+              {refPart > 0 && <div className="rc-promo"><span>🤝 {x.referral(order.referral.by)} · {order.referral.pct}%</span><span>−{money(refPart)}</span></div>}
+              {creditPart > 0 && <div className="rc-promo"><span>🤝 {x.ref_credit(order.ref_credit.n)} · {order.ref_credit.pct}%</span><span>−{money(creditPart)}</span></div>}
               {order.delivery_fee > 0 && <div><span>{x.fee}</span><span>{money(order.delivery_fee)}</span></div>}
             </>
           )}

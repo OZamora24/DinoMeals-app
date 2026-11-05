@@ -7,7 +7,9 @@ import { sendOrderText } from '../../../lib/sms';
 import { upsertReminder } from '../../../lib/db';
 import { publicOrder } from '../../../lib/orderView';
 import { cleanLabelLines } from '../../../lib/labelSpots';
-import { quotePrice } from '../../../lib/promo';
+import { promoDiscount } from '../../../lib/promo';
+import { PICK_MIN, PICK_MAX } from '../../../lib/loyalty';
+import { allDiscounts } from '../../../lib/referral';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
@@ -38,7 +40,7 @@ export default async function handler(req, res) {
         await upsertReminder({ digits: built.row.phone_digits, name: built.row.customer_name, lang: built.row.lang }).catch((e) => console.error('reminder opt-in', e?.message));
       }
       // Public receipt fields + the private order-page code (never name/phone/address).
-      return res.status(200).json({ order: { id: order.id, ...publicOrder(order) } });
+      return res.status(200).json({ order: { id: order.id, ...publicOrder(order), ref_code: built.ref.code }, loyalty: built.loyalty, ref_note: built.ref.note });
     }
 
     if (!admin) return res.status(401).json({ error: 'Not logged in' });
@@ -99,16 +101,29 @@ export default async function handler(req, res) {
       // Money: re-price when items change; otherwise just move the card fee
       // when the payment method switches. A hand-typed total always wins.
       const settings = await getSettings({ fresh: true });
-      const touchesMoney = 'cart' in p || patch.payment_method || patch.fulfillment;
+      // Loyalty "bonus" reward (25th, 30th… order): Juan picks 5–10% on the order card.
+      let curM = cur;
+      if ('reward_pick' in p && cur.reward && cur.reward.kind === 'pick') {
+        const n = Math.min(PICK_MAX, Math.max(PICK_MIN, parseInt(p.reward_pick, 10) || PICK_MIN));
+        curM = { ...cur, reward: { ...cur.reward, value: n, picked: true } };
+        patch.reward = curM.reward;
+      }
+      const touchesMoney = 'cart' in p || patch.payment_method || patch.fulfillment || 'reward_pick' in p;
       if ('total' in p) {
         patch.total = p.total === '' || p.total == null ? null : Math.max(0, Number(p.total) || 0);
-        // Custom quote that saved a promo code at checkout: the typed price is before the
-        // discount, so the code comes off automatically (shows on the receipt and export).
-        if (cur.promo && !(cur.items || []).length && !('cart' in p)) {
-          Object.assign(patch, patch.total == null ? { subtotal: null, discount: 0 } : quotePrice(cur.promo, patch.total));
+        // Custom quote that saved a promo code and/or loyalty reward at checkout: the typed price is
+        // before the discount, so both come off automatically (shows on the receipt and export).
+        if ((curM.promo || curM.reward || curM.referral || curM.ref_credit) && !(curM.items || []).length && !('cart' in p)) {
+          const sub = patch.total == null ? 0 : Math.round(patch.total * 100) / 100;
+          const st = allDiscounts(sub, { promoDisc: curM.promo ? promoDiscount(curM.promo, sub) : 0, reward: curM.reward, refPct: curM.referral ? curM.referral.pct : 0, creditPct: curM.ref_credit ? curM.ref_credit.pct : 0 }, settings);
+          Object.assign(patch,
+            patch.total == null ? { subtotal: null, discount: 0 } : { subtotal: sub, discount: st.total, total: Math.round((sub - st.total) * 100) / 100 },
+            curM.reward ? { reward: { ...curM.reward, discount: st.reward } } : {},
+            curM.referral ? { referral: { ...curM.referral, discount: st.referral } } : {},
+            curM.ref_credit ? { ref_credit: { ...curM.ref_credit, discount: st.credit } } : {});
         }
       } else if (touchesMoney) {
-        const r = repriceOrder(cur, patch, settings, 'cart' in p ? p.cart : null);
+        const r = repriceOrder(curM, patch, settings, 'cart' in p ? p.cart : null);
         if (r.error) return res.status(400).json({ error: r.error });
         Object.assign(patch, r.patch);
       }

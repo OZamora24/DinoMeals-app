@@ -4,10 +4,11 @@ import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import SmsConsent from '../SmsConsent';
 import { promoLabel } from '../../lib/promo';
+import { prettyDate } from '../../lib/menu';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
-  hasItems, fee, cardFee, subtotal, total, discount = 0, promo, promoMsg, applyPromo, removePromo, err, busy, place, onClose,
+  hasItems, fee, cardFee, subtotal, total, discount = 0, loyalty = null, rewardDisc = 0, refState = null, refDisc = 0, credits = null, creditDisc = 0, promo, promoMsg, applyPromo, removePromo, err, busy, place, onClose,
 }) {
   const [cashPop, setCashPop] = useState(false);
   // Esc closes the cash popup first, then the checkout popup (tapping outside or Back already did)
@@ -131,12 +132,23 @@ export default function CheckoutSheet({
             {(hasItems || custom.trim()) && (settings.promo_on || promo) && (
               <PromoBox t={t} lang={lang} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} pending={!hasItems} />
             )}
+            {(hasItems || custom.trim()) && refState && refState.name && <ReferralBox t={t} refState={refState} pending={!hasItems} refDisc={refDisc} />}
+            {(hasItems || custom.trim()) && !(refState && refState.ok) && credits && credits.pct > 0 && (
+              <div className="loy-box on ref">
+                <div className="loy-head"><span>🤝</span><b>{t('ref_credit_t', credits.use)}</b><em>{credits.pct}% {t('off')}</em></div>
+                <p className="loy-sub">{pendingText(!hasItems, t)}{!hasItems ? '' : creditDisc > 0 ? ` −${money(creditDisc)}` : ''}{credits.available > credits.use ? ` · ${t('ref_credit_more', credits.available - credits.use)}` : ''}</p>
+              </div>
+            )}
+            {(hasItems || custom.trim()) && loyalty && loyalty.on && <LoyaltyBox t={t} lang={lang} loyalty={loyalty} pending={!hasItems} rewardDisc={rewardDisc} />}
             {hasItems && (
               <div className="totals">
-                {(fee > 0 || cardFee > 0 || discount > 0) && (
+                {(fee > 0 || cardFee > 0 || discount > 0 || rewardDisc > 0 || refDisc > 0 || creditDisc > 0) && (
                   <>
                     <div><span>{t('subtotal')}</span><span>{money(subtotal)}</span></div>
                     {discount > 0 && <div className="promo-line"><span>{t('promo_line')} {promo?.code}</span><span>−{money(discount)}</span></div>}
+                    {rewardDisc > 0 && <div className="promo-line"><span>🎁 {t('loy_line')} · {loyalty.available.label}</span><span>−{money(rewardDisc)}</span></div>}
+                    {refDisc > 0 && <div className="promo-line"><span>🤝 {t('ref_line', refState.name)} · {refState.pct}%</span><span>−{money(refDisc)}</span></div>}
+                    {creditDisc > 0 && <div className="promo-line"><span>🤝 {t('ref_credit_t', credits.use)} · {credits.pct}%</span><span>−{money(creditDisc)}</span></div>}
                     {fee > 0 && <div><span>{t('delivery_fee')}</span><span>{money(fee)}</span></div>}
                     {cardFee > 0 && <div><span>{t('card_fee')}</span><span>{money(cardFee)}</span></div>}
                   </>
@@ -193,6 +205,50 @@ function PromoBox({ t, lang, promo, promoMsg, applyPromo, removePromo, discount,
         <button type="submit" className="btn btn-ghost btn-sm" disabled={!code.trim() || busy}>{t('promo_apply')}</button>
       </form>
       {promoMsg && <p className="promo-msg">{promoMsg}</p>}
+    </div>
+  );
+}
+
+// Customer Loyalty Rewards: the unlocked reward (used automatically) or progress to the next one.
+function LoyaltyBox({ t, lang, loyalty, pending, rewardDisc }) {
+  const a = loyalty.available;
+  if (a) {
+    return (
+      <div className="loy-box on">
+        <div className="loy-head"><span>🎁</span><b>{t('loy_unlocked')}</b><em>{a.label}</em></div>
+        <p className="loy-sub">
+          {pending ? t('loy_quote') : a.kind === 'pick' ? t('loy_pick') : t('loy_applied')}
+          {!pending && rewardDisc > 0 ? ` · −${money(rewardDisc)}` : ''} · {t('loy_until', prettyDate(a.expires, lang))}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="loy-box">
+      <div className="loy-head"><span>🦖</span><b>{t('loy_title')}</b></div>
+      <div className="loy-pips" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} className={i < loyalty.progress ? 'on' : ''} />)}</div>
+      <p className="loy-sub">{t('loy_left', loyalty.next.left, loyalty.next.label)} · {t('loy_rules')}</p>
+    </div>
+  );
+}
+
+const pendingText = (pending, t) => (pending ? t('loy_quote') : t('loy_applied'));
+
+// Referral: a friend's link was used. Shows the 10% new-customer discount, or why it can't be used.
+function ReferralBox({ t, refState, pending, refDisc }) {
+  if (!refState.ok) {
+    if (refState.note === 'need_phone') return null;
+    return (
+      <div className="loy-box ref">
+        <div className="loy-head"><span>🤝</span><b>{t('ref_from', refState.name)}</b></div>
+        <p className="loy-sub">{t(`ref_${refState.note}`) !== `ref_${refState.note}` ? t(`ref_${refState.note}`) : t('ref_ref_invalid')}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="loy-box on ref">
+      <div className="loy-head"><span>🤝</span><b>{t('ref_from', refState.name)}</b><em>{refState.pct}% {t('off')}</em></div>
+      <p className="loy-sub">{t('ref_first')}{pending ? ` ${t('loy_quote')}` : refDisc > 0 ? ` −${money(refDisc)}` : ''}</p>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { publicSettings, publicSettingsWithCapacity } from '../../lib/publicSett
 import { smsStatus } from '../../lib/sms';
 import { cleanPopups } from '../../lib/popups';
 import { cleanPromoList } from '../../lib/promo';
+import { loyaltyConfig } from '../../lib/loyalty';
+import { referralConfig } from '../../lib/referral';
 import { mailStatus } from '../../lib/mailer';
 import { countCustomerPush } from '../../lib/db';
 
@@ -23,6 +25,12 @@ export default async function handler(req, res) {
       for (const k of Object.keys(DEFAULT_SETTINGS)) if (k !== 'push_subs' && k !== 'last_report_week' && k in (req.body || {})) patch[k] = req.body[k];
       if ('popups' in patch) patch.popups = cleanPopups(patch.popups);
       if ('promo_codes' in patch) patch.promo_codes = cleanPromoList(patch.promo_codes);
+      if ('referral' in patch) patch.referral = referralConfig({ referral: patch.referral });
+      if ('loyalty' in patch) { // on/off + start week; renewals are kept (they're set from /api/rewards)
+        const curL = (await getSettings({ fresh: true })).loyalty || {};
+        const c = loyaltyConfig({ loyalty: { ...curL, ...(patch.loyalty || {}), renew: curL.renew } });
+        patch.loyalty = { on: c.on, start: c.start, renew: c.renew };
+      }
       if ('delivery_fee' in patch) patch.delivery_fee = Math.max(0, Number(patch.delivery_fee) || 0);
       if ('card_fee' in patch) patch.card_fee = Math.max(0, Number(patch.card_fee) || 0);
       if ('weekly_capacity' in patch) patch.weekly_capacity = Math.max(0, parseInt(patch.weekly_capacity, 10) || 0);

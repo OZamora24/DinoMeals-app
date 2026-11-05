@@ -20,6 +20,7 @@ import LbMenu from '../components/order/LbMenu';
 import ExtrasPanel from '../components/order/ExtrasPanel';
 import CheckoutSheet from '../components/order/CheckoutSheet';
 import { promoDiscount, normCode } from '../lib/promo';
+import { allDiscounts } from '../lib/referral';
 
 export async function getServerSideProps({ req, query }) {
   const s = await getSettings();
@@ -59,6 +60,15 @@ export default function OrderPage({ settings, adminMode }) {
   const [err, setErr] = useState('');
   const [promo, setPromo] = useState(null); // { code, type, value } once a code checks out
   const [promoMsg, setPromoMsg] = useState('');
+  const [loyalty, setLoyalty] = useState(null); // Customer Loyalty Rewards for the phone typed at checkout
+  const [credits, setCredits] = useState(null); // referral credits this customer earned (up to 2 used)
+  const [refCode, setRefCode] = useState(''); // friend's referral code from ?ref= (kept on this phone)
+  const [refState, setRefState] = useState(null); // { ok, name, pct, note }
+  const [refBanner, setRefBanner] = useState(null); // shown at the top when a friend's link was opened
+  useEffect(() => {
+    if (!refCode || adminMode) { setRefBanner(null); return; }
+    fetch(`/api/referral?code=${encodeURIComponent(refCode)}`).then((r) => r.json()).then(setRefBanner).catch(() => setRefBanner(null));
+  }, [refCode, adminMode]);
   const [done, setDone] = useState(null);
 
   // admin extras
@@ -120,7 +130,14 @@ export default function OrderPage({ settings, adminMode }) {
   const subtotal = hasItems ? Math.round(priced.subtotal * 100) / 100 : 0;
   const cardFee = info.payment_method === 'card' && hasItems ? Number(settings.card_fee) || 0 : 0;
   const discount = hasItems ? promoDiscount(promo, subtotal) : 0;
-  const total = hasItems ? Math.round((subtotal - discount + fee + cardFee) * 100) / 100 : null;
+  const reward = loyalty && loyalty.on && loyalty.available ? loyalty.available : null;
+  const refPct = refState && refState.ok && refState.pct ? refState.pct : 0;
+  const creditPct = !refPct && credits && credits.pct ? credits.pct : 0;
+  const parts = allDiscounts(hasItems ? subtotal : 0, { promoDisc: discount, reward, refPct, creditPct });
+  const rewardDisc = hasItems ? parts.reward : 0;
+  const refDisc = hasItems ? parts.referral : 0;
+  const creditDisc = hasItems ? parts.credit : 0;
+  const total = hasItems ? Math.round((subtotal - parts.total + fee + cardFee) * 100) / 100 : null;
   const mealsOk = mealCount === 0 || (planTarget ? mealCount === planTarget : mealCount >= MIN_MEALS);
   const lbsOk = lbCount === 0 || lbCount >= MIN_LBS;
   const flavorNeeded = cartNeedsFlavor({ meals, lbs });
@@ -291,6 +308,38 @@ export default function OrderPage({ settings, adminMode }) {
     if (router.isReady && router.query.code) applyPromo(String(router.query.code), true);
   }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ---- loyalty rewards: look up the phone typed at checkout ----
+  const phoneDigits = String(info.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  useEffect(() => {
+    if (!sheet || phoneDigits.length !== 10 || adminMode) { setLoyalty(null); setCredits(null); setRefState(null); return undefined; }
+    let alive = true;
+    const tm = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/rewards?phone=${phoneDigits}&lang=${lang}`);
+        const j = await r.json().catch(() => ({}));
+        if (alive) { setLoyalty(r.ok && settings.loyalty_on !== false ? j.loyalty : null); setCredits(r.ok ? j.credits : null); }
+      } catch { if (alive) { setLoyalty(null); setCredits(null); } }
+      if (refCode && settings.referral_on !== false) {
+        try {
+          const r = await fetch(`/api/referral?code=${encodeURIComponent(refCode)}&phone=${phoneDigits}`);
+          const j = await r.json().catch(() => ({}));
+          if (alive) setRefState(r.ok ? j : null);
+        } catch { if (alive) setRefState(null); }
+      } else if (alive) setRefState(null);
+    }, 350);
+    return () => { alive = false; clearTimeout(tm); };
+  }, [sheet, phoneDigits, lang, settings.loyalty_on, settings.referral_on, refCode, adminMode]);
+  // Referral links: dinomeals.app/order?ref=MARCUS-7Q2K (remembered on this phone until they order).
+  useEffect(() => {
+    if (adminMode) return;
+    let c = router.isReady && router.query.ref ? String(router.query.ref).slice(0, 30) : '';
+    try {
+      if (c) localStorage.setItem('dino_ref', c);
+      else c = localStorage.getItem('dino_ref') || '';
+    } catch {}
+    setRefCode(c);
+  }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- submit ----
   async function place() {
     if (!adminMode) primeSizzle(); // unlock Chef Rex's sizzle while we still have the tap
@@ -303,6 +352,7 @@ export default function OrderPage({ settings, adminMode }) {
         ...info,
         total,
         promo_code: promo ? promo.code : '',
+        ref_code: !adminMode && refState && refState.ok ? refCode : '',
         lang,
         ...(adminMode ? { as_admin: true, source: adm.source, paid: adm.paid, cook_date: adm.cook_date } : {}),
       };
@@ -313,7 +363,8 @@ export default function OrderPage({ settings, adminMode }) {
         setErr(t(`err_${j.error}`) !== `err_${j.error}` ? t(`err_${j.error}`) : t('err_generic'));
         return;
       }
-      setDone({ ...j.order, name: info.name });
+      setDone({ ...j.order, name: info.name, loyalty: j.loyalty || null });
+      if (!adminMode && j.order && j.order.referral) { try { localStorage.removeItem('dino_ref'); } catch {} setRefCode(''); }
       setSheet(false);
       if (!adminMode) {
         try {
@@ -394,6 +445,7 @@ export default function OrderPage({ settings, adminMode }) {
       </header>
 
       {settings.announcement ? <div className="announce">{settings.announcement}</div> : null}
+      {refBanner && refBanner.valid ? <div className="announce ref-banner">🤝 {t('ref_banner', refBanner.name, refBanner.pct || settings.referral_new_pct || 10)}</div> : null}
       {full && settings.ordering_open ? <div className="announce">{t('week_full_note')}</div> : null}
 
       {!adminMode && (
@@ -537,6 +589,12 @@ export default function OrderPage({ settings, adminMode }) {
           subtotal={subtotal}
           total={total}
           discount={discount}
+          loyalty={loyalty}
+          rewardDisc={rewardDisc}
+          refState={refState}
+          refDisc={refDisc}
+          credits={credits}
+          creditDisc={creditDisc}
           promo={promo}
           promoMsg={promoMsg}
           applyPromo={applyPromo}

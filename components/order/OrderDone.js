@@ -9,6 +9,7 @@ import PayInfo from './PayInfo';
 import Receipt from './Receipt';
 import { ReceiptButtons, SaveContact } from './OrderTools';
 import { rememberOrder } from '../../lib/orderView';
+import ShareReferral from './ShareReferral';
 
 export default function OrderDone({ done, adminMode, settings, lang, setLang, t, resetAll }) {
   const quote = done.total == null;
@@ -35,8 +36,16 @@ export default function OrderDone({ done, adminMode, settings, lang, setLang, t,
             )}
           </div>
         )}
-        {(done.items?.length > 0 || (quote && done.promo_code)) && <Receipt order={done} lang={lang} badge={false} />}
+        {(done.items?.length > 0 || (quote && (done.promo_code || done.reward))) && <Receipt order={done} lang={lang} badge={false} />}
+        {!adminMode && done.loyalty && done.loyalty.on && (
+          <p className="loy-done">
+            {done.loyalty.available && done.loyalty.count > 0 && done.loyalty.count % 5 === 0 && !done.reward
+              ? t('loy_after_unlock', done.loyalty.available.label)
+              : t('loy_after', done.loyalty.count, done.loyalty.next.left, done.loyalty.next.label)}
+          </p>
+        )}
         {!adminMode && done.token && <ReceiptButtons order={done} lang={lang} />}
+        {!adminMode && done.ref_code && <ShareReferral code={done.ref_code} lang={lang} newPct={settings.referral_new_pct || 10} creditPct={settings.referral_credit_pct || 5} />}
         {!adminMode && <SaveContact lang={lang} />}
         <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
         <div className="done-actions">

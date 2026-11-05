@@ -84,3 +84,9 @@ alter table orders add column if not exists label_lines jsonb not null default '
 -- Promo codes: the code an order used ({code, type, value}) and the $ taken off the food subtotal.
 alter table orders add column if not exists promo jsonb;
 alter table orders add column if not exists discount numeric not null default 0;
+
+-- Customer Loyalty Rewards + Referral program (Nov 2026). Safe to run more than once.
+alter table public.orders add column if not exists reward jsonb;
+alter table public.orders add column if not exists referral jsonb;
+alter table public.orders add column if not exists ref_credit jsonb;
+create index if not exists orders_referral_by_idx on public.orders ((referral->>'by'));

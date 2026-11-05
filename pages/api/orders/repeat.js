@@ -40,6 +40,9 @@ export default async function handler(req, res) {
           source: 'repeat',
           route_pos: null,
           promo: null, // promo codes are one-time: the repeat is full price
+          reward: null, // loyalty rewards too
+          referral: null,
+          ref_credit: null,
           discount: 0,
         })
       );

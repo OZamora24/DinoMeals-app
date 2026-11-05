@@ -5,6 +5,8 @@ import {
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
 import { customCookParts } from '../lib/labelSpots';
+import { loyaltyState, rewardLabel, ordinal, EVERY } from '../lib/loyalty';
+import { referralCredits, referralConfig, referralsThisMonth } from '../lib/referral';
 import { venmoLink, cardLinks } from '../lib/payLinks';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
 
@@ -283,6 +285,8 @@ export function RegularsTab({ week, weekOrders, repeat }) {
   if (!all) return <p className="muted">Loading…</p>;
   return (
     <div>
+      <LoyaltyPanel all={all} />
+      <ReferralPanel all={all} />
       <div className="route-head">
         <div>
           <h2 className="display sm">Regulars</h2>
@@ -703,4 +707,151 @@ function PromoStatus({ p }) {
   else if (p.ends && today > p.ends) { cls = 'off'; txt = 'Ended'; }
   else if (p.starts && today < p.starts) { cls = 'soon'; txt = `Starts ${nice(p.starts)}`; }
   return <span className={`promo-st ${cls}`}>{txt}</span>;
+}
+
+// Customer Loyalty Rewards (lib/loyalty.js): who's close to a reward, unlocked / used / expired
+// rewards, and a Renew button for expired ones. The on/off switch pauses new rewards.
+function LoyaltyPanel({ all }) {
+  const [settings, setSettings] = useState(null);
+  const [busy, setBusy] = useState('');
+  const [open, setOpen] = useState(false);
+  useEffect(() => { api('/api/settings').then((j) => setSettings(j.settings)).catch(() => setSettings({})); }, []);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const rows = useMemo(() => {
+    if (!settings) return [];
+    const by = {};
+    for (const o of all) (by[o.phone_digits] ||= []).push(o);
+    return Object.entries(by)
+      .map(([digits, orders]) => ({ digits, name: orders[0].customer_name, phone: orders[0].phone, st: loyaltyState(orders, today, settings, digits) }))
+      .filter((r) => r.st.count > 0)
+      .sort((a, b) => b.st.count - a.st.count);
+  }, [all, settings, today]);
+  if (!settings) return null;
+  const on = settings.loyalty?.on !== false;
+  const toggle = async () => {
+    setBusy('toggle');
+    try { const j = await api('/api/settings', { method: 'POST', body: { loyalty: { ...(settings.loyalty || {}), on: !on } } }); setSettings(j.settings); } finally { setBusy(''); }
+  };
+  const renew = async (digits, milestone) => {
+    setBusy(`${digits}:${milestone}`);
+    try { await api('/api/rewards', { method: 'POST', body: { phone: digits, milestone } }); const j = await api('/api/settings'); setSettings(j.settings); } finally { setBusy(''); }
+  };
+  const ready = rows.filter((r) => r.st.available).length;
+  const shown = open ? rows : rows.slice(0, 6);
+  return (
+    <section className="loy-panel">
+      <div className="route-head">
+        <div>
+          <h2 className="display sm">⭐ Loyalty Rewards</h2>
+          <p className="muted small">Paid orders of 8+ meals / 4+ lb (or quotes $80+), once per week, since {settings.loyalty?.start || '2026-11-08'}. Every 5th week unlocks a reward for their next order: 5% · 10% · $20 free meal · 20% · then 5–10% (you pick). Rewards last 30 days; promo + reward max 20%.</p>
+        </div>
+        <label className="switch-row">
+          <span>{on ? 'On' : 'Paused'}</span>
+          <button className={`switch ${on ? 'on' : ''}`} disabled={busy === 'toggle'} onClick={toggle} aria-label="Loyalty rewards on or off"><span /></button>
+        </label>
+      </div>
+      {rows.length === 0 && <p className="muted empty">No counted orders yet. Customers show up here after their first paid order.</p>}
+      {ready > 0 && <p className="loy-ready">🎁 {ready} customer{ready === 1 ? '' : 's'} with a reward ready to use.</p>}
+      <div className="reg-list">
+        {shown.map((r) => (
+          <div className="reg loy-row" key={r.digits}>
+            <div className="reg-main">
+              <b>{r.name}</b> <span className="muted small">{r.phone}</span>
+              <div className="loy-pips sm" aria-label={`${r.st.progress} of ${EVERY}`}>{[0, 1, 2, 3, 4].map((i) => <i key={i} className={i < r.st.progress ? 'on' : ''} />)}</div>
+              <div className="muted small">{r.st.count} counted week{r.st.count === 1 ? '' : 's'} · {r.st.next.left} more to {rewardLabel(r.st.next.reward)} ({ordinal(r.st.next.at)})</div>
+              {r.st.earned.length > 0 && (
+                <div className="loy-chips">
+                  {r.st.earned.map((e) => (
+                    <span key={e.milestone} className={`loy-chip ${e.status}`}>
+                      {ordinal(e.milestone)}: {rewardLabel(e)} ·{' '}
+                      {e.status === 'used' ? `used on #${e.used_order}` : e.status === 'expired' ? `expired ${e.expires}` : `ready until ${e.expires}${e.renewed ? ' (renewed)' : ''}`}
+                      {e.status === 'expired' && (
+                        <button className="link" disabled={busy === `${r.digits}:${e.milestone}`} onClick={() => renew(r.digits, e.milestone)}>Renew 30 days</button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {rows.length > 6 && <button className="btn btn-ghost btn-sm" onClick={() => setOpen(!open)}>{open ? 'Show less' : `Show all ${rows.length}`}</button>}
+    </section>
+  );
+}
+
+// Referral program (lib/referral.js): who brought whom, credits earned/used, on/off and amounts.
+function ReferralPanel({ all }) {
+  const [settings, setSettings] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [edit, setEdit] = useState(null);
+  useEffect(() => { api('/api/settings').then((j) => setSettings(j.settings)).catch(() => setSettings({})); }, []);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const cfg = referralConfig(settings || {});
+  const rows = useMemo(() => {
+    if (!settings) return [];
+    const byRef = {};
+    const own = {};
+    for (const o of all) {
+      (own[o.phone_digits] ||= []).push(o);
+      if (o.referral && o.referral.by) (byRef[o.referral.by] ||= []).push(o);
+    }
+    return Object.entries(byRef)
+      .map(([digits, friends]) => {
+        const mine = own[digits] || [];
+        return { digits, name: mine[0]?.customer_name || friends[0].referral.by_name || 'Customer', phone: mine[0]?.phone || '', month: referralsThisMonth(friends), rc: referralCredits(friends, mine, today, settings) };
+      })
+      .sort((a, b) => b.rc.credits.length - a.rc.credits.length);
+  }, [all, settings, today]);
+  if (!settings) return null;
+  const save = async (patch) => {
+    setBusy(true);
+    try { const j = await api('/api/settings', { method: 'POST', body: { referral: { ...cfg, ...patch } } }); setSettings(j.settings); setEdit(null); } finally { setBusy(false); }
+  };
+  const field = (k, label, suffix) => (
+    <label className="ref-field">{label}
+      <span><input className="input" inputMode="numeric" value={edit ? edit[k] : cfg[k]} onChange={(e) => setEdit({ ...(edit || cfg), [k]: e.target.value })} />{suffix}</span>
+    </label>
+  );
+  return (
+    <section className="loy-panel">
+      <div className="route-head">
+        <div>
+          <h2 className="display sm">🤝 Referrals</h2>
+          <p className="muted small">Every customer has a share link on their receipt. A new customer using it gets {cfg.new_pct}% off their first order. When that order is paid (8+ meals / 4+ lb), the person who shared it earns a {cfg.credit_pct}% credit for their next order (up to {cfg.max_stack} credits used at once, {cfg.expire_days} days to use). Max {cfg.monthly_cap} referrals per person per month. Separate from the 20% promo + loyalty max.</p>
+        </div>
+        <label className="switch-row">
+          <span>{cfg.on ? 'On' : 'Paused'}</span>
+          <button className={`switch ${cfg.on ? 'on' : ''}`} disabled={busy} onClick={() => save({ on: !cfg.on })} aria-label="Referrals on or off"><span /></button>
+        </label>
+      </div>
+      <div className="ref-settings">
+        {field('new_pct', 'New customer', '%')}
+        {field('credit_pct', 'Credit per friend', '%')}
+        {field('max_stack', 'Credits per order', '')}
+        {field('monthly_cap', 'Max / month', '')}
+        {field('expire_days', 'Credits last', 'days')}
+        {edit && <button className="btn btn-red btn-sm" disabled={busy} onClick={() => save(edit)}>Save</button>}
+      </div>
+      {rows.length === 0 && <p className="muted empty">No referrals yet. They show up here when a new customer orders with someone's link.</p>}
+      <div className="reg-list">
+        {rows.map((r) => (
+          <div className="reg loy-row" key={r.digits}>
+            <div className="reg-main">
+              <b>{r.name}</b> <span className="muted small">{r.phone}</span>
+              <div className="muted small">{r.rc.credits.length} friend{r.rc.credits.length === 1 ? '' : 's'} referred · {r.month}/{cfg.monthly_cap} this month · {r.rc.available} credit{r.rc.available === 1 ? '' : 's'} ready</div>
+              <div className="loy-chips">
+                {r.rc.credits.map((c) => (
+                  <span key={c.id} className={`loy-chip ${c.status}`}>
+                    {c.friend} #{c.order_no} · {c.status === 'pending' ? 'waiting for payment' : c.status === 'used' ? `credit used on #${c.used_on}` : c.status === 'expired' ? `credit expired ${c.expires}` : `credit ready until ${c.expires}`}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }

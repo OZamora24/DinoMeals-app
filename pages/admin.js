@@ -12,7 +12,9 @@ import DinoHelper from '../components/DinoHelper';
 // Rex (the help pop-up). Set to false to hide him.
 const SHOW_REX = true;
 import { labelCount, isCustomOrder } from '../lib/labelSpots';
-import { promoLabel, quotePrice } from '../lib/promo';
+import { promoLabel, promoDiscount } from '../lib/promo';
+import { rewardLabel, ordinal } from '../lib/loyalty';
+import { allDiscounts } from '../lib/referral';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
@@ -386,16 +388,31 @@ function OrderCard({ o, patch, edit, remove, repeat, week, macros }) {
       <ul className="oc-items">
         {(o.items || []).map((l, i) => <li key={i}>{lineText(l)}</li>)}
       </ul>
-      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · {o.total == null ? promoLabel(o.promo) : `−${money(Number(o.discount) || 0)}`}</div>}
+      {o.reward && (
+        <div className="oc-promo oc-reward">
+          🎁 Loyalty reward ({ordinal(o.reward.milestone)} order): {rewardLabel(o.reward)}{Number(o.reward.discount) > 0 ? ` · −${money(Number(o.reward.discount))}` : o.total == null ? ' · comes off when you set the price' : ''}
+          {o.reward.kind === 'pick' && (
+            <div className="reward-pick">
+              <span>Pick the bonus:</span>
+              {[5, 6, 7, 8, 9, 10].map((n) => (
+                <button key={n} type="button" className={`chip sm ${o.reward.value === n ? 'on' : ''}`} onClick={() => patch(o.id, { reward_pick: n })}>{n}%</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {o.referral && <div className="oc-promo oc-reward">🤝 New customer, referred by {o.referral.by_name || 'a friend'} · {o.referral.pct}%{Number(o.referral.discount) > 0 ? ` · −${money(Number(o.referral.discount))}` : ''}</div>}
+      {o.ref_credit && <div className="oc-promo oc-reward">🤝 Referral credit{(o.ref_credit.ids || []).length === 1 ? '' : 's'} ×{(o.ref_credit.ids || []).length} · {o.ref_credit.pct}%{Number(o.ref_credit.discount) > 0 ? ` · −${money(Number(o.ref_credit.discount))}` : ''}</div>}
+      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · {o.total == null ? promoLabel(o.promo) : `−${money(Math.max(0, (Number(o.discount) || 0) - (Number(o.reward?.discount) || 0) - (Number(o.referral?.discount) || 0) - (Number(o.ref_credit?.discount) || 0)))}`}</div>}
       {o.custom_request && <div className="oc-custom">✎ {o.custom_request}</div>}
       {o.status === 'quote' && (
         <div className="quote-row">
           <input className="input" inputMode="decimal" placeholder="Price $" value={quote} onChange={(e) => setQuote(e.target.value)} />
           <button className="btn btn-red btn-sm" onClick={() => patch(o.id, { total: quote, status: 'confirmed' })}>Set price</button>
-          {o.promo && o.promo.code && (
+          {((o.promo && o.promo.code) || o.reward || o.referral || o.ref_credit) && (
             <p className="quote-promo">
-              Type the price <b>before</b> the discount. {o.promo.code} ({promoLabel(o.promo)}) comes off automatically
-              {Number(quote) > 0 ? <>: customer pays <b>{money(quotePrice(o.promo, quote).total)}</b></> : '.'}
+              Type the price <b>before</b> the discount. {[o.promo && o.promo.code && `${o.promo.code} (${promoLabel(o.promo)})`, o.reward && `loyalty reward (${rewardLabel(o.reward)})`, o.referral && `new-customer ${o.referral.pct}%`, o.ref_credit && `referral credits ${o.ref_credit.pct}%`].filter(Boolean).join(' + ')} comes off automatically
+              {Number(quote) > 0 ? <>: customer pays <b>{money(Number(quote) - allDiscounts(Number(quote), { promoDisc: o.promo ? promoDiscount(o.promo, Number(quote)) : 0, reward: o.reward, refPct: o.referral ? o.referral.pct : 0, creditPct: o.ref_credit ? o.ref_credit.pct : 0 }).total)}</b></> : '.'}
             </p>
           )}
         </div>
