@@ -3,22 +3,37 @@ import { isValidSession } from '../../../lib/adminSession';
 import { rateLimit } from '../../../lib/rateLimit';
 import { notifyNewOrder } from '../../../lib/push';
 import { buildOrderRow, repriceOrder, normalizePhone, PAY, STATUSES, clean } from '../../../lib/orderRow';
-import { sendOrderText } from '../../../lib/sms';
-import { upsertReminder } from '../../../lib/db';
+import { sendOrderText, progressLine } from '../../../lib/sms';
+import { upsertReminder, ordersByPhone } from '../../../lib/db';
 import { publicOrder } from '../../../lib/orderView';
 import { cleanLabelLines } from '../../../lib/labelSpots';
 import { promoDiscount } from '../../../lib/promo';
-import { PICK_MIN, PICK_MAX } from '../../../lib/loyalty';
+import { PICK_MIN, PICK_MAX, loyaltyState, loyaltyConfig, qualifies } from '../../../lib/loyalty';
+import { dateKey, laNow } from '../../../lib/menu';
 import { allDiscounts } from '../../../lib/referral';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
 async function textCustomer(kind, order, settings) {
   try {
-    const sent = await Promise.race([sendOrderText(kind, order, settings), new Promise((r) => setTimeout(() => r(null), 5500))]);
+    const extra = kind === 'paid' ? { line: await rewardsLine(order, settings) } : {};
+    const sent = await Promise.race([sendOrderText(kind, order, settings, { extra }), new Promise((r) => setTimeout(() => r(null), 5500))]);
     if (sent) await updateOrder(order.id, { sms_sent: sent });
   } catch (e) {
     console.error('textCustomer', kind, e?.message);
+  }
+}
+
+// "⭐ Rewards: 3 of 5…" / "🎉 You unlocked…" for the payment-received text. Only when this order
+// counts toward the program; any error just leaves the line off.
+async function rewardsLine(order, settings) {
+  try {
+    if (!order.sms_opt_in || !qualifies(order, loyaltyConfig(settings))) return '';
+    const own = await ordersByPhone(order.phone_digits, 500);
+    return progressLine(loyaltyState(own, dateKey(laNow()), settings, order.phone_digits), order, order.lang === 'es' ? 'es' : 'en');
+  } catch (e) {
+    console.error('rewardsLine', e?.message);
+    return '';
   }
 }
 

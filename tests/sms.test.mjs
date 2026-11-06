@@ -77,3 +77,35 @@ test('sendText reports Twilio STOP (21610) so the reminder list drops that numbe
   assert.deepEqual(await sendText('9095550123', 'hi', { env: ON, fetchImpl: stop }), { ok: false, code: 21610 });
   assert.equal((await sendText('9095550123', 'hi', { env: {}, fetchImpl: stop })).code, 'off');
 });
+
+test('rewards lines ride inside the existing texts (paid, ready, Thursday reminder)', async () => {
+  const { progressLine, waitingLine, reminderMessage, BELL_LINE } = await import('../lib/sms.js');
+  const { loyaltyState } = await import('../lib/loyalty.js');
+  const s = { zelle_info: '(909) 436-6621', pickup_address: '123 Main St, Rialto' };
+  const mk = (i, extra = {}) => ({ id: i, order_no: 1000 + i, paid: true, status: 'done', cook_date: `2026-11-${String(i + 1).padStart(2, '0')}`, meal_count: 10, items: [{}], ...extra });
+  const LS = { loyalty: { start: '2026-01-01' } };
+  // 3 paid orders -> progress line
+  const three = [mk(1), mk(2), mk(3)];
+  const st3 = loyaltyState(three, '2026-11-05', LS, '9095551234');
+  assert.match(progressLine(st3, three[2], 'en'), /Rewards: 3 of 5\. 2 more orders to 5% off!/);
+  assert.match(progressLine(st3, three[2], 'es'), /Recompensas: 3 de 5\. ¡Faltan 2 órdenes/);
+  // 5th paid order -> unlocked
+  const five = [mk(1), mk(2), mk(3), mk(4), mk(5)];
+  const st5 = loyaltyState(five, '2026-11-07', LS, '9095551234');
+  assert.match(progressLine(st5, five[4], 'en'), /You unlocked 5% off on your next order!/);
+  // paid text carries the line and stays within 3 segments' worth of characters
+  const order = { order_no: 1042, customer_name: 'Maria', meal_count: 12, total: 168, cook_date: '2026-10-18', paid: true, view_token: 'ab12cd34ef56' };
+  const p = buildMessage('paid', order, s, { line: progressLine(st3, three[2], 'en') });
+  assert.match(p, /Thank you! Pickup .*⭐ Rewards: 3 of 5.* Your order: https:\/\/dinomeals\.app\/o\/ab12cd34ef56 Reply STOP/);
+  assert.ok(!/ {2}/.test(buildMessage('paid', order, s)), 'no double spaces without a line');
+  // ready text carries the bell tip (EN + ES), can be switched off
+  assert.ok(buildMessage('ready', order, s).includes(BELL_LINE.en));
+  assert.ok(buildMessage('ready', { ...order, lang: 'es' }, s).includes(BELL_LINE.es));
+  assert.ok(!buildMessage('ready', order, s, { bell: false }).includes('🔔'));
+  // reminder: line only when something is waiting
+  assert.equal(waitingLine(st3, null, 'en'), '');
+  assert.match(waitingLine(st5, null, 'en'), /Waiting for you: 5% off \(use by /);
+  assert.match(waitingLine(st3, { pct: 10 }, 'en'), /10% referral credit/);
+  assert.match(reminderMessage('en', { cutoff_day: 5, cutoff_hour: 10 }, waitingLine(st5, { pct: 5 }, 'en')), /close Fri 10:00 AM\. 🎁 Waiting for you: 5% off .* \+ 5% referral credit\. Order at/);
+  assert.match(reminderMessage('en', { cutoff_day: 5, cutoff_hour: 10 }), /close Fri 10:00 AM\. Order at/);
+});

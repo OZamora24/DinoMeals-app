@@ -4,9 +4,19 @@
 // there are two schedules (one lands on 4 PM during daylight time, one during standard
 // time) and this handler only sends when it's really Thursday 4 PM in Los Angeles.
 // Nothing goes out unless SMS_ENABLED=true (texts stay off until the carrier approves).
-import { getSettings, reminderSubscribers, updateReminder } from '../../../lib/db';
-import { reminderMessage, sendText, smsStatus } from '../../../lib/sms';
-import { cookDateFor, laNow } from '../../../lib/menu';
+import { getSettings, reminderSubscribers, updateReminder, recentOrders } from '../../../lib/db';
+import { reminderMessage, sendText, smsStatus, waitingLine } from '../../../lib/sms';
+import { cookDateFor, laNow, dateKey } from '../../../lib/menu';
+import { loyaltyState } from '../../../lib/loyalty';
+import { referralCredits, referralConfig } from '../../../lib/referral';
+
+// "🎁 Waiting for you: 5% off (use by …)" for one phone, from all orders loaded once.
+export function waitingFor(digits, all, today, s, lang) {
+  const own = all.filter((o) => o.phone_digits === digits);
+  const friends = all.filter((o) => o.referral && o.referral.by === digits);
+  const rc = referralConfig(s).on ? referralCredits(friends, own, today, s) : null;
+  return waitingLine(loyaltyState(own, today, s, digits), rc, lang);
+}
 
 export const REMINDER_DAY = 4; // Thursday
 export const REMINDER_HOUR = 16; // 4 PM Pacific
@@ -26,11 +36,17 @@ export default async function handler(req, res) {
 
   const week = cookDateFor(now, s.cutoff_day, s.cutoff_hour);
   const subs = await reminderSubscribers();
+  const today = dateKey(now);
+  // Every order once (not one query per person) so the rewards line stays fast. If it fails,
+  // the reminders still go out without it.
+  const all = await recentOrders(3650).catch((e) => (console.error('reminder rewards', e?.message), null));
   let sent = 0;
   let optedOut = 0;
   for (const r of subs) {
     if (r.last_sent_week === week) continue; // never twice in one week
-    const out = await sendText(r.phone_digits, reminderMessage(r.lang, s));
+    let extra = '';
+    try { if (all) extra = waitingFor(r.phone_digits, all, today, s, r.lang); } catch {}
+    const out = await sendText(r.phone_digits, reminderMessage(r.lang, s, extra));
     if (out.ok) {
       sent += 1;
       await updateReminder(r.phone_digits, { last_sent_week: week });
