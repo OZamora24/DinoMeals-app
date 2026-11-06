@@ -258,6 +258,23 @@ export function RouteTab({ orders, patch, settings }) {
 }
 
 /* =========================== REGULARS =========================== */
+// 🎁 Rewards tab: every customer program in one place (loyalty, referrals, trainers, monthly plans).
+export function RewardsTab() {
+  const [all, setAll] = useState(null);
+  useEffect(() => {
+    api('/api/orders').then((j) => setAll(j.orders)).catch(() => setAll([]));
+  }, []);
+  if (!all) return <p className="muted">Loading…</p>;
+  return (
+    <div>
+      <LoyaltyPanel all={all} />
+      <ReferralPanel all={all} />
+      <TrainerPanel all={all} />
+      <MonthlyPanel all={all} />
+    </div>
+  );
+}
+
 export function RegularsTab({ week, weekOrders, repeat }) {
   const [all, setAll] = useState(null);
   useEffect(() => {
@@ -287,10 +304,6 @@ export function RegularsTab({ week, weekOrders, repeat }) {
   if (!all) return <p className="muted">Loading…</p>;
   return (
     <div>
-      <LoyaltyPanel all={all} />
-      <ReferralPanel all={all} />
-      <TrainerPanel all={all} />
-      <MonthlyPanel all={all} />
       <div className="route-head">
         <div>
           <h2 className="display sm">Regulars</h2>

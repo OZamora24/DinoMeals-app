@@ -48,6 +48,9 @@ export const Printer = (p) => (
 export const Route = (p) => (
   <P {...p}><circle cx="6" cy="19" r="2.5" /><circle cx="18" cy="5" r="2.5" /><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5" /></P>
 );
+export const Gift = (p) => (
+  <P {...p}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M5 12v9h14v-9M12 8v13" /><path d="M12 8c-1.5-3.5-6-4-6-1.5S10 8 12 8zM12 8c1.5-3.5 6-4 6-1.5S14 8 12 8z" /></P>
+);
 export const Users = (p) => (
   <P {...p}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5" /></P>
 );
