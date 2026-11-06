@@ -20,6 +20,6 @@ test('older shops that saved their Venmo link in the card field still work', () 
 test('venmo is an accepted payment method, and only card carries the card fee', () => {
   const src = readFileSync(new URL('../lib/orderRow.js', import.meta.url), 'utf8');
   assert.match(src, /export const PAY = \[[^\]]*'venmo'/);
-  assert.match(src, /payment_method === 'card' && hasItems \? Number\(settings\.card_fee\)/);
+  assert.match(src, /payment_method === 'card' && hasItems (\? |&& \(!monthly \|\| monthly\.card_fee\) \? )Number\(settings\.card_fee\)/);
   assert.doesNotMatch(src, /payment_method === 'venmo'[^\n]*card_fee/);
 });

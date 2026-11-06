@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LABELS_PER_SHEET, clampSpot, nextStart, sheetsUsed, cleanLabelLines, customMacros } from '../lib/labelSpots';
+import { LABELS_PER_SHEET, clampSpot, nextStart, sheetsUsed, cleanLabelLines, customMacros, labelLineCount } from '../lib/labelSpots';
+import LbLinePicker, { newLbLine } from './LbLinePicker';
 import { PROTEINS, CARBS, VEGGIES, NONE, PORTIONS, activeFlavors } from '../lib/menu';
 
 // 🏷️ Labels: pick where on the sheet to start, then download the Word file.
@@ -17,7 +18,7 @@ const newLine = () => ({
   amt: { protein: [PORTIONS.protein, 'oz'], carb: [PORTIONS.carb, 'oz'], veg: [PORTIONS.veg, 'oz'] },
 });
 // Editor keeps amounts for every part (even when "None" is picked) so switching back keeps the number.
-const toEditor = (l) => ({ ...newLine(), ...l, amt: { ...newLine().amt, ...(l.amt || {}) } });
+const toEditor = (l) => (l.type === 'lb' ? { ...l } : { ...newLine(), ...l, amt: { ...newLine().amt, ...(l.amt || {}) } });
 const r0 = (n) => Math.round(n);
 
 function Amount({ value, onChange }) {
@@ -95,8 +96,8 @@ export default function LabelsButton({ href, count, label = '🏷️ Labels', ti
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!count && !custom) return null;
 
-  const customCount = custom ? lines.reduce((n, l) => n + (Number(l.count) || 0), 0) : 0;
-  const savedCount = custom ? savedLines.reduce((n, l) => n + (Number(l.count) || 0), 0) : 0;
+  const customCount = custom ? lines.reduce((n, l) => n + labelLineCount(l), 0) : 0;
+  const savedCount = custom ? savedLines.reduce((n, l) => n + labelLineCount(l), 0) : 0;
   const total = custom ? count - savedCount + customCount : count;
   const sheets = sheetsUsed(start, total);
   const next = nextStart(start, total);
@@ -141,12 +142,22 @@ export default function LabelsButton({ href, count, label = '🏷️ Labels', ti
                 <section className="cl-box">
                   <h3 className="cl-h">1 · Meals on this order</h3>
                   {custom.custom_request && <p className="cl-note">✎ {custom.custom_request}</p>}
-                  {lines.map((l, i) => (
+                  {lines.map((l, i) => (l.type === 'lb' ? (
+                    <div className="cl-line" key={i}>
+                      <LbLinePicker line={l} step={0.5} showPrice={false}
+                        onChange={(nl) => setLines((ls) => ls.map((x, j) => (j === i ? { ...nl, type: 'lb' } : x)))}
+                        onRemove={() => setLines((ls) => ls.filter((_, j) => j !== i))} />
+                      <p className="muted small">{labelLineCount(l)} label{labelLineCount(l) === 1 ? '' : 's'}: one "1 Lb." label per pound{Number(l.lbs) % 1 ? ' + one "½ Lb."' : ''}</p>
+                    </div>
+                  ) : (
                     <LineEditor key={i} line={l} macros={macros || {}}
                       onChange={(nl) => setLines((ls) => ls.map((x, j) => (j === i ? nl : x)))}
                       onRemove={() => setLines((ls) => ls.filter((_, j) => j !== i))} />
-                  ))}
-                  <button type="button" className="btn btn-ghost btn-sm cl-add" onClick={() => setLines((ls) => [...ls, newLine()])}>+ Add another meal</button>
+                  )))}
+                  <div className="row wrap">
+                    <button type="button" className="btn btn-ghost btn-sm cl-add" onClick={() => setLines((ls) => [...ls, newLine()])}>+ Add another meal</button>
+                    <button type="button" className="btn btn-ghost btn-sm cl-add" onClick={() => setLines((ls) => [...ls, { type: 'lb', ...newLbLine() }])}>+ Add by the lb</button>
+                  </div>
                   <h3 className="cl-h">2 · Where to start</h3>
                 </section>
               )}
@@ -154,7 +165,7 @@ export default function LabelsButton({ href, count, label = '🏷️ Labels', ti
               <div className="ls-grid">{spots}</div>
               <div className="ls-sum">
                 <div><b>{total}</b> label{total === 1 ? '' : 's'} · <b>{sheets}</b> sheet{sheets === 1 ? '' : 's'}{start > 1 ? ` (finishes the open sheet first)` : ''}</div>
-                {!total ? <div className="ls-left">Add at least one meal.</div>
+                {!total ? <div className="ls-left">Add at least one meal or lb.</div>
                   : lastSheetFree > 0
                     ? <div className="ls-left">{lastSheetFree} sticker{lastSheetFree === 1 ? '' : 's'} left on the last sheet. Keep it: the next print will start at spot <b>{next}</b>.</div>
                     : <div className="ls-left ok">Uses every sticker. The next print starts on a new sheet.</div>}

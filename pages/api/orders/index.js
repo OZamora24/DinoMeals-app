@@ -2,15 +2,15 @@ import { insertOrder, listOrders, updateOrder, deleteOrder, getOrder, getSetting
 import { isValidSession } from '../../../lib/adminSession';
 import { rateLimit } from '../../../lib/rateLimit';
 import { notifyNewOrder } from '../../../lib/push';
-import { buildOrderRow, repriceOrder, normalizePhone, PAY, STATUSES, clean } from '../../../lib/orderRow';
+import { buildOrderRow, buildMonthlyRows, repriceOrder, normalizePhone, PAY, STATUSES, clean } from '../../../lib/orderRow';
 import { sendOrderText, progressLine } from '../../../lib/sms';
-import { upsertReminder, ordersByPhone } from '../../../lib/db';
+import { upsertReminder, ordersByPhone, ordersByMonthly } from '../../../lib/db';
 import { publicOrder } from '../../../lib/orderView';
 import { cleanLabelLines } from '../../../lib/labelSpots';
 import { promoDiscount } from '../../../lib/promo';
 import { PICK_MIN, PICK_MAX, loyaltyState, loyaltyConfig, qualifies } from '../../../lib/loyalty';
 import { dateKey, laNow } from '../../../lib/menu';
-import { allDiscounts } from '../../../lib/referral';
+import { allDiscounts, pctOff } from '../../../lib/referral';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
@@ -45,6 +45,25 @@ export default async function handler(req, res) {
       if (!admin && !rateLimit(req, 'order', 10, 10 * 60 * 1000)) return res.status(429).json({ error: 'rate_limited' });
       const wantAdmin = !!req.body?.as_admin;
       if (wantAdmin && !admin) return res.status(401).json({ error: 'Not logged in' });
+      // Monthly Plan: 4 orders (one per weekend) placed and paid together.
+      if (Array.isArray(req.body?.monthly_weeks)) {
+        const plan = await buildMonthlyRows(req.body || {}, { admin: wantAdmin });
+        if (plan.error) return res.status(400).json(plan);
+        const orders = [];
+        for (const row of plan.rows) orders.push(await insertOrder(row));
+        const first = orders[0];
+        if (!wantAdmin) await Promise.race([notifyNewOrder(first), new Promise((r) => setTimeout(r, 3000))]);
+        if (!wantAdmin) await textCustomer('confirm', first, await getSettings());
+        if (!wantAdmin && first.reminder_opt_in) {
+          await upsertReminder({ digits: first.phone_digits, name: first.customer_name, lang: first.lang }).catch((e) => console.error('reminder opt-in', e?.message));
+        }
+        return res.status(200).json({
+          order: { id: first.id, ...publicOrder(first), ref_code: plan.ref.code },
+          monthly: { total: plan.plan_total, weeks: orders.map((o) => ({ order_no: o.order_no, cook_date: o.cook_date, total: o.total, meal_count: o.meal_count, lb_total: o.lb_total })) },
+          loyalty: plan.loyalty,
+          ref_note: '',
+        });
+      }
       const built = await buildOrderRow(req.body || {}, { admin: wantAdmin });
       if (built.error) return res.status(400).json(built);
       const order = await insertOrder(built.row);
@@ -128,14 +147,15 @@ export default async function handler(req, res) {
         patch.total = p.total === '' || p.total == null ? null : Math.max(0, Number(p.total) || 0);
         // Custom quote that saved a promo code and/or loyalty reward at checkout: the typed price is
         // before the discount, so both come off automatically (shows on the receipt and export).
-        if ((curM.promo || curM.reward || curM.referral || curM.ref_credit) && !(curM.items || []).length && !('cart' in p)) {
+        if ((curM.promo || curM.reward || curM.referral || curM.ref_credit || curM.trainer) && !(curM.items || []).length && !('cart' in p)) {
           const sub = patch.total == null ? 0 : Math.round(patch.total * 100) / 100;
-          const st = allDiscounts(sub, { promoDisc: curM.promo ? promoDiscount(curM.promo, sub) : 0, reward: curM.reward, refPct: curM.referral ? curM.referral.pct : 0, creditPct: curM.ref_credit ? curM.ref_credit.pct : 0 }, settings);
+          const st = allDiscounts(sub, { promoDisc: curM.promo ? promoDiscount(curM.promo, sub) : curM.trainer ? pctOff(curM.trainer.pct, sub) : 0, reward: curM.reward, refPct: curM.referral ? curM.referral.pct : 0, creditPct: curM.ref_credit ? curM.ref_credit.pct : 0 }, settings);
           Object.assign(patch,
             patch.total == null ? { subtotal: null, discount: 0 } : { subtotal: sub, discount: st.total, total: Math.round((sub - st.total) * 100) / 100 },
             curM.reward ? { reward: { ...curM.reward, discount: st.reward } } : {},
             curM.referral ? { referral: { ...curM.referral, discount: st.referral } } : {},
-            curM.ref_credit ? { ref_credit: { ...curM.ref_credit, discount: st.credit } } : {});
+            curM.ref_credit ? { ref_credit: { ...curM.ref_credit, discount: st.credit } } : {},
+            curM.trainer ? { trainer: { ...curM.trainer, discount: st.promo } } : {});
         }
       } else if (touchesMoney) {
         const r = repriceOrder(curM, patch, settings, 'cart' in p ? p.cart : null);
@@ -145,8 +165,22 @@ export default async function handler(req, res) {
       const wasPaid = !!cur.paid;
       const wasStatus = cur.status;
       const order = await updateOrder(id, patch);
+      // Monthly Plan: it's paid as one, so Paid / Unpaid applies to all 4 weeks (one text, on week 1's order).
+      if ('paid' in patch && cur.monthly && cur.monthly.id) {
+        try {
+          for (const sib of await ordersByMonthly(cur.monthly.id)) {
+            if (sib.id !== id && !!sib.paid !== patch.paid) await updateOrder(sib.id, { paid: patch.paid, paid_at: patch.paid_at });
+          }
+        } catch (e) { console.error('monthly paid', e?.message); }
+      }
       // Order-status texts: "payment received" when it flips to paid, "ready" when marked ready.
-      if (patch.paid === true && !wasPaid) await textCustomer('paid', order, settings);
+      if (patch.paid === true && !wasPaid) {
+        if (!cur.monthly) await textCustomer('paid', order, settings);
+        else {
+          const w1 = cur.monthly.week === 1 ? order : (await ordersByMonthly(cur.monthly.id).catch(() => [])).find((o) => o.monthly && o.monthly.week === 1);
+          if (w1) await textCustomer('paid', w1, settings);
+        }
+      }
       if (patch.status === 'ready' && wasStatus !== 'ready') await textCustomer('ready', order, settings);
       return res.status(200).json({ order });
     }

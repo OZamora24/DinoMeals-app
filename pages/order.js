@@ -20,7 +20,10 @@ import LbMenu from '../components/order/LbMenu';
 import ExtrasPanel from '../components/order/ExtrasPanel';
 import CheckoutSheet from '../components/order/CheckoutSheet';
 import { promoDiscount, normCode } from '../lib/promo';
-import { allDiscounts } from '../lib/referral';
+import { allDiscounts, pctOff } from '../lib/referral';
+import { useTrainerCredits } from '../lib/trainer';
+import { MONTHLY_SIZES, monthlyWeeks } from '../lib/monthly';
+import MonthlyBar from '../components/order/MonthlyBar';
 
 export async function getServerSideProps({ req, query }) {
   const s = await getSettings();
@@ -62,6 +65,10 @@ export default function OrderPage({ settings, adminMode }) {
   const [promoMsg, setPromoMsg] = useState('');
   const [loyalty, setLoyalty] = useState(null); // Customer Loyalty Rewards for the phone typed at checkout
   const [credits, setCredits] = useState(null); // referral credits this customer earned (up to 2 used)
+  const [tcredit, setTcredit] = useState(null); // a trainer's own $ meal credits { available, amount, each }
+  // Monthly Plan: null, or { week: 0-3, weeks: [{ meals, lbs, extras, planId } × 4] } (the open
+  // week lives in the normal cart state and is copied back in when switching weeks).
+  const [monthly, setMonthly] = useState(null);
   const [refCode, setRefCode] = useState(''); // friend's referral code from ?ref= (kept on this phone)
   const [refState, setRefState] = useState(null); // { ok, name, pct, note }
   const [refBanner, setRefBanner] = useState(null); // shown at the top when a friend's link was opened
@@ -129,19 +136,80 @@ export default function OrderPage({ settings, adminMode }) {
   const fee = info.fulfillment === 'delivery' && hasItems ? Number(settings.delivery_fee) || 0 : 0;
   const subtotal = hasItems ? Math.round(priced.subtotal * 100) / 100 : 0;
   const cardFee = info.payment_method === 'card' && hasItems ? Number(settings.card_fee) || 0 : 0;
-  const discount = hasItems ? promoDiscount(promo, subtotal) : 0;
-  const reward = loyalty && loyalty.on && loyalty.available ? loyalty.available : null;
-  const refPct = refState && refState.ok && refState.pct ? refState.pct : 0;
-  const creditPct = !refPct && credits && credits.pct ? credits.pct : 0;
+  // A trainer's code: 10% on a brand-new customer's first order, else 5% (the server decides;
+  // the page shows the smaller one until it knows the phone is new).
+  const trainerShownPct = promo && promo.trainer ? (loyalty && loyalty.new_customer ? promo.trainer.first_pct : promo.trainer.pct) : 0;
+  const discount = monthly ? 0 : hasItems ? (promo && promo.trainer ? pctOff(trainerShownPct, subtotal) : promoDiscount(promo, subtotal)) : 0;
+  const reward = !monthly && loyalty && loyalty.on && loyalty.available ? loyalty.available : null;
+  const refPct = !monthly && refState && refState.ok && refState.pct ? refState.pct : 0;
+  const creditPct = !monthly && !refPct && credits && credits.pct ? credits.pct : 0;
   const parts = allDiscounts(hasItems ? subtotal : 0, { promoDisc: discount, reward, refPct, creditPct });
+  const tcUse = !monthly && hasItems && tcredit && tcredit.available > 0
+    ? useTrainerCredits(Array.from({ length: tcredit.available }, (_, i) => i), tcredit.each, subtotal - parts.total)
+    : { ids: [], amount: 0 };
   const rewardDisc = hasItems ? parts.reward : 0;
   const refDisc = hasItems ? parts.referral : 0;
   const creditDisc = hasItems ? parts.credit : 0;
-  const total = hasItems ? Math.round((subtotal - parts.total + fee + cardFee) * 100) / 100 : null;
-  const mealsOk = mealCount === 0 || (planTarget ? mealCount === planTarget : mealCount >= MIN_MEALS);
+  const total = hasItems ? Math.round((subtotal - parts.total - tcUse.amount + fee + cardFee) * 100) / 100 : null;
+  const mealsOk = mealCount === 0 || (planTarget ? mealCount === planTarget : mealCount >= MIN_MEALS) && (!monthly || MONTHLY_SIZES.includes(String(mealCount)));
   const lbsOk = lbCount === 0 || lbCount >= MIN_LBS;
   const flavorNeeded = cartNeedsFlavor({ meals, lbs });
-  const canCheckout = ((hasItems && mealsOk && lbsOk) || (!hasItems && custom.trim().length > 3)) && !flavorNeeded;
+  const weekOk = hasItems && mealsOk && lbsOk && !flavorNeeded;
+  const canCheckout = monthly ? false : ((hasItems && mealsOk && lbsOk) || (!hasItems && custom.trim().length > 3)) && !flavorNeeded;
+
+  // ---- Monthly Plan: 4 weekend carts ----
+  const curCart = () => ({ meals, lbs, extras, planId: MONTHLY_SIZES.includes(planId) ? planId : '8' });
+  const loadCart = (c) => {
+    setMeals(c.meals || []); setLbs(c.lbs || []); setExtras(c.extras || []);
+    setPlanId(c.planId || '8'); setPlanQty(1); setEditIdx(null);
+  };
+  const emptyWeek = { meals: [], lbs: [], extras: [], planId: '8' };
+  const mWeeks = monthly ? monthly.weeks.map((w, i) => (i === monthly.week ? curCart() : w)) : [];
+  const weekPrice = (c) => {
+    const p = priceCart(c, []);
+    const n = (c.meals || []).reduce((a, m) => a + mealLineCount(m), 0);
+    const lb = (c.lbs || []).reduce((a, l) => a + (Number(l.lbs) || 0), 0);
+    const ok = (n > 0 || lb > 0) && p.ok && (n === 0 || MONTHLY_SIZES.includes(String(n))) && (lb === 0 || lb >= MIN_LBS) && !cartNeedsFlavor(c);
+    return { ok, n, lb, sub: p.ok ? Math.round(p.subtotal * 100) / 100 : 0 };
+  };
+  const mPct = (settings.monthly && settings.monthly.pct) || 10;
+  const mInfo = monthly ? (() => {
+    const ws = mWeeks.map(weekPrice);
+    const dates = monthlyWeeks(settings.cook_date, ws.length);
+    const sub = ws.reduce((a, w) => a + w.sub, 0);
+    const off = ws.reduce((a, w) => a + pctOff(mPct, w.sub), 0);
+    const delivery = info.fulfillment === 'delivery' ? (Number(settings.delivery_fee) || 0) * ws.length : 0;
+    const card = info.payment_method === 'card' ? Number(settings.card_fee) || 0 : 0;
+    const r2 = (v) => Math.round(v * 100) / 100;
+    return { ws, dates, sub: r2(sub), off: r2(off), delivery: r2(delivery), card, total: r2(sub - off + delivery + card), allOk: ws.every((w) => w.ok), pct: mPct };
+  })() : null;
+  function startMonthly() {
+    const c = curCart();
+    setMonthly({ week: 0, weeks: [c, emptyWeek, emptyWeek, emptyWeek] });
+    loadCart(c);
+    setTab((c.lbs || []).length && !(c.meals || []).length ? 'lb' : 'meals');
+    setPromo(null); setPromoMsg('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function goWeek(i) {
+    if (!monthly || i === monthly.week) return;
+    const weeks = mWeeks.slice();
+    setMonthly({ week: i, weeks });
+    loadCart(weeks[i]);
+    setTab((weeks[i].lbs || []).length && !(weeks[i].meals || []).length ? 'lb' : 'meals');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function copyWeekToRest() {
+    if (!monthly) return;
+    const c = curCart();
+    setMonthly({ week: monthly.week, weeks: mWeeks.map((w, i) => (i > monthly.week ? JSON.parse(JSON.stringify(c)) : w)) });
+    setFlash('copied');
+    setTimeout(() => setFlash(null), 1500);
+  }
+  function exitMonthly() {
+    setMonthly(null);
+    if (!MONTHLY_SIZES.includes(planId)) setPlanId(MEAL_PLANS[0].id);
+  }
 
   // ---- builder helpers ----
   const bP = byId(PROTEINS, bProtein);
@@ -298,6 +366,7 @@ export default function OrderPage({ settings, adminMode }) {
       const r = await fetch(`/api/promo-code?code=${encodeURIComponent(code)}`);
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.promo) { setPromo(j.promo); return; }
+      if (r.ok && j.trainer) { setPromo({ code: j.trainer.code, trainer: j.trainer }); return; }
       if (!quiet) setPromoMsg(r.status === 429 ? t('err_generic') : t('promo_bad'));
     } catch {
       if (!quiet) setPromoMsg(t('err_generic'));
@@ -311,14 +380,14 @@ export default function OrderPage({ settings, adminMode }) {
   // ---- loyalty rewards: look up the phone typed at checkout ----
   const phoneDigits = String(info.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
   useEffect(() => {
-    if (!sheet || phoneDigits.length !== 10 || adminMode) { setLoyalty(null); setCredits(null); setRefState(null); return undefined; }
+    if (!sheet || phoneDigits.length !== 10 || adminMode) { setLoyalty(null); setCredits(null); setTcredit(null); setRefState(null); return undefined; }
     let alive = true;
     const tm = setTimeout(async () => {
       try {
         const r = await fetch(`/api/rewards?phone=${phoneDigits}&lang=${lang}`);
         const j = await r.json().catch(() => ({}));
-        if (alive) { setLoyalty(r.ok && settings.loyalty_on !== false ? j.loyalty : null); setCredits(r.ok ? j.credits : null); }
-      } catch { if (alive) { setLoyalty(null); setCredits(null); } }
+        if (alive) { setLoyalty(r.ok && settings.loyalty_on !== false ? j.loyalty : null); setCredits(r.ok ? j.credits : null); setTcredit(r.ok ? j.trainer_credit : null); }
+      } catch { if (alive) { setLoyalty(null); setCredits(null); setTcredit(null); } }
       if (refCode && settings.referral_on !== false) {
         try {
           const r = await fetch(`/api/referral?code=${encodeURIComponent(refCode)}&phone=${phoneDigits}`);
@@ -348,11 +417,12 @@ export default function OrderPage({ settings, adminMode }) {
     try {
       const body = {
         cart,
-        custom_request: custom,
+        ...(monthly ? { monthly_weeks: mWeeks.map(({ meals: m, lbs: l, extras: x }) => ({ meals: m, lbs: l, extras: x })) } : {}),
+        custom_request: monthly ? '' : custom,
         ...info,
         total,
-        promo_code: promo ? promo.code : '',
-        ref_code: !adminMode && refState && refState.ok ? refCode : '',
+        promo_code: promo && !monthly ? promo.code : '',
+        ref_code: !monthly && !adminMode && refState && refState.ok ? refCode : '',
         lang,
         ...(adminMode ? { as_admin: true, source: adm.source, paid: adm.paid, cook_date: adm.cook_date } : {}),
       };
@@ -360,10 +430,13 @@ export default function OrderPage({ settings, adminMode }) {
       const j = await r.json();
       if (!r.ok) {
         if (j.error === 'promo_invalid') { setPromo(null); setPromoMsg(t('promo_bad')); }
+        if (j.error === 'trainer_self') { setPromo(null); setPromoMsg(t('err_trainer_self')); }
+        if (monthly && j.week && ['monthly_size', 'monthly_week_full'].includes(j.error)) { setErr(t(`err_${j.error}`, j.week)); return; }
         setErr(t(`err_${j.error}`) !== `err_${j.error}` ? t(`err_${j.error}`) : t('err_generic'));
         return;
       }
-      setDone({ ...j.order, name: info.name, loyalty: j.loyalty || null });
+      setDone({ ...j.order, name: info.name, loyalty: j.loyalty || null, monthly_summary: j.monthly || null });
+      if (monthly) setMonthly(null);
       if (!adminMode && j.order && j.order.referral) { try { localStorage.removeItem('dino_ref'); } catch {} setRefCode(''); }
       setSheet(false);
       if (!adminMode) {
@@ -385,6 +458,7 @@ export default function OrderPage({ settings, adminMode }) {
     setExtras([]);
     setCustom('');
     setDone(null);
+    setMonthly(null);
     setInfo((i) => ({ ...(adminMode ? emptyInfo : { ...i, notes: '' }) }));
   }
 
@@ -447,6 +521,10 @@ export default function OrderPage({ settings, adminMode }) {
       {settings.announcement ? <div className="announce">{settings.announcement}</div> : null}
       {refBanner && refBanner.valid ? <div className="announce ref-banner">🤝 {t('ref_banner', refBanner.name, refBanner.pct || settings.referral_new_pct || 10)}</div> : null}
       {full && settings.ordering_open ? <div className="announce">{t('week_full_note')}</div> : null}
+      {!closed && !adminMode && settings.spots_left ? <div className="announce spots-left">🔥 {t('spots_left', settings.spots_left)}</div> : null}
+      {!closed && settings.monthly && settings.monthly.on && (settings.monthly.open || monthly) && (
+        <MonthlyBar t={t} lang={lang} monthly={monthly} info={mInfo} start={startMonthly} goWeek={goWeek} copyToRest={copyWeekToRest} exit={exitMonthly} weekOk={weekOk} />
+      )}
 
       {!adminMode && (
         <UsualPanel
@@ -467,7 +545,7 @@ export default function OrderPage({ settings, adminMode }) {
           ['meals', t('meals_tab'), mealCount ? `${mealCount}` : null],
           ['lb', t('lb_tab'), lbCount ? `${lbCount} lb` : null],
           ['custom', t('custom_tab'), custom.trim() ? '✓' : null],
-        ].map(([k, label, badge]) => (
+        ].filter(([k]) => !(monthly && k === 'custom')).map(([k, label, badge]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
             {label}
             {badge && <span className="tab-badge">{badge}</span>}
@@ -513,6 +591,7 @@ export default function OrderPage({ settings, adminMode }) {
               anyQty={anyQty}
               setAnyQty={setAnyQty}
               goCustom={goCustom}
+              planIds={monthly ? MONTHLY_SIZES : null}
             />
 
             <MealBox lang={lang} t={t} settings={settings} meals={meals} mealCount={mealCount} plan={plan} remaining={remaining} editSet={editSet} incMeal={incMeal} decMeal={decMeal} />
@@ -549,7 +628,7 @@ export default function OrderPage({ settings, adminMode }) {
 
       {flash && (
         <div className="toast">
-          <Check size={16} /> {flash === 'loaded' ? t('load') : flash === 'updated' ? t('update_set') : t('added_n', flash.added || 1)}
+          <Check size={16} /> {flash === 'loaded' ? t('load') : flash === 'copied' ? t('m_copied') : flash === 'updated' ? t('update_set') : t('added_n', flash.added || 1)}
         </div>
       )}
 
@@ -565,9 +644,17 @@ export default function OrderPage({ settings, adminMode }) {
           {flavorNeeded && <div className="cb-warn">{t('pick_flavor_box')}</div>}
           <div className="cb-total">{hasItems ? money(subtotal) : custom.trim() ? t('quote') : '$0'}</div>
         </div>
+        {monthly ? (
+          monthly.week < 3 ? (
+            <button className="btn btn-red btn-lg" disabled={!weekOk} onClick={() => goWeek(monthly.week + 1)}>{t('m_next_week', monthly.week + 2)} <Arrow size={18} /></button>
+          ) : (
+            <button className="btn btn-red btn-lg" disabled={!mInfo.allOk} onClick={() => { setErr(''); setSheet(true); }}>{t('checkout')} <Arrow size={18} /></button>
+          )
+        ) : (
         <button className="btn btn-red btn-lg" disabled={!canCheckout || closed} onClick={() => { setErr(''); setSheet(true); }}>
           {closed ? (full && settings.ordering_open ? t('week_full') : t('closed_btn')) : <>{t('checkout')} <Arrow size={18} /></>}
         </button>
+        )}
       </div>
 
       {/* ---------------- CHECKOUT SHEET ---------------- */}
@@ -593,8 +680,11 @@ export default function OrderPage({ settings, adminMode }) {
           rewardDisc={rewardDisc}
           refState={refState}
           refDisc={refDisc}
-          credits={credits}
+          credits={monthly ? null : credits}
           creditDisc={creditDisc}
+          tcUse={tcUse}
+          trainerPct={trainerShownPct}
+          monthly={mInfo}
           promo={promo}
           promoMsg={promoMsg}
           applyPromo={applyPromo}

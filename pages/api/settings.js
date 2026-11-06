@@ -6,6 +6,8 @@ import { cleanPopups } from '../../lib/popups';
 import { cleanPromoList } from '../../lib/promo';
 import { loyaltyConfig } from '../../lib/loyalty';
 import { referralConfig } from '../../lib/referral';
+import { trainerConfig, cleanTrainerList } from '../../lib/trainer';
+import { monthlyConfig } from '../../lib/monthly';
 import { mailStatus } from '../../lib/mailer';
 import { countCustomerPush } from '../../lib/db';
 
@@ -26,6 +28,9 @@ export default async function handler(req, res) {
       if ('popups' in patch) patch.popups = cleanPopups(patch.popups);
       if ('promo_codes' in patch) patch.promo_codes = cleanPromoList(patch.promo_codes);
       if ('referral' in patch) patch.referral = referralConfig({ referral: patch.referral });
+      if ('trainer' in patch) patch.trainer = trainerConfig({ trainer: patch.trainer });
+      if ('trainers' in patch) patch.trainers = cleanTrainerList(patch.trainers);
+      if ('monthly' in patch) { const m = monthlyConfig({ monthly: patch.monthly }); patch.monthly = { on: m.on, pct: m.pct, max: m.max }; }
       if ('loyalty' in patch) { // on/off + start week; renewals are kept (they're set from /api/rewards)
         const curL = (await getSettings({ fresh: true })).loyalty || {};
         const c = loyaltyConfig({ loyalty: { ...curL, ...(patch.loyalty || {}), renew: curL.renew } });

@@ -90,3 +90,10 @@ alter table public.orders add column if not exists reward jsonb;
 alter table public.orders add column if not exists referral jsonb;
 alter table public.orders add column if not exists ref_credit jsonb;
 create index if not exists orders_referral_by_idx on public.orders ((referral->>'by'));
+
+-- Trainer Partner program + Monthly Plan (Nov 2026; applied to the live database Nov 7)
+alter table public.orders add column if not exists trainer jsonb;         -- client's order: trainer code used { code, by, name, pct, first, discount }
+alter table public.orders add column if not exists trainer_credit jsonb;  -- trainer's own order: $ meal credits used { ids, amount }
+alter table public.orders add column if not exists monthly jsonb;         -- Monthly Plan week { id, week, of, pct, discount, plan_total }
+create index if not exists orders_trainer_by_idx on public.orders ((trainer->>'by'));
+create index if not exists orders_monthly_id_idx on public.orders ((monthly->>'id'));

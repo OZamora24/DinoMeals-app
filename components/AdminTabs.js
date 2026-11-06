@@ -7,6 +7,8 @@ import {
 import { customCookParts } from '../lib/labelSpots';
 import { loyaltyState, rewardLabel, ordinal, EVERY } from '../lib/loyalty';
 import { referralCredits, referralConfig, referralsThisMonth } from '../lib/referral';
+import { trainerConfig, cleanTrainerList, trainerCredits, clientsThisMonth } from '../lib/trainer';
+import { monthlyConfig, activeMonthly } from '../lib/monthly';
 import { venmoLink, cardLinks } from '../lib/payLinks';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
 
@@ -68,7 +70,7 @@ export function CookTab({ orders, week }) {
         for (const p of customCookParts(l)) {
           if (p.kind === 'protein') containers += p.meals;
           const label = p.kind === 'protein' ? proteinLabel(p.id, p.flavor) : nameOf(byId(p.kind === 'carb' ? CARBS : VEGGIES, p.id));
-          add(p.kind, p.kind === 'protein' ? `${p.id}:${p.flavor}` : p.id, label, p.meals, p.oz, 0);
+          add(p.kind, p.kind === 'protein' ? `${p.id}:${p.flavor}` : p.id, label, p.meals, p.oz, p.lbs || 0);
         }
       }
     }
@@ -287,6 +289,8 @@ export function RegularsTab({ week, weekOrders, repeat }) {
     <div>
       <LoyaltyPanel all={all} />
       <ReferralPanel all={all} />
+      <TrainerPanel all={all} />
+      <MonthlyPanel all={all} />
       <div className="route-head">
         <div>
           <h2 className="display sm">Regulars</h2>
@@ -851,6 +855,174 @@ function ReferralPanel({ all }) {
             </div>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+// Trainer Partner program (lib/trainer.js): Juan's trainers, their codes, clients and $ meal credits.
+function TrainerPanel({ all }) {
+  const [settings, setSettings] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [edit, setEdit] = useState(null);
+  const [add, setAdd] = useState(null); // { name, phone, code }
+  const [msg, setMsg] = useState('');
+  useEffect(() => { api('/api/settings').then((j) => setSettings(j.settings)).catch(() => setSettings({})); }, []);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const cfg = trainerConfig(settings || {});
+  const list = cleanTrainerList((settings && settings.trainers) || []);
+  const rows = useMemo(() => {
+    if (!settings) return [];
+    return list.map((t) => {
+      const clients = all.filter((o) => o.trainer && o.trainer.by === t.phone);
+      const mine = all.filter((o) => o.phone_digits === t.phone);
+      return { t, clients, month: clientsThisMonth(clients), tc: trainerCredits(clients, mine, today, settings) };
+    });
+  }, [all, settings, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!settings) return null;
+  const saveCfg = async (patch) => {
+    setBusy(true);
+    try { const j = await api('/api/settings', { method: 'POST', body: { trainer: { ...cfg, ...patch } } }); setSettings(j.settings); setEdit(null); } finally { setBusy(false); }
+  };
+  const saveList = async (next) => {
+    setBusy(true); setMsg('');
+    try { const j = await api('/api/settings', { method: 'POST', body: { trainers: next } }); setSettings(j.settings); return true; } catch { setMsg('Could not save. Try again.'); return false; } finally { setBusy(false); }
+  };
+  const addTrainer = async () => {
+    const code = String(add.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const phone = String(add.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+    if (!add.name.trim() || phone.length !== 10 || !code) { setMsg('Name, 10-digit phone and a code are all needed.'); return; }
+    if (list.some((t) => t.code === code)) { setMsg('That code is already used.'); return; }
+    if (await saveList([...list, { name: add.name, phone, code, active: true, added: today }])) setAdd(null);
+  };
+  const field = (k, label, suffix) => (
+    <label className="ref-field">{label}
+      <span><input className="input" inputMode="numeric" value={edit ? edit[k] : cfg[k]} onChange={(e) => setEdit({ ...(edit || cfg), [k]: e.target.value })} />{suffix}</span>
+    </label>
+  );
+  return (
+    <section className="loy-panel">
+      <div className="route-head">
+        <div>
+          <h2 className="display sm">💪 Trainer Partners</h2>
+          <p className="muted small">Each trainer has their own code. Their clients type it in the promo code box: {cfg.first_pct}% off their first DinoMeals order, then {cfg.pct}% off every order after. It takes the promo-code spot, so it shares the 20% max with loyalty rewards. The trainer earns a ${cfg.credit} meal credit every time a client's order is paid. Credits pile up, come off the trainer's own order automatically (one or all of them) and last {cfg.expire_days} days.</p>
+        </div>
+        <label className="switch-row">
+          <span>{cfg.on ? 'On' : 'Paused'}</span>
+          <button className={`switch ${cfg.on ? 'on' : ''}`} disabled={busy} onClick={() => saveCfg({ on: !cfg.on })} aria-label="Trainer program on or off"><span /></button>
+        </label>
+      </div>
+      <div className="ref-settings">
+        {field('first_pct', 'Client 1st order', '%')}
+        {field('pct', 'Client after', '%')}
+        {field('credit', 'Trainer credit', '$')}
+        {field('expire_days', 'Credits last', 'days')}
+        {edit && <button className="btn btn-red btn-sm" disabled={busy} onClick={() => saveCfg(edit)}>Save</button>}
+      </div>
+      {add ? (
+        <div className="ref-settings">
+          <label className="ref-field">Name<span><input className="input" value={add.name} onChange={(e) => setAdd({ ...add, name: e.target.value })} /></span></label>
+          <label className="ref-field">Phone<span><input className="input" inputMode="tel" value={add.phone} onChange={(e) => setAdd({ ...add, phone: e.target.value })} /></span></label>
+          <label className="ref-field">Code<span><input className="input" value={add.code} placeholder="COACHNAME" onChange={(e) => setAdd({ ...add, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20) })} /></span></label>
+          <button className="btn btn-red btn-sm" disabled={busy} onClick={addTrainer}>Add trainer</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setAdd(null); setMsg(''); }}>Cancel</button>
+        </div>
+      ) : (
+        <button className="btn btn-ghost btn-sm" onClick={() => setAdd({ name: '', phone: '', code: '' })}>+ Add trainer</button>
+      )}
+      {msg && <p className="err small">{msg}</p>}
+      {rows.length === 0 && <p className="muted empty">No trainers yet.</p>}
+      <div className="reg-list">
+        {rows.map((r) => (
+          <div className="reg loy-row" key={r.t.code}>
+            <div className="reg-main">
+              <b>{r.t.name}</b> <span className="muted small">{r.t.phone.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')}</span> <span className="loy-chip available">{r.t.code}</span>{!r.t.active && <span className="loy-chip expired">paused</span>}
+              <div className="muted small">{new Set(r.clients.filter((o) => o.status !== 'cancelled').map((o) => o.phone_digits)).size} client{r.clients.length === 1 ? '' : 's'} · {r.month} this month · {r.tc.available} credit{r.tc.available === 1 ? '' : 's'} ready = <b>{money(r.tc.amount)}</b> toward meals</div>
+              <div className="loy-chips">
+                {r.tc.credits.map((c) => (
+                  <span key={c.id} className={`loy-chip ${c.status}`}>
+                    {c.client} #{c.order_no} · {c.status === 'pending' ? 'waiting for payment' : c.status === 'used' ? `$${c.value} used on #${c.used_on}` : c.status === 'expired' ? `expired ${c.expires}` : `$${c.value} ready until ${c.expires}`}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="reg-actions">
+              <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => saveList(list.map((t) => (t.code === r.t.code ? { ...t, active: !t.active } : t)))}>{r.t.active ? 'Pause' : 'Turn on'}</button>
+              <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => window.confirm(`Remove ${r.t.name}? Their code stops working. Past orders keep their discount.`) && saveList(list.filter((t) => t.code !== r.t.code))}>Remove</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Monthly Plan (lib/monthly.js): running plans, who's paid, and the % / max plans.
+function MonthlyPanel({ all }) {
+  const [settings, setSettings] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [edit, setEdit] = useState(null);
+  useEffect(() => { api('/api/settings').then((j) => setSettings(j.settings)).catch(() => setSettings({})); }, []);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const cfg = monthlyConfig(settings || {});
+  const plans = useMemo(() => {
+    const by = {};
+    for (const o of all) if (o.monthly && o.monthly.id) (by[o.monthly.id] ||= []).push(o);
+    const running = activeMonthly(all, today);
+    return Object.entries(by)
+      .map(([id, os]) => ({ id, os: os.sort((a, b) => a.cook_date.localeCompare(b.cook_date)), running: running.has(id) }))
+      .sort((a, b) => (a.running === b.running ? b.os[0].cook_date.localeCompare(a.os[0].cook_date) : a.running ? -1 : 1));
+  }, [all, today]);
+  if (!settings) return null;
+  const nRunning = plans.filter((p) => p.running).length;
+  const save = async (patch) => {
+    setBusy(true);
+    try { const j = await api('/api/settings', { method: 'POST', body: { monthly: { ...cfg, ...patch } } }); setSettings(j.settings); setEdit(null); } finally { setBusy(false); }
+  };
+  const field = (k, label, suffix) => (
+    <label className="ref-field">{label}
+      <span><input className="input" inputMode="numeric" value={edit ? edit[k] : cfg[k]} onChange={(e) => setEdit({ ...(edit || cfg), [k]: e.target.value })} />{suffix}</span>
+    </label>
+  );
+  return (
+    <section className="loy-panel">
+      <div className="route-head">
+        <div>
+          <h2 className="display sm">📅 Monthly Plans · {nRunning} of {cfg.max}</h2>
+          <p className="muted small">Customers pick meals for the next {cfg.weeks} weekends (8, 10 or 12 meals a week, or by the lb) and pay for all of it up front: {cfg.pct}% off, no promo codes or other discounts. Month to month, no automatic charge. Each weekend shows up as its own order in the week's list. Marking one week Paid marks the whole plan paid. A plan counts as one order for loyalty rewards. When {cfg.max} plans are running, the option is hidden until one ends.</p>
+        </div>
+        <label className="switch-row">
+          <span>{cfg.on ? 'On' : 'Paused'}</span>
+          <button className={`switch ${cfg.on ? 'on' : ''}`} disabled={busy} onClick={() => save({ on: !cfg.on })} aria-label="Monthly plans on or off"><span /></button>
+        </label>
+      </div>
+      <div className="ref-settings">
+        {field('pct', 'Plan discount', '%')}
+        {field('max', 'Max plans', '')}
+        {edit && <button className="btn btn-red btn-sm" disabled={busy} onClick={() => save(edit)}>Save</button>}
+      </div>
+      {plans.length === 0 && <p className="muted empty">No monthly plans yet.</p>}
+      <div className="reg-list">
+        {plans.map((p) => {
+          const o = p.os[0];
+          const paid = p.os.every((x) => x.paid);
+          return (
+            <div className="reg loy-row" key={p.id}>
+              <div className="reg-main">
+                <b>{o.customer_name}</b> <span className="muted small">{o.phone}</span>{' '}
+                <span className={`loy-chip ${paid ? 'used' : 'pending'}`}>{paid ? 'paid' : 'not paid yet'}</span>{!p.running && <span className="loy-chip expired">ended</span>}
+                <div className="muted small">Whole plan {money(Number(o.monthly.plan_total) || 0)} · {o.payment_method}</div>
+                <div className="loy-chips">
+                  {p.os.map((x) => (
+                    <span key={x.id} className={`loy-chip ${x.status === 'cancelled' ? 'expired' : x.cook_date < today ? 'used' : 'available'}`}>
+                      #{x.order_no} · {prettyDate(x.cook_date)} · {x.meal_count ? `${x.meal_count} meals` : ''}{x.meal_count && x.lb_total ? ' + ' : ''}{x.lb_total ? `${x.lb_total} lb` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

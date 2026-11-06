@@ -15,6 +15,7 @@ import { labelCount, isCustomOrder } from '../lib/labelSpots';
 import { promoLabel, promoDiscount } from '../lib/promo';
 import { rewardLabel, ordinal } from '../lib/loyalty';
 import { allDiscounts } from '../lib/referral';
+import { discountParts } from '../lib/orderView';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
@@ -403,16 +404,19 @@ function OrderCard({ o, patch, edit, remove, repeat, week, macros }) {
       )}
       {o.referral && <div className="oc-promo oc-reward">🤝 New customer, referred by {o.referral.by_name || 'a friend'} · {o.referral.pct}%{Number(o.referral.discount) > 0 ? ` · −${money(Number(o.referral.discount))}` : ''}</div>}
       {o.ref_credit && <div className="oc-promo oc-reward">🤝 Referral credit{(o.ref_credit.ids || []).length === 1 ? '' : 's'} ×{(o.ref_credit.ids || []).length} · {o.ref_credit.pct}%{Number(o.ref_credit.discount) > 0 ? ` · −${money(Number(o.ref_credit.discount))}` : ''}</div>}
-      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · {o.total == null ? promoLabel(o.promo) : `−${money(Math.max(0, (Number(o.discount) || 0) - (Number(o.reward?.discount) || 0) - (Number(o.referral?.discount) || 0) - (Number(o.ref_credit?.discount) || 0)))}`}</div>}
+      {o.monthly && <div className="oc-promo oc-reward">📅 Monthly Plan · week {o.monthly.week} of {o.monthly.of} · {o.monthly.pct}%{Number(o.monthly.discount) > 0 ? ` · −${money(Number(o.monthly.discount))}` : ''}{o.monthly.week === 1 ? ` · whole plan ${money(Number(o.monthly.plan_total) || 0)}, paid together` : ''}</div>}
+      {o.trainer && <div className="oc-promo oc-reward">💪 Trainer code {o.trainer.code} ({o.trainer.name}) · {o.trainer.pct}%{o.trainer.first ? ' first order' : ''}{Number(o.trainer.discount) > 0 ? ` · −${money(Number(o.trainer.discount))}` : ''}</div>}
+      {o.trainer_credit && <div className="oc-promo oc-reward">💪 Trainer meal credit{(o.trainer_credit.ids || []).length === 1 ? '' : 's'} ×{(o.trainer_credit.ids || []).length} · −{money(Number(o.trainer_credit.amount) || 0)}</div>}
+      {o.promo && o.promo.code && <div className="oc-promo">🏷 {o.promo.code} · {o.total == null ? promoLabel(o.promo) : `−${money(discountParts(o).promo)}`}</div>}
       {o.custom_request && <div className="oc-custom">✎ {o.custom_request}</div>}
       {o.status === 'quote' && (
         <div className="quote-row">
           <input className="input" inputMode="decimal" placeholder="Price $" value={quote} onChange={(e) => setQuote(e.target.value)} />
           <button className="btn btn-red btn-sm" onClick={() => patch(o.id, { total: quote, status: 'confirmed' })}>Set price</button>
-          {((o.promo && o.promo.code) || o.reward || o.referral || o.ref_credit) && (
+          {((o.promo && o.promo.code) || o.reward || o.referral || o.ref_credit || o.trainer) && (
             <p className="quote-promo">
-              Type the price <b>before</b> the discount. {[o.promo && o.promo.code && `${o.promo.code} (${promoLabel(o.promo)})`, o.reward && `loyalty reward (${rewardLabel(o.reward)})`, o.referral && `new-customer ${o.referral.pct}%`, o.ref_credit && `referral credits ${o.ref_credit.pct}%`].filter(Boolean).join(' + ')} comes off automatically
-              {Number(quote) > 0 ? <>: customer pays <b>{money(Number(quote) - allDiscounts(Number(quote), { promoDisc: o.promo ? promoDiscount(o.promo, Number(quote)) : 0, reward: o.reward, refPct: o.referral ? o.referral.pct : 0, creditPct: o.ref_credit ? o.ref_credit.pct : 0 }).total)}</b></> : '.'}
+              Type the price <b>before</b> the discount. {[o.promo && o.promo.code && `${o.promo.code} (${promoLabel(o.promo)})`, o.reward && `loyalty reward (${rewardLabel(o.reward)})`, o.referral && `new-customer ${o.referral.pct}%`, o.ref_credit && `referral credits ${o.ref_credit.pct}%`, o.trainer && `trainer ${o.trainer.code} ${o.trainer.pct}%`].filter(Boolean).join(' + ')} comes off automatically
+              {Number(quote) > 0 ? <>: customer pays <b>{money(Number(quote) - allDiscounts(Number(quote), { promoDisc: o.promo ? promoDiscount(o.promo, Number(quote)) : o.trainer ? Math.round(Number(quote) * o.trainer.pct) / 100 : 0, reward: o.reward, refPct: o.referral ? o.referral.pct : 0, creditPct: o.ref_credit ? o.ref_credit.pct : 0 }).total)}</b></> : '.'}
             </p>
           )}
         </div>

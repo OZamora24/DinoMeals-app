@@ -7,6 +7,7 @@ import { linesToCart, cartKey } from '../lib/cart';
 import { formatPhone } from '../lib/orderForm';
 import { Stepper } from './order/Controls';
 import { Plus, X } from './Icons';
+import LbLinePicker, { newLbLine } from './LbLinePicker';
 
 // Admin: edit everything on a placed order. Only the fields you actually
 // changed are sent, so opening this and saving never re-prices an old order.
@@ -111,7 +112,7 @@ export default function OrderEditor({ order, onSave, onClose }) {
                     </select>
                   </div>
                   {ozTag(m) && <div className="muted small">Portions: {ozTag(m)}</div>}
-                  <div className="edit-line-foot">
+                  <div className="edit-line-foot">
                     <Stepper value={m.count} onDec={() => setMeal(i, { count: Math.max(0, m.count - 1) })} onInc={() => setMeal(i, { count: m.count + 1 })} unit="meals" />
                     <b>{unit == null ? '—' : money(unit * m.count)}</b>
                     <button className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => setMeals((ms) => ms.filter((_, j) => j !== i))}><X size={14} /></button>
@@ -119,15 +120,11 @@ export default function OrderEditor({ order, onSave, onClose }) {
                 </div>
               );
             })}
+            {/* By the lb: change the item / flavor / pounds, or add a line (e.g. split 2 lb Teriyaki into 1 Teriyaki + 1 Chipotle). */}
             {lbs.map((l, i) => (
-              <div className="edit-line" key={`l${i}`}>
-                <div>{lineLabel({ type: 'lb', ...l })}</div>
-                <div className="edit-line-foot">
-                  <Stepper value={Number(l.lbs) || 0} onDec={() => setLbs((ls) => ls.map((x, j) => (j === i ? { ...x, lbs: Math.max(0, (Number(x.lbs) || 0) - 1) } : x)))} onInc={() => setLbs((ls) => ls.map((x, j) => (j === i ? { ...x, lbs: (Number(x.lbs) || 0) + 1 } : x)))} unit="lb" />
-                  <span />
-                  <button className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => setLbs((ls) => ls.filter((_, j) => j !== i))}><X size={14} /></button>
-                </div>
-              </div>
+              <LbLinePicker key={`l${i}`} line={l}
+                onChange={(nl) => setLbs((ls) => ls.map((x, j) => (j === i ? nl : x)))}
+                onRemove={() => setLbs((ls) => ls.filter((_, j) => j !== i))} />
             ))}
             {extras.map((x, i) => (
               <div className="edit-line" key={`x${i}`}>
@@ -140,7 +137,10 @@ export default function OrderEditor({ order, onSave, onClose }) {
               </div>
             ))}
             {meals.length === 0 && lbs.length === 0 && extras.length === 0 && <p className="muted small">No priced items on this order.</p>}
-            <button className="btn btn-ghost btn-sm" onClick={addMeal}><Plus size={14} /> Add a meal</button>
+            <div className="row">
+              <button className="btn btn-ghost btn-sm" onClick={addMeal}><Plus size={14} /> Add a meal</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setLbs((ls) => [...ls, newLbLine()])}><Plus size={14} /> Add by the lb</button>
+            </div>
             {itemsChanged && (
               <p className="muted small">
                 {subtotal == null ? 'Check the items — something is not valid.' : `Food subtotal ${money(subtotal)} · delivery / card fees are re-applied when you save.`}

@@ -1,6 +1,6 @@
 // Itemized receipt for one order (public fields only — see lib/orderView.js).
 import { lineLabel, ozTag, money } from '../../lib/menu';
-import { VIEW_TXT } from '../../lib/orderView';
+import { VIEW_TXT, discountParts } from '../../lib/orderView';
 
 function lineParts(l, lang, x) {
   if (l.type === 'meal') {
@@ -15,10 +15,8 @@ function lineParts(l, lang, x) {
 export default function Receipt({ order, lang = 'en', badge = true }) {
   const x = VIEW_TXT[lang] || VIEW_TXT.en;
   const quote = order.total == null;
-  const rewardPart = (order.reward && Number(order.reward.discount)) || 0;
-  const refPart = (order.referral && Number(order.referral.discount)) || 0;
-  const creditPart = (order.ref_credit && Number(order.ref_credit.discount)) || 0;
-  const promoPart = Math.round(((Number(order.discount) || 0) - rewardPart - refPart - creditPart) * 100) / 100;
+  const dp = discountParts(order);
+  const { reward: rewardPart, referral: refPart, credit: creditPart, promo: promoPart } = dp;
   return (
     <div className="receipt">
       <div className="rc-head">
@@ -55,10 +53,14 @@ export default function Receipt({ order, lang = 'en', badge = true }) {
               {rewardPart > 0 && <div className="rc-promo"><span>🎁 {x.reward} · {order.reward.label}</span><span>−{money(rewardPart)}</span></div>}
               {refPart > 0 && <div className="rc-promo"><span>🤝 {x.referral(order.referral.by)} · {order.referral.pct}%</span><span>−{money(refPart)}</span></div>}
               {creditPart > 0 && <div className="rc-promo"><span>🤝 {x.ref_credit(order.ref_credit.n)} · {order.ref_credit.pct}%</span><span>−{money(creditPart)}</span></div>}
+              {dp.trainer > 0 && <div className="rc-promo"><span>💪 {x.trainer(order.trainer.code)} · {order.trainer.pct}%</span><span>−{money(dp.trainer)}</span></div>}
+              {dp.monthly > 0 && <div className="rc-promo"><span>📅 {x.monthly(order.monthly.week, order.monthly.of)} · {order.monthly.pct}%</span><span>−{money(dp.monthly)}</span></div>}
+              {dp.tcredit > 0 && <div className="rc-promo"><span>💪 {x.trainer_credit(order.trainer_credit.n)}</span><span>−{money(dp.tcredit)}</span></div>}
               {order.delivery_fee > 0 && <div><span>{x.fee}</span><span>{money(order.delivery_fee)}</span></div>}
             </>
           )}
           <div className="big"><span>{x.total}</span><span>{money(order.total)}</span></div>
+          {order.monthly && order.monthly.week === 1 && order.monthly.plan_total > 0 && <div className="rc-plan"><span>📅 {x.plan_total}</span><b>{money(order.monthly.plan_total)}</b></div>}
         </div>
       )}
     </div>

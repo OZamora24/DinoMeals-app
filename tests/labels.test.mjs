@@ -67,3 +67,20 @@ test('cook sheet: a custom line adds every part in cooked ounces, skipped carb/v
   near(only[0].oz, 16);
   assert.deepEqual(customCookParts({ protein: 'chicken', count: 0 }), []);
 });
+
+test('custom label editor: by-the-lb lines are cleaned, counted per pound and go on the cook sheet', async () => {
+  const { cleanLabelLines, labelCount, labelLineCount, customCookParts } = await import('../lib/labelSpots.js');
+  const lines = cleanLabelLines([
+    { type: 'lb', kind: 'protein', item: 'chicken', flavor: 'chipotle', lbs: 1 },
+    { type: 'lb', kind: 'protein', item: 'chicken', flavor: 'nope', lbs: 2.5 },
+    { type: 'lb', kind: 'veg', item: 'fajitas', lbs: 1 }, // not sold by the lb
+    { type: 'lb', kind: 'carb', item: 'whiterice', lbs: 0 },
+    { protein: 'tritip', carb: 'whiterice', veg: 'broccoli', count: 3 },
+  ]);
+  assert.equal(lines.length, 3);
+  assert.deepEqual(lines[0], { type: 'lb', kind: 'protein', item: 'chicken', flavor: 'chipotle', lbs: 1 });
+  assert.equal(lines[1].flavor, 'chipotle'); // unknown flavor → first active one
+  assert.equal(labelLineCount(lines[1]), 3); // 2.5 lb → 1 + 1 + ½
+  assert.equal(labelCount({ items: [], label_lines: lines }), 1 + 3 + 3);
+  assert.deepEqual(customCookParts(lines[0]), [{ kind: 'protein', id: 'chicken', flavor: 'chipotle', meals: 0, oz: 16, lbs: 1 }]);
+});

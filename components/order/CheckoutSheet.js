@@ -8,7 +8,7 @@ import { prettyDate } from '../../lib/menu';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
-  hasItems, fee, cardFee, subtotal, total, discount = 0, loyalty = null, rewardDisc = 0, refState = null, refDisc = 0, credits = null, creditDisc = 0, promo, promoMsg, applyPromo, removePromo, err, busy, place, onClose,
+  hasItems, fee, cardFee, subtotal, total, discount = 0, loyalty = null, rewardDisc = 0, refState = null, refDisc = 0, credits = null, creditDisc = 0, tcUse = { ids: [], amount: 0 }, trainerPct = 0, monthly = null, promo, promoMsg, applyPromo, removePromo, err, busy, place, onClose,
 }) {
   const [cashPop, setCashPop] = useState(false);
   // Esc closes the cash popup first, then the checkout popup (tapping outside or Back already did)
@@ -118,7 +118,14 @@ export default function CheckoutSheet({
 
           <fieldset className="fs review">
             <legend>{t('review')}</legend>
-            <ul className="review-list">
+            {monthly && (
+              <ul className="review-list">
+                {monthly.ws.map((w, i) => (
+                  <li key={i}><span>📅 {t('m_week', i + 1)} · {prettyDate(monthly.dates[i], lang)} · {w.n ? `${w.n} ${t('meals')}` : ''}{w.n && w.lb ? ' + ' : ''}{w.lb ? `${w.lb} lb` : ''}</span><b>{money(w.sub)}</b></li>
+                ))}
+              </ul>
+            )}
+            {!monthly && <ul className="review-list">
               {priced.lines.map((l, i) => (
                 <li key={i}>
                   <span>{lineSummary(l, lang)}</span>
@@ -128,9 +135,20 @@ export default function CheckoutSheet({
               {custom.trim() && (
                 <li className="custom-li"><span>✎ {custom.trim()}</span><b>{hasItems ? '' : t('quote')}</b></li>
               )}
-            </ul>
+            </ul>}
+            {monthly && (
+              <div className="totals">
+                <div><span>{t('subtotal')}</span><span>{money(monthly.sub)}</span></div>
+                <div className="promo-line"><span>📅 {t('m_title')} · {monthly.pct}%</span><span>−{money(monthly.off)}</span></div>
+                {monthly.delivery > 0 && <div><span>{t('delivery_fee')} ×{monthly.ws.length}</span><span>{money(monthly.delivery)}</span></div>}
+                {monthly.card > 0 && <div><span>{t('card_fee')}</span><span>{money(monthly.card)}</span></div>}
+                <div className="grand"><span>{t('m_pay_now')}</span><span>{money(monthly.total)}</span></div>
+                <p className="muted small">{t('m_rules')}</p>
+              </div>
+            )}
+            {!monthly && <>
             {(hasItems || custom.trim()) && (settings.promo_on || promo) && (
-              <PromoBox t={t} lang={lang} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} pending={!hasItems} />
+              <PromoBox t={t} lang={lang} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} pending={!hasItems} trainerPct={trainerPct} />
             )}
             {(hasItems || custom.trim()) && refState && refState.name && <ReferralBox t={t} refState={refState} pending={!hasItems} refDisc={refDisc} />}
             {(hasItems || custom.trim()) && !(refState && refState.ok) && credits && credits.pct > 0 && (
@@ -140,15 +158,22 @@ export default function CheckoutSheet({
               </div>
             )}
             {(hasItems || custom.trim()) && loyalty && loyalty.on && <LoyaltyBox t={t} lang={lang} loyalty={loyalty} pending={!hasItems} rewardDisc={rewardDisc} />}
+            {hasItems && tcUse.amount > 0 && (
+              <div className="loy-box on ref">
+                <div className="loy-head"><span>💪</span><b>{t('tc_title', tcUse.ids.length)}</b><em>−{money(tcUse.amount)}</em></div>
+                <p className="loy-sub">{t('loy_applied')}</p>
+              </div>
+            )}
             {hasItems && (
               <div className="totals">
-                {(fee > 0 || cardFee > 0 || discount > 0 || rewardDisc > 0 || refDisc > 0 || creditDisc > 0) && (
+                {(fee > 0 || cardFee > 0 || discount > 0 || rewardDisc > 0 || refDisc > 0 || creditDisc > 0 || tcUse.amount > 0) && (
                   <>
                     <div><span>{t('subtotal')}</span><span>{money(subtotal)}</span></div>
-                    {discount > 0 && <div className="promo-line"><span>{t('promo_line')} {promo?.code}</span><span>−{money(discount)}</span></div>}
+                    {discount > 0 && <div className="promo-line"><span>{promo && promo.trainer ? `💪 ${t('trainer_line')} ${promo.code} · ${trainerPct}%` : `${t('promo_line')} ${promo?.code}`}</span><span>−{money(discount)}</span></div>}
                     {rewardDisc > 0 && <div className="promo-line"><span>🎁 {t('loy_line')} · {loyalty.available.label}</span><span>−{money(rewardDisc)}</span></div>}
                     {refDisc > 0 && <div className="promo-line"><span>🤝 {t('ref_line', refState.name)} · {refState.pct}%</span><span>−{money(refDisc)}</span></div>}
                     {creditDisc > 0 && <div className="promo-line"><span>🤝 {t('ref_credit_t', credits.use)} · {credits.pct}%</span><span>−{money(creditDisc)}</span></div>}
+                    {tcUse.amount > 0 && <div className="promo-line"><span>💪 {t('tc_title', tcUse.ids.length)}</span><span>−{money(tcUse.amount)}</span></div>}
                     {fee > 0 && <div><span>{t('delivery_fee')}</span><span>{money(fee)}</span></div>}
                     {cardFee > 0 && <div><span>{t('card_fee')}</span><span>{money(cardFee)}</span></div>}
                   </>
@@ -156,12 +181,13 @@ export default function CheckoutSheet({
                 <div className="grand"><span>{t('total')}</span><span>{money(total)}</span></div>
               </div>
             )}
+            </>}
           </fieldset>
           {err && <div className="error">{err}</div>}
         </div>
         <div className="sheet-foot">
           <button className="btn btn-red btn-lg btn-block" disabled={busy} onClick={place}>
-            {busy ? t('placing') : <>{t('place')}{hasItems ? ` · ${money(total)}` : ''}</>}
+            {busy ? t('placing') : <>{t('place')}{monthly ? ` · ${money(monthly.total)}` : hasItems ? ` · ${money(total)}` : ''}</>}
           </button>
           <p className="contact-line">{t('questions')} <b>{CONTACT_NAME}</b> <a href={`tel:${CONTACT_PHONE.replace(/\D/g, '')}`}>{CONTACT_PHONE}</a></p>
           <p className="legal-line"><a href="/privacy" target="_blank" rel="noreferrer">{t('privacy')}</a> · <a href="/terms" target="_blank" rel="noreferrer">{t('terms')}</a></p>
@@ -183,9 +209,22 @@ export default function CheckoutSheet({
 
 // pending: a custom quote with no price yet. The code is saved on the order and
 // comes off when the price is set.
-function PromoBox({ t, lang, promo, promoMsg, applyPromo, removePromo, discount, pending }) {
+function PromoBox({ t, lang, promo, promoMsg, applyPromo, removePromo, discount, pending, trainerPct = 0 }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  if (promo && promo.trainer) {
+    const tr = promo.trainer;
+    return (
+      <>
+        <div className="promo-box on">
+          <span className="promo-tag">💪 {promo.code}</span>
+          <span className="promo-off">{pending ? `${trainerPct}% ${t('off')}` : `−${money(discount)}`}</span>
+          <button type="button" className="link" onClick={removePromo}>{t('promo_remove')}</button>
+        </div>
+        <p className="promo-note">{t('trainer_note', tr.name, tr.first_pct, tr.pct)}</p>
+      </>
+    );
+  }
   if (promo) {
     return (
       <>

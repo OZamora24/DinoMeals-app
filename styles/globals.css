@@ -1270,3 +1270,31 @@ label .input { margin-top: 6px; font-weight: 500; }
 .ref-field { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; font-weight: 700; color: #b8aa98; }
 .ref-field span { display: flex; align-items: center; gap: 4px; }
 .ref-field .input { width: 64px; padding: 6px 8px; }
+
+/* ---- Spots left (shown at 10 or fewer) ---- */
+.announce.spots-left { background: linear-gradient(90deg, #7a3b00, #c96a00); }
+
+/* ---- Monthly Plan ---- */
+.m-invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 16px 0; padding: 12px 14px; border: 1px dashed rgba(242,161,58,.55); border-radius: 14px; background: rgba(242,161,58,.08); }
+.m-invite div { display: flex; flex-direction: column; gap: 2px; }
+.m-invite b { color: #f2a13a; }
+.m-invite span { color: var(--muted); font-size: .85rem; }
+.m-invite .btn { flex: none; }
+.m-bar { margin: 12px 16px 0; padding: 12px 14px; border: 1px solid rgba(242,161,58,.55); border-radius: 14px; background: rgba(242,161,58,.08); }
+.m-bar-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.m-bar-head b { color: #f2a13a; }
+.m-weeks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.m-week { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--cream); text-align: left; cursor: pointer; min-width: 0; }
+.m-week span { font-size: .72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.m-week b { font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.m-week em { font-style: normal; font-size: .74rem; color: var(--muted); }
+.m-week.ok em { color: #4cc38a; font-weight: 700; }
+.m-week.on { border-color: #f2a13a; box-shadow: 0 0 0 1px #f2a13a inset; }
+.m-bar-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.m-sum { margin-left: auto; font-size: .9rem; }
+.m-sum s { color: var(--muted); margin-left: 4px; font-size: .8rem; }
+.m-done-weeks { list-style: none; padding: 0; margin: 8px 0 12px; text-align: left; }
+.m-done-weeks li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+.rc-plan { display: flex; justify-content: space-between; color: #f2a13a; font-size: .88rem; padding-top: 6px; }
+.reg-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 420px) { .m-weeks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

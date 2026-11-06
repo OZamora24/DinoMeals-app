@@ -43,6 +43,9 @@ export default async function handler(req, res) {
           reward: null, // loyalty rewards too
           referral: null,
           ref_credit: null,
+          trainer: null, // trainer codes and credits are per order
+          trainer_credit: null,
+          monthly: null, // a repeat of a plan week is a normal single order
           discount: 0,
         })
       );

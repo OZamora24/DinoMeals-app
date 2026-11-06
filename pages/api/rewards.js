@@ -1,4 +1,5 @@
-import { getSettings, ordersByPhone, saveSettings, isDemo, ordersReferredBy } from '../../lib/db';
+import { getSettings, ordersByPhone, saveSettings, isDemo, ordersReferredBy, ordersByTrainer } from '../../lib/db';
+import { trainerConfig, trainerByPhone, trainerCredits } from '../../lib/trainer';
 import { referralCredits, referralConfig } from '../../lib/referral';
 import { rateLimit } from '../../lib/rateLimit';
 import { isValidSession } from '../../lib/adminSession';
@@ -24,8 +25,12 @@ export default async function handler(req, res) {
       // Referral credits this customer earned by bringing friends (used automatically, up to 2 per order).
       const rc = referralConfig(s).on ? referralCredits(await ordersReferredBy(digits), own, dateKey(laNow()), s) : null;
       const credits = rc ? { available: rc.available, use: rc.use.length, pct: rc.pct } : null;
-      if (admin && req.query.full) return res.status(200).json({ loyalty: state, credits: rc });
-      return res.status(200).json({ loyalty: { ...publicLoyalty(state, req.query.lang === 'es' ? 'es' : 'en'), new_customer: own.every((o) => o.status === 'cancelled') }, credits });
+      // Trainer Partner: a trainer's own $ meal credits (used automatically on their order).
+      const isTrainer = trainerConfig(s).on && trainerByPhone(s.trainers, digits);
+      const tc = isTrainer ? trainerCredits(await ordersByTrainer(digits), own, dateKey(laNow()), s) : null;
+      const trainer_credit = tc ? { available: tc.available, amount: tc.amount, each: tc.each } : null;
+      if (admin && req.query.full) return res.status(200).json({ loyalty: state, credits: rc, trainer: tc });
+      return res.status(200).json({ loyalty: { ...publicLoyalty(state, req.query.lang === 'es' ? 'es' : 'en'), new_customer: own.every((o) => o.status === 'cancelled') }, credits, trainer_credit });
     }
     if (req.method === 'POST') {
       if (!admin) return res.status(401).json({ error: 'Not logged in' });
