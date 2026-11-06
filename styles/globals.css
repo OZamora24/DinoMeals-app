@@ -231,15 +231,23 @@ label .input { margin-top: 6px; font-weight: 500; }
 }
 @keyframes sweep { to { --sweep: 360deg; } }
 
-/* 4b. glossy shine */
-.splash-shine {
-  position: absolute; inset: -20%; pointer-events: none;
-  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%);
-  transform: translateX(-120%);
-  animation: shine 2.2s ease-in-out 1.3s infinite;
-  mix-blend-mode: soft-light;
+/* 4b. glossy shine: one diagonal glint across the logo circle (top-left → bottom-right), then a pause.
+   Clipped by its own circle (clip-path + mask) so it can never show as a square on iPhone. */
+.splash-shine-clip {
+  position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; z-index: 2;
+  clip-path: circle(50% at 50% 50%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 69%, transparent 70.5%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 69%, transparent 70.5%);
 }
-@keyframes shine { 0% { transform: translateX(-120%); } 45%,100% { transform: translateX(120%); } }
+.splash-shine {
+  position: absolute; inset: 0; pointer-events: none;
+  /* a faint shadow edge in front of a bright band reads as glass on the cream as well as on the red */
+  background: linear-gradient(135deg, transparent 34%, rgba(60,30,20,.10) 41%, rgba(255,255,255,.35) 44%, rgba(255,255,255,.95) 48%, #fff 50%, rgba(255,255,255,.9) 52%, rgba(255,255,255,.3) 56%, transparent 62%);
+  filter: drop-shadow(0 0 6px rgba(255,255,255,.55));
+  transform: translate(-60%, -60%);
+  animation: shine 2.8s cubic-bezier(.4,.1,.4,.9) 1.35s infinite;
+}
+@keyframes shine { 0% { transform: translate(-60%, -60%); } 40%, 100% { transform: translate(60%, 60%); } }
 
 /* 3. name drop */
 .splash-word { margin-top: 26px; font-family: var(--display); font-size: 2.6rem; letter-spacing: .06em; color: var(--cream); display: flex; line-height: 1; }

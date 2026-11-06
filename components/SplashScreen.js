@@ -92,7 +92,9 @@ export default function SplashScreen({ phase, mode, muted, label, onEnter, onTog
             </svg>
             <div className="splash-badge">
               <img src="/logo-mark.png" alt="" className="splash-logo" />
-              <span className="splash-shine" />
+              {/* The shine lives in its own round mask: iPhone Safari doesn't clip a moving layer to a
+                  rounded parent while that parent is animating (that showed as a white square). */}
+              <span className="splash-shine-clip"><span className="splash-shine" /></span>
             </div>
           </div>
 
