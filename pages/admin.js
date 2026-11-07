@@ -244,16 +244,25 @@ export default function Admin() {
 }
 
 /* =========================== ORDERS =========================== */
+// Order types, in Juan's prep order. An order with both lb and meals shows under By the lb in the
+// grouped view, and in both the By the lb and Meals tabs.
+const hasLb = (o) => (o.items || []).some((l) => l.type === 'lb') || (o.label_lines || []).some((l) => l.type === 'lb');
+const hasMeals = (o) => (o.items || []).some((l) => l.type === 'meal');
+const kindOf = (o) => (hasLb(o) ? 'lb' : isCustomOrder(o) ? 'custom' : 'meals');
+const KINDS = [['all', 'All', '📋'], ['lb', 'By the lb', '⚖️'], ['custom', 'Custom', '📝'], ['meals', 'Meals', '🍱']];
 function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros }) {
   const weekLabels = orders.filter((o) => o.status !== 'cancelled').reduce((n, o) => n + labelCount(o), 0);
   const [filter, setFilter] = useState('all');
+  // Juan's prep order: by-the-lb first, then custom meals, then regular meals.
+  const [kind, setKind] = useState('all'); // all | lb | custom | meals
   const [q, setQ] = useState('');
   const [doneOpen, setDoneOpen] = useState(false); // the Completed drop-down
   const [doneFlash, setDoneFlash] = useState(false);
   const live = orders.filter((o) => o.status !== 'cancelled');
   const stats = {
     orders: live.length,
-    meals: live.reduce((a, o) => a + (o.meal_count || 0), 0),
+    // menu meals + custom-order meals typed in the label editor (same count as the cook sheet)
+    meals: live.reduce((a, o) => a + (o.meal_count || 0) + (o.label_lines || []).reduce((n, l) => n + (l.type === 'lb' ? 0 : Number(l.count) || 0), 0), 0),
     lbs: live.reduce((a, o) => a + Number(o.lb_total || 0), 0),
     revenue: live.reduce((a, o) => a + Number(o.total || 0), 0),
     owed: live.filter((o) => !o.paid).reduce((a, o) => a + Number(o.total || 0), 0),
@@ -269,12 +278,16 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros 
     quote: live.filter((o) => o.status === 'quote').length,
   };
   if (counts.quote > 0 || filter === 'quote') PHONE_TABS.push(['quote', 'Quotes']);
+  const kindCounts = { all: live.length, lb: live.filter(hasLb).length, custom: live.filter(isCustomOrder).length, meals: live.filter(hasMeals).length };
   const shown = orders.filter((o) => {
     if (filter === 'unpaid' && (o.paid || o.status === 'cancelled')) return false;
     if (filter === 'pickup' && o.fulfillment !== 'pickup') return false;
     if (filter === 'delivery' && o.fulfillment !== 'delivery') return false;
     if (filter === 'quote' && o.status !== 'quote') return false;
     if (q && !`${o.customer_name} ${o.phone} ${o.order_no}`.toLowerCase().includes(q.toLowerCase())) return false;
+    if (kind === 'lb' && !hasLb(o)) return false;
+    if (kind === 'custom' && !isCustomOrder(o)) return false;
+    if (kind === 'meals' && !hasMeals(o)) return false;
     return true;
   });
   // Finished orders move into their own "Completed" drop-down automatically (status Done).
@@ -333,14 +346,39 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros 
           ))}
         </div>
       </div>
+      <div className="kind-tabs" role="tablist" aria-label="Order type">
+        {KINDS.map(([k, label, icon]) => (
+          <button key={k} role="tab" aria-selected={kind === k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>
+            <b><span>{icon}</span> {label}</b><small>{kindCounts[k]}</small>
+          </button>
+        ))}
+      </div>
       {loading && <p className="muted">Loading…</p>}
       {!loading && shown.length === 0 && <p className="muted empty">{q || filter !== 'all' ? 'No orders match.' : 'No orders here yet.'}</p>}
       {!loading && shown.length > 0 && active.length === 0 && <p className="muted empty">All caught up: every order here is completed.</p>}
-      <div className="order-cards">
-        {active.map((o) => (
-          <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
-        ))}
-      </div>
+      {kind === 'all' ? (
+        // "All types": grouped in prep order, each order once (by-the-lb first, then custom, then meals)
+        KINDS.slice(1).map(([k, label, icon]) => {
+          const list = active.filter((o) => kindOf(o) === k);
+          if (!list.length) return null;
+          return (
+            <section className="kind-sec" key={k}>
+              <h3 className="kind-head"><span>{icon}</span>{label === 'Meals' ? 'Regular meals' : label === 'Custom' ? 'Custom meals' : label}<small>{list.length}</small></h3>
+              <div className="order-cards">
+                {list.map((o) => (
+                  <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      ) : (
+        <div className="order-cards">
+          {active.map((o) => (
+            <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
+          ))}
+        </div>
+      )}
       {completed.length > 0 && (
         <section className={`done-sec ${showDone ? 'is-open' : ''} ${doneFlash ? 'flash' : ''}`}>
           <button className="done-head" onClick={() => setDoneOpen((v) => !v)} aria-expanded={showDone}>

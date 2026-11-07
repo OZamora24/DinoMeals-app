@@ -4,7 +4,7 @@ import {
   PROTEINS, CARBS, VEGGIES, ALLERGEN_LABELS, PORTIONS, DIET_FLAGS, mealOz,
   lineLabel, lineSummary, proteinLabel, nameOf, byId, prettyDate, money,
 } from '../lib/menu';
-import { customCookParts } from '../lib/labelSpots';
+import { customCookParts, labelCount } from '../lib/labelSpots';
 import { loyaltyState, rewardLabel, ordinal, EVERY } from '../lib/loyalty';
 import { referralCredits, referralConfig, referralsThisMonth } from '../lib/referral';
 import { trainerConfig, cleanTrainerList, trainerCredits, clientsThisMonth } from '../lib/trainer';
@@ -37,6 +37,12 @@ export function Stat({ label, value, sub, hot }) {
 }
 
 /* =========================== COOK SHEET =========================== */
+// By-the-lb burgers pick a style as a flavor; on the cook sheet they join the matching meal burger.
+const cookProtein = (item, flavor = '') => {
+  if (item === 'burgers' && flavor === 'smashed') return ['smashburgers', ''];
+  if (item === 'burgers' && flavor === 'smoked') return ['burgers', ''];
+  return [item, flavor || ''];
+};
 export function CookTab({ orders, week }) {
   const [paidOnly, setPaidOnly] = useState(false);
   const src = orders.filter((o) => !paidOnly || o.paid);
@@ -61,21 +67,28 @@ export function CookTab({ orders, week }) {
           const key = l.kind === 'protein' ? `${l.item}:` : l.item;
           add(l.kind, key, lineLabel(l), l.qty, l.qty * PORTIONS[l.kind], 0);
         } else if (l.type === 'lb') {
-          const key = l.kind === 'protein' ? `${l.item}:${l.flavor || ''}` : l.item;
-          add(l.kind, key, lineLabel(l), 0, l.lbs * 16, l.lbs);
+          if (l.kind === 'protein') {
+            // Same food, one row: lb "Burgers · Smashed" = "Smashed Burgers", lb "Burgers · Smoked" = "Smoked Burgers".
+            const [id, fl] = cookProtein(l.item, l.flavor);
+            const key = `${id}:${fl}`;
+            add('protein', key, id === l.item && fl === (l.flavor || '') ? lineLabel(l) : proteinLabel(id, fl || undefined), 0, l.lbs * 16, l.lbs);
+          } else add(l.kind, l.item, lineLabel(l), 0, l.lbs * 16, l.lbs);
         }
       }
       // Custom-quote orders: the meals entered in the label editor (oz / gram amounts).
       for (const l of o.label_lines || []) {
         for (const p of customCookParts(l)) {
           if (p.kind === 'protein') containers += p.meals;
-          const label = p.kind === 'protein' ? proteinLabel(p.id, p.flavor) : nameOf(byId(p.kind === 'carb' ? CARBS : VEGGIES, p.id));
-          add(p.kind, p.kind === 'protein' ? `${p.id}:${p.flavor}` : p.id, label, p.meals, p.oz, p.lbs || 0);
+          const [pid, pfl] = p.kind === 'protein' ? cookProtein(p.id, p.flavor) : [p.id, ''];
+          const label = p.kind === 'protein' ? proteinLabel(pid, pfl || undefined) : nameOf(byId(p.kind === 'carb' ? CARBS : VEGGIES, p.id));
+          add(p.kind, p.kind === 'protein' ? `${pid}:${pfl}` : p.id, label, p.meals, p.oz, p.lbs || 0);
         }
       }
     }
     const sort = (o) => Object.values(o).sort((a, b) => b.oz - a.oz);
-    return { protein: sort(groups.protein), carb: sort(groups.carb), veg: sort(groups.veg), containers };
+    // Everything that gets packed and labeled: meals + bulk (1 per lb, a ½ lb gets its own) + extras.
+    const total = src.reduce((n, o) => n + labelCount(o), 0);
+    return { protein: sort(groups.protein), carb: sort(groups.carb), veg: sort(groups.veg), containers, total, other: total - containers };
   }, [src]);
   const lb = (oz) => (oz / 16).toFixed(oz % 16 === 0 ? 0 : 1);
   const totalOz = (g) => g.reduce((a, r) => a + r.oz, 0);
@@ -94,6 +107,7 @@ export function CookTab({ orders, week }) {
       </div>
       <div className="stat-row">
         <Stat label="Meal containers" value={sheet.containers} />
+        <Stat label="Total containers" value={sheet.total} sub={sheet.other ? `meals + ${sheet.other} bulk / extras` : null} />
         <Stat label="Protein to cook" value={`${lb(totalOz(sheet.protein))} lb`} />
         <Stat label="Carbs" value={`${lb(totalOz(sheet.carb))} lb`} />
         <Stat label="Veggies" value={`${lb(totalOz(sheet.veg))} lb`} />
