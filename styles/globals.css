@@ -1318,3 +1318,10 @@ label .input { margin-top: 6px; font-weight: 500; }
 .kind-sec { margin-bottom: 18px; }
 .kind-head { display: flex; align-items: center; gap: 8px; font: 400 1.25rem var(--display); letter-spacing: .04em; text-transform: uppercase; color: #f2a13a; margin: 6px 2px 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .kind-head small { font: 800 .75rem Manrope, sans-serif; color: var(--muted); background: rgba(255,255,255,.06); border-radius: 99px; padding: 2px 8px; }
+
+/* Type row folds out of the All tab: smooth fade + drop down, and back up */
+.kind-drop { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-8px); transition: grid-template-rows .32s ease, opacity .28s ease, transform .32s ease; pointer-events: none; }
+.kind-drop.open { grid-template-rows: 1fr; opacity: 1; transform: none; pointer-events: auto; }
+.kind-drop-in { overflow: hidden; min-height: 0; }
+.all-caret { display: inline-block; margin-left: 4px; font-size: .75em; transition: transform .3s ease; }
+.all-caret.up { transform: rotate(180deg); }
