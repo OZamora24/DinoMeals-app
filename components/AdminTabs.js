@@ -9,6 +9,7 @@ import { loyaltyState, rewardLabel, ordinal, EVERY } from '../lib/loyalty';
 import { referralCredits, referralConfig, referralsThisMonth } from '../lib/referral';
 import { trainerConfig, cleanTrainerList, trainerCredits, clientsThisMonth } from '../lib/trainer';
 import { monthlyConfig, activeMonthly } from '../lib/monthly';
+import { keyLabel, MIN_MEAL_RATINGS } from '../lib/reviews';
 import { venmoLink, cardLinks } from '../lib/payLinks';
 import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
 
@@ -1052,5 +1053,76 @@ function MonthlyPanel({ all }) {
         })}
       </div>
     </section>
+  );
+}
+
+// ⭐ Reviews tab (lib/reviews.js): overall score, meal scoreboard, every review with reply / hide.
+export function ReviewsTab() {
+  const [data, setData] = useState(null);
+  const [draft, setDraft] = useState({});
+  const [busy, setBusy] = useState('');
+  const load = () => api('/api/reviews?all=1').then(setData).catch(() => setData({ reviews: [], board: [], summary: { count: 0, avg: 0 } }));
+  useEffect(() => { load(); }, []);
+  if (!data) return <p className="muted">Loading…</p>;
+  const save = async (id, patch) => {
+    setBusy(id);
+    try {
+      const j = await api('/api/reviews', { method: 'PATCH', body: { id, ...patch } });
+      setData((d) => ({ ...d, reviews: d.reviews.map((r) => (r.id === id ? { ...r, ...j.review } : r)) }));
+      if ('reply' in patch) setDraft((x) => ({ ...x, [id]: undefined }));
+    } finally { setBusy(''); }
+  };
+  const S = ({ n }) => <span className="rv-show-stars">{'★'.repeat(n)}<i>{'★'.repeat(5 - n)}</i></span>;
+  return (
+    <div>
+      <div className="route-head">
+        <div>
+          <h2 className="display sm">⭐ Reviews</h2>
+          <p className="muted small">From real customers only (one per order, on their private order page, from the Tuesday after pickup). Shown as first name + last initial. Reply publicly, or hide spam / rude ones. Please don't hide a review just because it's low: an honest low review with a kind reply builds trust. Everyone who reviews is offered the Google link (dinomeals.app/review).</p>
+        </div>
+      </div>
+      <div className="stat-row">
+        <Stat label="Score" value={data.summary.count ? `⭐ ${data.summary.avg.toFixed(1)}` : '—'} sub={data.summary.count < 3 ? 'shows on the site at 3 reviews' : null} />
+        <Stat label="Reviews" value={data.summary.count} />
+      </div>
+      <section className="loy-panel">
+        <h3 className="display sm">Meal scoreboard</h3>
+        <p className="muted small">Each meal's score shows on the order page once it has {MIN_MEAL_RATINGS}+ ratings. Below 4.0 is marked red.</p>
+        {data.board.length === 0 && <p className="muted empty">No meal ratings yet.</p>}
+        <div className="rv-board">
+          {data.board.map((r, i) => (
+            <div key={r.key} className={`rv-brow ${r.count >= MIN_MEAL_RATINGS && r.avg < 4 ? 'low' : ''}`}>
+              <span className="n">{i + 1}</span>
+              <span className="l">{r.label}<small className="c">{r.count} rating{r.count === 1 ? '' : 's'}{r.count < MIN_MEAL_RATINGS ? ' · not shown yet' : ''}</small></span>
+              <span className="s">⭐ {r.avg.toFixed(1)}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      {data.reviews.length === 0 && <p className="muted empty">No reviews yet. They start coming in the Tuesday after a pickup.</p>}
+      <div className="reg-list">
+        {data.reviews.map((r) => (
+          <div className={`reg rv-admin ${r.status === 'hidden' ? 'is-hidden' : ''}`} key={r.id}>
+            <div className="reg-main">
+              <div className="rv-card-h"><b>{r.name} · #{r.order_no}</b><S n={r.stars} /></div>
+              <div className="muted small">{new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{r.lang === 'es' ? ' · Español' : ''}{r.status === 'hidden' ? ' · HIDDEN from the site' : ''}</div>
+              {r.comment && <p className="rv-comment">{r.comment}</p>}
+              {r.meals_all.length > 0 && (
+                <div className="rv-loved">{r.meals_all.map((m) => <span key={m.key}>{keyLabel(m.key)} {'★'.repeat(m.stars)}</span>)}</div>
+              )}
+              {r.reply && draft[r.id] === undefined && <div className="rv-reply"><b>Your reply:</b> {r.reply} <button className="link" onClick={() => setDraft((x) => ({ ...x, [r.id]: r.reply }))}>Edit</button></div>}
+              {(!r.reply || draft[r.id] !== undefined) && (
+                <textarea className="input" rows={2} maxLength={500} placeholder="Write a public reply…" value={draft[r.id] || ''} onChange={(e) => setDraft((x) => ({ ...x, [r.id]: e.target.value }))} />
+              )}
+              <div className="row wrap" style={{ marginTop: 8 }}>
+                {(draft[r.id] || '').trim() && <button className="btn btn-red btn-sm" disabled={busy === r.id} onClick={() => save(r.id, { reply: draft[r.id] })}>Post reply</button>}
+                {r.reply && draft[r.id] === undefined && <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => window.confirm('Remove your reply?') && save(r.id, { reply: '' })}>Remove reply</button>}
+                <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => save(r.id, { status: r.status === 'hidden' ? 'published' : 'hidden' })}>{r.status === 'hidden' ? 'Show again' : 'Hide (spam / rude)'}</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

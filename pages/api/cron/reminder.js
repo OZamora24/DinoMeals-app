@@ -4,8 +4,9 @@
 // there are two schedules (one lands on 4 PM during daylight time, one during standard
 // time) and this handler only sends when it's really Thursday 4 PM in Los Angeles.
 // Nothing goes out unless SMS_ENABLED=true (texts stay off until the carrier approves).
-import { getSettings, reminderSubscribers, updateReminder, recentOrders } from '../../../lib/db';
-import { reminderMessage, sendText, smsStatus, waitingLine } from '../../../lib/sms';
+import { getSettings, reminderSubscribers, updateReminder, recentOrders, reviewedOrderIds, updateOrder } from '../../../lib/db';
+import { reminderMessage, sendText, smsStatus, waitingLine, rateLine } from '../../../lib/sms';
+import { orderToAsk } from '../../../lib/reviews';
 import { cookDateFor, laNow, dateKey } from '../../../lib/menu';
 import { loyaltyState } from '../../../lib/loyalty';
 import { referralCredits, referralConfig } from '../../../lib/referral';
@@ -40,15 +41,23 @@ export default async function handler(req, res) {
   // Every order once (not one query per person) so the rewards line stays fast. If it fails,
   // the reminders still go out without it.
   const all = await recentOrders(3650).catch((e) => (console.error('reminder rewards', e?.message), null));
+  // Reviews: orders already reviewed (to skip) for everyone on the list.
+  const reviewed = await reviewedOrderIds(subs.map((r) => r.phone_digits)).catch(() => new Set());
   let sent = 0;
   let optedOut = 0;
   for (const r of subs) {
     if (r.last_sent_week === week) continue; // never twice in one week
     let extra = '';
+    let ask = null;
     try { if (all) extra = waitingFor(r.phone_digits, all, today, s, r.lang); } catch {}
+    try {
+      if (all) ask = orderToAsk(all.filter((o) => o.phone_digits === r.phone_digits), reviewed, today, new Date().toISOString());
+      if (ask) extra = [extra, rateLine(ask.view_token, r.lang)].filter(Boolean).join(' ');
+    } catch {}
     const out = await sendText(r.phone_digits, reminderMessage(r.lang, s, extra));
     if (out.ok) {
       sent += 1;
+      if (ask) await updateOrder(ask.id, { review_asked_at: new Date().toISOString() }).catch((e) => console.error('review asked', e?.message));
       await updateReminder(r.phone_digits, { last_sent_week: week });
     } else if (out.code === 21610) {
       optedOut += 1; // they replied STOP — stop trying

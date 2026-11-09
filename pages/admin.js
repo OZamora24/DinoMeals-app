@@ -16,8 +16,8 @@ import { promoLabel, promoDiscount } from '../lib/promo';
 import { rewardLabel, ordinal } from '../lib/loyalty';
 import { allDiscounts } from '../lib/referral';
 import { discountParts } from '../lib/orderView';
-import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt, Gift } from '../components/Icons';
-import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, RewardsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
+import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt, Gift, Star } from '../components/Icons';
+import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, RewardsTab, ReviewsTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
 const TABS = [
   ['orders', 'Orders', List],
@@ -26,6 +26,7 @@ const TABS = [
   ['route', 'Delivery', Route],
   ['regulars', 'Regulars', Users],
   ['rewards', 'Rewards', Gift],
+  ['reviews', 'Reviews', Star],
   ['messages', 'Messages', Bolt],
   ['settings', 'Menu & settings', Gear],
 ];
@@ -234,6 +235,7 @@ export default function Admin() {
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
         {tab === 'regulars' && <RegularsTab week={week} weekOrders={orders} repeat={repeat} />}
         {tab === 'rewards' && <RewardsTab />}
+        {tab === 'reviews' && <ReviewsTab />}
         {tab === 'messages' && <MessagesTab settings={settings} save={saveSettings} reload={loadSettings} />}
         {tab === 'settings' && <SettingsTab settings={settings} save={saveSettings} week={week} />}
       </main>

@@ -97,3 +97,26 @@ alter table public.orders add column if not exists trainer_credit jsonb;  -- tra
 alter table public.orders add column if not exists monthly jsonb;         -- Monthly Plan week { id, week, of, pct, discount, plan_total }
 create index if not exists orders_trainer_by_idx on public.orders ((trainer->>'by'));
 create index if not exists orders_monthly_id_idx on public.orders ((monthly->>'id'));
+
+-- Customer reviews (Nov 2026). One per order, from the customer's private order page. Safe to run more than once.
+create table if not exists public.reviews (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid unique not null references public.orders(id) on delete cascade,
+  order_no int,
+  phone_digits text,
+  display_name text,                                  -- "Maria L." (never the full name or phone)
+  stars int not null check (stars between 1 and 5),
+  meals jsonb not null default '[]'::jsonb,           -- [{ key: 'p:tritip', stars: 5 }]
+  comment text not null default '',
+  lang text not null default 'en',
+  status text not null default 'published' check (status in ('published','hidden')),
+  reply text not null default '',                     -- Juan's public reply
+  reply_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.reviews enable row level security;
+drop policy if exists "server only" on public.reviews;
+create policy "server only" on public.reviews for all to anon, authenticated using (private.dino_authorized()) with check (private.dino_authorized());
+create index if not exists reviews_phone_idx on public.reviews (phone_digits);
+create index if not exists reviews_created_idx on public.reviews (created_at desc);
+alter table public.orders add column if not exists review_asked_at timestamptz;  -- last time the Thursday text asked this order for a review

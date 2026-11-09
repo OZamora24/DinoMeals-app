@@ -1325,3 +1325,51 @@ label .input { margin-top: 6px; font-weight: 500; }
 .kind-drop-in { overflow: hidden; min-height: 0; }
 .all-caret { display: inline-block; margin-left: 4px; font-size: .75em; transition: transform .3s ease; }
 .all-caret.up { transform: rotate(180deg); }
+
+/* ---- Customer reviews ---- */
+.rv-box { margin: 16px 0; padding: 18px; border: 1.5px solid #f2a13a; border-radius: 20px; background: rgba(242,161,58,.06); text-align: left; }
+.rv-box h2 { font-size: 1.7rem; margin: 0; }
+.rv-verified { display: inline-block; font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: rgba(71,194,122,.15); color: var(--ok); }
+.rv-overall { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 14px 0 6px; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+.rv-stars { display: inline-flex; gap: 2px; }
+.rv-stars button { background: none; border: 0; padding: 2px; color: #4a433c; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.rv-stars button.on { color: #f2a13a; }
+.rv-stars.lg button { font-size: 2.6rem; padding: 2px 4px; }
+.rv-h { display: block; margin: 14px 0 4px; }
+.rv-meal { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px 6px 12px; border: 1.5px solid var(--line); border-radius: 14px; margin-top: 8px; font-weight: 700; font-size: .9rem; }
+.rv-meal.on { border-color: #f2a13a; background: rgba(242,161,58,.08); }
+.rv-text { margin-top: 12px; }
+.rv-box .btn-block { margin-top: 10px; }
+.rv-thanks { text-align: center; }
+.rv-thanks.small { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; text-align: left; }
+.rv-rex { width: 140px; height: auto; }
+.rv-google { margin: 16px 0 6px; padding: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+.btn-google { background: #fff; color: #222; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-google b { color: #4285f4; font-size: 1.1rem; }
+.rv-line { display: inline-block; margin: 6px 16px 0; font-weight: 800; font-size: .85rem; color: #f2a13a; text-decoration: none; }
+.pcard-score { display: block; font-size: .72rem; font-weight: 800; color: #f2a13a; margin-top: 2px; }
+.pcard-score i { font-style: normal; color: var(--muted); font-weight: 700; }
+.rv-section .rv-score { display: flex; align-items: center; gap: 22px; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; max-width: 520px; }
+.rv-big { font-family: var(--display); font-size: 3.6rem; line-height: .9; color: var(--cream); }
+.rv-show-stars { color: #f2a13a; letter-spacing: 2px; white-space: nowrap; }
+.rv-show-stars i { font-style: normal; color: #4a433c; }
+.rv-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.rv-bars div { display: flex; align-items: center; gap: 8px; font-size: .72rem; color: var(--muted); }
+.rv-bars em { flex: 1; height: 6px; border-radius: 3px; background: #3a342e; overflow: hidden; }
+.rv-bars i { display: block; height: 100%; background: #f2a13a; }
+.rv-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px; }
+.rv-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; }
+.rv-card-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rv-card p, .rv-comment { margin: 6px 0 0; font-size: .92rem; line-height: 1.45; }
+.rv-loved { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rv-loved span { font-size: .72rem; font-weight: 800; background: rgba(242,161,58,.12); color: #f2a13a; padding: 3px 8px; border-radius: 99px; }
+.rv-reply { margin-top: 10px; border-left: 3px solid var(--red); padding: 6px 10px; background: var(--bg-2); border-radius: 0 10px 10px 0; font-size: .85rem; }
+.rv-reply b { color: var(--red); }
+.rv-more { margin-top: 14px; }
+.rv-board { margin-top: 6px; }
+.rv-brow { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-weight: 700; }
+.rv-brow .n { font-family: var(--display); color: var(--muted); }
+.rv-brow .s { color: #f2a13a; font-weight: 800; }
+.rv-brow .c { display: block; color: var(--muted); font-size: .78rem; font-weight: 600; }
+.rv-brow.low .s { color: #ff8a7a; }
+.rv-admin.is-hidden { opacity: .55; }

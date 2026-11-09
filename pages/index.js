@@ -9,10 +9,12 @@ import { getSettings } from '../lib/db';
 import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { Flame, Grain, Leaf, Box, Card, Truck, Arrow, Repeat } from '../components/Icons';
 import DinoScene from '../components/DinoScene';
+import ReviewsSection from '../components/ReviewsSection';
 
 export async function getServerSideProps() {
   const s = await getSettings();
-  return { props: { settings: await publicSettingsWithCapacity(s) } };
+  const { reviewProps } = await import('../lib/reviewsData');
+  return { props: { settings: await publicSettingsWithCapacity(s), reviews: await reviewProps(3) } };
 }
 
 const TICKER = [
@@ -20,7 +22,7 @@ const TICKER = [
   'Korean BBQ Beef', 'Roasted Sweet Potatoes', 'Lemon Pepper Tilapia', 'Teriyaki Chicken', 'Brussels Sprouts',
 ];
 
-export default function Home({ settings }) {
+export default function Home({ settings, reviews = null }) {
   const { lang, setLang, t } = useLang();
   const [mode, setMode] = useState('meal');
   const soldOut = new Set(settings.sold_out || []);
@@ -122,6 +124,8 @@ export default function Home({ settings }) {
           ))}
         </div>
       </section>
+
+      <ReviewsSection data={reviews} t={t} lang={lang} />
 
       {/* ---------- MENU ---------- */}
       <section className="section" id="menu">

@@ -8,7 +8,7 @@ export default function MealBuilder({
   lang, t, soldOut, builderRef, editIdx, setEditIdx,
   bProtein, setBProtein, bFlavor, setBFlavor, flavorMissing, bCarb, setBCarb, bVeg, setBVeg, bOz, setBOz,
   bP, builderUnit, builderMacros, builderAllergens, pickProtein, addSet,
-  plan, setPlanId, planQty, setPlanQty, addN, mealCount, anyQty, setAnyQty, goCustom, planIds = null,
+  plan, setPlanId, planQty, setPlanQty, addN, mealCount, anyQty, setAnyQty, goCustom, planIds = null, scores = null,
 }) {
   const [noSides, setNoSides] = useState(false);
   const full = editIdx == null && addN <= 0;
@@ -68,6 +68,7 @@ export default function MealBuilder({
                 {p.smoked && <span className="smoke-tag">SMOKED</span>}
                 <span className="pcard-name">{nameOf(p, lang)}</span>
                 <span className="pcard-price">{out ? t('sold_out') : money(p.meal)}</span>
+                {scores && scores[`p:${p.id}`] && <span className="pcard-score">⭐ {scores[`p:${p.id}`].avg.toFixed(1)} <i>({scores[`p:${p.id}`].count})</i></span>}
                 {bProtein === p.id && <span className="pcard-check"><Check size={14} /></span>}
               </button>
             );

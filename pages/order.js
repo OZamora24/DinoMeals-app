@@ -28,10 +28,12 @@ import MonthlyBar from '../components/order/MonthlyBar';
 export async function getServerSideProps({ req, query }) {
   const s = await getSettings();
   const adminMode = query.admin === '1' && isValidSession(req);
-  return { props: { settings: await publicSettingsWithCapacity(s), adminMode } };
+  const { reviewData } = await import('../lib/reviewsData');
+  const rd = await reviewData();
+  return { props: { settings: await publicSettingsWithCapacity(s), adminMode, reviews: { summary: rd.summary, scores: rd.scores } } };
 }
 
-export default function OrderPage({ settings, adminMode }) {
+export default function OrderPage({ settings, adminMode, reviews = null }) {
   const router = useRouter();
   const { lang, setLang, t } = useLang();
   const soldOut = useMemo(() => new Set(settings.sold_out || []), [settings.sold_out]);
@@ -518,6 +520,9 @@ export default function OrderPage({ settings, adminMode }) {
         </div>
       </header>
 
+      {!adminMode && reviews && reviews.summary.show && (
+        <a href="/#reviews" className="rv-line">⭐ {reviews.summary.avg.toFixed(1)} · {t('rv_count', reviews.summary.count)}</a>
+      )}
       {settings.announcement ? <div className="announce">{settings.announcement}</div> : null}
       {refBanner && refBanner.valid ? <div className="announce ref-banner">🤝 {t('ref_banner', refBanner.name, refBanner.pct || settings.referral_new_pct || 10)}</div> : null}
       {full && settings.ordering_open ? <div className="announce">{t('week_full_note')}</div> : null}
@@ -592,6 +597,7 @@ export default function OrderPage({ settings, adminMode }) {
               setAnyQty={setAnyQty}
               goCustom={goCustom}
               planIds={monthly ? MONTHLY_SIZES : null}
+              scores={reviews ? reviews.scores : null}
             />
 
             <MealBox lang={lang} t={t} settings={settings} meals={meals} mealCount={mealCount} plan={plan} remaining={remaining} editSet={editSet} incMeal={incMeal} decMeal={decMeal} />

@@ -13,6 +13,7 @@ import { prettyDate } from '../../lib/menu';
 import { CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import { VIEW_TXT, rememberOrder } from '../../lib/orderView';
 import ShareReferral from '../../components/order/ShareReferral';
+import ReviewBox from '../../components/order/ReviewBox';
 
 export async function getServerSideProps({ params, res }) {
   const { getOrderByToken, getSettings } = await import('../../lib/db');
@@ -31,7 +32,17 @@ export async function getServerSideProps({ params, res }) {
     const { referralConfig } = await import('../../lib/referral');
     const rc = referralConfig(s);
     const ref = rc.on && o.status !== 'cancelled' ? { code: codeFor(o.phone_digits, o.customer_name), newPct: rc.new_pct, creditPct: rc.credit_pct } : null;
-    return { props: { order: publicOrder(o), pay, ref } };
+    // Review form (lib/reviews.js): opens the Tuesday after cook day, one per order.
+    let review = null;
+    try {
+      const { canReview, itemsToRate, displayName } = await import('../../lib/reviews');
+      const { reviewForOrder } = await import('../../lib/db');
+      const { dateKey, laNow } = await import('../../lib/menu');
+      const open = canReview(o, dateKey(laNow()));
+      const done = open ? !!(await reviewForOrder(o.id)) : false;
+      review = { open, done, items: itemsToRate(o), name: displayName(o.customer_name) };
+    } catch (e) { console.error('order page review', e?.message); }
+    return { props: { order: publicOrder(o), pay, ref, review } };
   } catch (e) {
     console.error('order page', e?.message);
     res.statusCode = 500;
@@ -39,7 +50,7 @@ export async function getServerSideProps({ params, res }) {
   }
 }
 
-export default function OrderPage({ order, pay, ref = null }) {
+export default function OrderPage({ order, pay, ref = null, review = null }) {
   const { lang, setLang, t } = useLang();
   const x = VIEW_TXT[lang] || VIEW_TXT.en;
   useEffect(() => {
@@ -69,6 +80,7 @@ export default function OrderPage({ order, pay, ref = null }) {
             <h1 className="display">{x.order} #{order.order_no}</h1>
             <p className="done-no">{order.fulfillment === 'delivery' ? x.delivery : x.pickup} · {t('cook_day')} {prettyDate(order.cook_date, lang)}</p>
             <Tracker order={order} lang={lang} />
+            <ReviewBox order={order} review={review} t={t} lang={lang} />
             {!order.paid && order.total != null && order.status !== 'cancelled' && (
               <div className="pay-card">
                 <h3>{t('pay_now')}</h3>

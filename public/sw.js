@@ -47,6 +47,7 @@ self.addEventListener('notificationclick', (event) => {
           // customers: bring the app/site forward (not the kitchen page) and tell it which message to show
           if (!c.url.includes('/admin') && 'focus' in c) {
             if (d.promoId) c.postMessage({ type: 'dino-promo-open', id: d.promoId });
+            else if (d.url && d.url !== '/' && 'navigate' in c) return c.navigate(d.url).then((w) => (w || c).focus()); // e.g. /rate
             return c.focus();
           }
         } else if (c.url.includes('/admin') && 'focus' in c) return c.focus();
