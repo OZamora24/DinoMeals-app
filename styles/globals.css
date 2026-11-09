@@ -1373,3 +1373,50 @@ label .input { margin-top: 6px; font-weight: 500; }
 .rv-brow .c { display: block; color: var(--muted); font-size: .78rem; font-weight: 600; }
 .rv-brow.low .s { color: #ff8a7a; }
 .rv-admin.is-hidden { opacity: .55; }
+
+/* ---------- Food photos (lib/photos.js) ---------- */
+.ph-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.ph-head .section-title { margin-bottom: 8px; }
+.ph-head p { margin: 0 0 16px; }
+.ph-all { flex: none; color: var(--ember); font-weight: 800; text-decoration: none; margin-bottom: 18px; white-space: nowrap; }
+.ph-strip { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 20px 14px; margin: 0 -20px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ph-strip::-webkit-scrollbar { display: none; }
+.ph-tile { position: relative; flex: none; width: 74%; max-width: 330px; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; scroll-snap-align: start; border: 1px solid var(--line); background: var(--card); padding: 0; cursor: pointer; color: #fff; text-decoration: none; }
+.ph-tile img, .ph-cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }
+.ph-tile:hover img, .ph-cell:hover img { transform: scale(1.04); }
+.ph-tile span, .ph-cell span { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; text-align: left; font-weight: 800; font-size: .92rem; background: linear-gradient(transparent, rgba(0,0,0,.78)); }
+.ph-more { display: grid; place-content: center; text-align: center; gap: 6px; width: 46%; background: linear-gradient(160deg, var(--card-2), var(--card)); }
+.ph-more b { font-family: var(--display); font-size: 3rem; font-weight: 400; color: var(--ember); line-height: 1; }
+.ph-more span { position: static; background: none; padding: 0; text-align: center; color: var(--muted); }
+.ph-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+@media (min-width: 720px) { .ph-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } .ph-tile { width: 300px; } }
+.ph-cell { position: relative; aspect-ratio: 1; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--card); padding: 0; cursor: pointer; color: #fff; }
+.ph-cta { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 36px 0 10px; text-align: center; }
+.ph-cta .display { font-size: 2rem; text-transform: uppercase; }
+.lb { position: fixed; inset: 0; z-index: 200; background: rgba(8,7,6,.94); display: flex; align-items: center; justify-content: center; animation: lbIn .18s ease; touch-action: pan-y; }
+@keyframes lbIn { from { opacity: 0; } }
+.lb-fig { margin: 0; max-width: min(96vw, 1100px); max-height: 92vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.lb-fig img { max-width: 100%; max-height: 80vh; width: auto; height: auto; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: lbImg .22s ease; }
+@keyframes lbImg { from { opacity: 0; transform: scale(.97); } }
+.lb-fig figcaption { display: flex; gap: 14px; align-items: baseline; color: #fff; font-weight: 800; padding: 0 16px; text-align: center; }
+.lb-fig figcaption small { color: var(--muted); font-weight: 700; }
+.lb-x { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(31,28,25,.9); color: #fff; font-size: 1.1rem; cursor: pointer; }
+.lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 64px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(31,28,25,.75); color: #fff; font-size: 2.2rem; line-height: 1; cursor: pointer; }
+.lb-nav.prev { left: 10px; } .lb-nav.next { right: 10px; }
+@media (max-width: 600px) { .lb-nav { display: none; } }
+/* Admin → Photos */
+.ph-upload { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 26px 16px; border: 2px dashed var(--line-2); border-radius: 20px; background: var(--card); text-align: center; cursor: pointer; }
+.ph-upload b { font-size: 1.05rem; }
+.ph-upload input { display: none; }
+.ph-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 16px; }
+.ph-admin { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--card); display: flex; flex-direction: column; }
+.ph-admin.is-hidden { opacity: .55; }
+.ph-admin .pic { position: relative; aspect-ratio: 1; background: var(--card-2); }
+.ph-admin .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph-admin .pic em { position: absolute; left: 8px; top: 8px; font-style: normal; font-size: .72rem; font-weight: 800; background: rgba(0,0,0,.7); color: #fff; padding: 3px 8px; border-radius: 99px; }
+.ph-admin .body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ph-admin .input { font-size: .85rem; padding: 8px 10px; }
+.ph-admin .acts { display: flex; gap: 4px; }
+.ph-admin .acts .btn { flex: 1; padding: 6px 0; min-width: 0; }
+.ph-progress { margin-top: 10px; font-weight: 700; color: var(--ember); }
+.ph-tile img, .ph-cell img, .ph-admin .pic img { position: absolute; inset: 0; }

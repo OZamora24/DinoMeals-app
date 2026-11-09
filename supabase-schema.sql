@@ -120,3 +120,23 @@ create policy "server only" on public.reviews for all to anon, authenticated usi
 create index if not exists reviews_phone_idx on public.reviews (phone_digits);
 create index if not exists reviews_created_idx on public.reviews (created_at desc);
 alter table public.orders add column if not exists review_asked_at timestamptz;  -- last time the Thursday text asked this order for a review
+
+-- Food photos (Nov 2026). Juan uploads in Admin → Photos; shown on the home page and /photos.
+-- Pictures are stored here (base64, already shrunk on the phone) and served from /api/photo/<id> with long caching.
+create table if not exists public.photos (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  caption text not null default '',
+  sort int not null default 0,                  -- Juan's order (low first), then newest first
+  hidden boolean not null default false,
+  w int,
+  h int,
+  mime text not null default 'image/webp',
+  thumb_mime text not null default 'image/webp',
+  data text not null,                           -- full picture (about 1400 px), base64
+  thumb text not null                           -- thumbnail (about 560 px), base64
+);
+alter table public.photos enable row level security;
+drop policy if exists "server only" on public.photos;
+create policy "server only" on public.photos for all to anon, authenticated using (private.dino_authorized()) with check (private.dino_authorized());
+create index if not exists photos_order_idx on public.photos (hidden, sort, created_at desc);

@@ -10,11 +10,13 @@ import { publicSettingsWithCapacity } from '../lib/publicSettings';
 import { Flame, Grain, Leaf, Box, Card, Truck, Arrow, Repeat } from '../components/Icons';
 import DinoScene from '../components/DinoScene';
 import ReviewsSection from '../components/ReviewsSection';
+import { PhotoStrip } from '../components/PhotoViewer';
 
 export async function getServerSideProps() {
   const s = await getSettings();
   const { reviewProps } = await import('../lib/reviewsData');
-  return { props: { settings: await publicSettingsWithCapacity(s), reviews: await reviewProps(3) } };
+  const { photoProps } = await import('../lib/photosData');
+  return { props: { settings: await publicSettingsWithCapacity(s), reviews: await reviewProps(3), photos: await photoProps() } };
 }
 
 const TICKER = [
@@ -22,7 +24,7 @@ const TICKER = [
   'Korean BBQ Beef', 'Roasted Sweet Potatoes', 'Lemon Pepper Tilapia', 'Teriyaki Chicken', 'Brussels Sprouts',
 ];
 
-export default function Home({ settings, reviews = null }) {
+export default function Home({ settings, reviews = null, photos = null }) {
   const { lang, setLang, t } = useLang();
   const [mode, setMode] = useState('meal');
   const soldOut = new Set(settings.sold_out || []);
@@ -124,6 +126,8 @@ export default function Home({ settings, reviews = null }) {
           ))}
         </div>
       </section>
+
+      <PhotoStrip data={photos} t={t} />
 
       <ReviewsSection data={reviews} t={t} lang={lang} />
 

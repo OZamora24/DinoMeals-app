@@ -10,8 +10,9 @@ import { referralCredits, referralConfig, referralsThisMonth } from '../lib/refe
 import { trainerConfig, cleanTrainerList, trainerCredits, clientsThisMonth } from '../lib/trainer';
 import { monthlyConfig, activeMonthly } from '../lib/monthly';
 import { keyLabel, MIN_MEAL_RATINGS } from '../lib/reviews';
+import { HOME_COUNT, captionFromFileName } from '../lib/photos';
 import { venmoLink, cardLinks } from '../lib/payLinks';
-import { Flame, Printer, Check, Repeat, Chat, Route } from './Icons';
+import { Flame, Printer, Check, Repeat, Chat, Route, Camera } from './Icons';
 
 const STATUS = ['new', 'quote', 'confirmed', 'cooking', 'ready', 'done', 'cancelled'];
 export const SOURCE_LABEL = { web: 'Website', dm: 'IG DM', text: 'Text', call: 'Call', repeat: 'Repeat' };
@@ -1118,6 +1119,135 @@ export function ReviewsTab() {
                 {(draft[r.id] || '').trim() && <button className="btn btn-red btn-sm" disabled={busy === r.id} onClick={() => save(r.id, { reply: draft[r.id] })}>Post reply</button>}
                 {r.reply && draft[r.id] === undefined && <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => window.confirm('Remove your reply?') && save(r.id, { reply: '' })}>Remove reply</button>}
                 <button className="btn btn-ghost btn-sm" disabled={busy === r.id} onClick={() => save(r.id, { status: r.status === 'hidden' ? 'published' : 'hidden' })}>{r.status === 'hidden' ? 'Show again' : 'Hide (spam / rude)'}</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------- Photos (lib/photos.js) ----------------
+// Shrinks a picture on the phone before upload: the long side to `max` px, WebP (JPEG where the
+// browser can't make WebP). Returns { url, w, h }.
+async function shrinkImage(file, max, q = 0.82) {
+  let src, w, h;
+  try {
+    src = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    w = src.width; h = src.height;
+  } catch {
+    src = await new Promise((ok, bad) => {
+      const img = new Image();
+      img.onload = () => ok(img);
+      img.onerror = () => bad(new Error('read'));
+      img.src = URL.createObjectURL(file);
+    });
+    w = src.naturalWidth; h = src.naturalHeight;
+  }
+  const k = Math.min(1, max / Math.max(w, h));
+  const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+  const c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(src, 0, 0, cw, ch);
+  let url = c.toDataURL('image/webp', q);
+  if (!url.startsWith('data:image/webp')) url = c.toDataURL('image/jpeg', q);
+  return { url, w: cw, h: ch };
+}
+
+export function PhotosTab() {
+  const [list, setList] = useState(null);
+  const [max, setMax] = useState(80);
+  const [busy, setBusy] = useState('');
+  const [progress, setProgress] = useState('');
+  const [err, setErr] = useState('');
+  const [cap, setCap] = useState({});
+  const load = () => api('/api/photos?all=1').then((j) => { setList(j.photos || []); setMax(j.max || 80); }).catch(() => setList([]));
+  useEffect(() => { load(); }, []);
+  if (!list) return <p className="muted">Loading…</p>;
+
+  async function upload(files) {
+    setErr('');
+    const arr = [...files].filter((f) => /^image\//.test(f.type) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+    let done = 0, failed = 0;
+    // New photos go first, so upload the last one first: the batch then shows in the order picked.
+    for (const f of arr.slice().reverse()) {
+      setProgress(`Uploading ${done + failed + 1} of ${arr.length}…`);
+      try {
+        let full = await shrinkImage(f, 1400);
+        if (full.url.length > 2_000_000) full = await shrinkImage(f, 1200, 0.7);
+        const thumb = await shrinkImage(f, 560, 0.75);
+        const j = await api('/api/photos', { method: 'POST', body: { data: full.url, thumb: thumb.url, w: full.w, h: full.h, caption: captionFromFileName(f.name) } });
+        setList((l) => [j.photo, ...l]);
+        done += 1;
+      } catch (e) {
+        failed += 1;
+        setErr(e && e.message && e.message !== 'read' && e.message !== 'Request failed' ? e.message : "Couldn't read one of the pictures. Try a JPG or a screenshot of it.");
+      }
+    }
+    setProgress(done ? `✓ ${done} photo${done === 1 ? '' : 's'} added${failed ? ` · ${failed} failed` : ''}` : '');
+  }
+  const patch = async (id, body) => {
+    setBusy(id);
+    try {
+      const j = await api('/api/photos', { method: 'PATCH', body: { id, ...body } });
+      if (j.photos) setList(j.photos);
+      else setList((l) => l.map((p) => (p.id === id ? j.photo : p)));
+    } catch (e) { setErr(e.message); } finally { setBusy(''); }
+  };
+  const remove = async (id) => {
+    if (!window.confirm('Delete this photo for good?')) return;
+    setBusy(id);
+    try { await api(`/api/photos?id=${encodeURIComponent(id)}`, { method: 'DELETE' }); setList((l) => l.filter((p) => p.id !== id)); }
+    catch (e) { setErr(e.message); } finally { setBusy(''); }
+  };
+  const shown = list.filter((p) => !p.hidden).length;
+
+  return (
+    <div>
+      <div className="route-head">
+        <div>
+          <h2 className="display sm">📸 Photos</h2>
+          <p className="muted small">Food pictures for the website. The first {HOME_COUNT} show in "Fresh off the smoker" on the home page, and all of them on dinomeals.app/photos. New photos go first. Use ↑ ↓ to change the order, add a short caption if you like (for example "Smoked tri-tip, cilantro lime rice").</p>
+        </div>
+      </div>
+      <div className="stat-row">
+        <Stat label="On the site" value={shown} />
+        <Stat label="Hidden" value={list.length - shown} />
+        <Stat label="Space left" value={Math.max(0, max - list.length)} sub={`max ${max}`} />
+      </div>
+      <label className="ph-upload">
+        <Camera size={30} />
+        <b>Add photos</b>
+        <span className="muted small">Pick from your camera roll (you can pick several; they show in the order you pick them). They're shrunk on your phone first, so it's quick. A file named like "Garlic butter shrimp.jpg" gets that as its caption.</span>
+        <input type="file" accept="image/*" multiple onChange={(e) => { upload(e.target.files); e.target.value = ''; }} />
+      </label>
+      {progress && <div className="ph-progress">{progress}</div>}
+      {err && <div className="error">{err}</div>}
+      {list.length === 0 && <p className="muted empty">No photos yet. Add your best plates above. 🦖</p>}
+      <div className="ph-admin-grid">
+        {list.map((p, i) => (
+          <div className={`ph-admin ${p.hidden ? 'is-hidden' : ''}`} key={p.id}>
+            <div className="pic">
+              <img src={p.thumb} alt="" loading="lazy" />
+              <em>{(() => { if (p.hidden) return 'Hidden'; const rank = list.filter((x, k) => k <= i && !x.hidden).length; return rank <= HOME_COUNT ? `Home #${rank}` : 'Photos page'; })()}</em>
+            </div>
+            <div className="body">
+              <input
+                className="input"
+                maxLength={80}
+                placeholder="Caption (optional)"
+                value={cap[p.id] ?? p.caption}
+                onChange={(e) => setCap((c) => ({ ...c, [p.id]: e.target.value }))}
+                onBlur={() => { if (cap[p.id] !== undefined && cap[p.id] !== p.caption) patch(p.id, { caption: cap[p.id] }).then(() => setCap((c) => ({ ...c, [p.id]: undefined }))); }}
+              />
+              <div className="acts">
+                <button className="btn btn-ghost btn-sm" aria-label="Move earlier" disabled={busy === p.id || i === 0} onClick={() => patch(p.id, { move: -1 })}>↑</button>
+                <button className="btn btn-ghost btn-sm" aria-label="Move later" disabled={busy === p.id || i === list.length - 1} onClick={() => patch(p.id, { move: 1 })}>↓</button>
+                <button className="btn btn-ghost btn-sm" aria-label={p.hidden ? 'Show' : 'Hide'} disabled={busy === p.id} onClick={() => patch(p.id, { hidden: !p.hidden })}>{p.hidden ? 'Show' : 'Hide'}</button>
+                <button className="btn btn-ghost btn-sm" aria-label="Delete" disabled={busy === p.id} onClick={() => remove(p.id)}>🗑</button>
               </div>
             </div>
           </div>
