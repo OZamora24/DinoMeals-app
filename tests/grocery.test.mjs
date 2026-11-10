@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { shoppingList, groceryConfig, cleanGrocery, rawFactor, listText, DEFAULT_YIELDS } from '../lib/grocery.js';
+import { shoppingList, groceryConfig, cleanGrocery, rawFactor, listText, weekList, DEFAULT_YIELDS } from '../lib/grocery.js';
 
 test('raw amounts: trim + shrink, rice grows, extra %, rounded up to ½ lb', () => {
   // 22.5 lb cooked tri-tip: ÷ (0.8 × 0.7) = 40.18 lb, +5% = 42.19 -> 42.5
@@ -29,10 +29,28 @@ test('Juan can change numbers; bad numbers fall back; only changes are saved', (
   assert.ok(Math.abs(rawFactor({ trim: 20, shrink: 30 }) - 1 / 0.56) < 1e-9);
 });
 
-test('copy text has sections, pantry and supplies', () => {
-  const txt = listText(shoppingList({ tritip: 160, broccoli: 48 }, {}, {}), { week: 'Sun, Nov 15', pantry: ['Organic avocado oil'], containers: 182 });
+test('copy text: categories, Juan items, this-week-only items, lines taken off', () => {
+  const cfg = groceryConfig({ grocery: { custom: [
+    { id: 'c_1', cat: 'Pantry / supplies', name: 'Organic avocado oil', qty: '2 bottles' },
+    { id: 'c_2', cat: 'Sauces', name: 'Limes', qty: '1 bag', week: '2026-11-15' },
+    { id: 'c_3', cat: 'Sauces', name: 'Old item', week: '2026-11-08' },
+  ], hidden: ['broccoli'] } });
+  const groups = weekList(shoppingList({ tritip: 160, broccoli: 48 }, {}, {}), cfg, { week: '2026-11-15', containers: 182 });
+  const txt = listText(groups, { week: 'Sun, Nov 15' });
   assert.match(txt, /PROTEIN\n☐ Tri-tip/);
-  assert.match(txt, /VEGGIES\n☐ Broccoli crowns/);
-  assert.match(txt, /Organic avocado oil/);
+  assert.doesNotMatch(txt, /Broccoli/);
+  assert.match(txt, /SAUCES\n☐ Limes — 1 bag/);
+  assert.doesNotMatch(txt, /Old item/);
+  assert.match(txt, /Organic avocado oil — 2 bottles/);
   assert.match(txt, /Label sheets \(10 per sheet\) — 19/);
+  assert.deepEqual(groups.map((g) => g.cat), ['Protein', 'Pantry / supplies', 'Sauces']);
+});
+
+test('old saved pantry list becomes Pantry / supplies items; bad items are dropped', () => {
+  const c = groceryConfig({ grocery: { pantry: ['Avocado oil', ''] } });
+  assert.deepEqual(c.custom.map((x) => [x.cat, x.name]), [['Pantry / supplies', 'Avocado oil']]);
+  const saved = cleanGrocery({ custom: [{ name: '  Foil  ', cat: '' }, { name: '' }], hidden: ['containers', 'containers'] });
+  assert.equal(saved.custom.length, 1);
+  assert.equal(saved.custom[0].cat, 'Pantry / supplies');
+  assert.deepEqual(saved.hidden, ['containers']);
 });

@@ -1442,3 +1442,12 @@ label .input { margin-top: 6px; font-weight: 500; }
 
 .again-banner b { display: block; margin-bottom: 2px; }
 .again-warn { margin-top: 6px; color: #ffb36b; font-weight: 700; }
+.shop-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; margin: 4px 0 10px; border: 1px dashed var(--line-2); border-radius: 14px; background: rgba(0,0,0,.18); }
+.shop-add .input { width: auto; flex: 1 1 160px; padding: 9px 12px; }
+.shop-add .shop-qty { flex: 0 1 150px; }
+.shop-x { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: .8rem; cursor: pointer; opacity: .55; }
+.shop-x:hover { opacity: 1; background: rgba(226,55,45,.18); color: #ff8a7a; }
+.shop-q.sm { font-family: inherit; font-weight: 800; font-size: .92rem; }
+.shop-hidden { margin: 8px 0 0; }
+.shop-chip { display: inline-block; margin: 6px 6px 0 0; padding: 3px 10px; border-radius: 99px; background: var(--card-2); }
+@media print { .shop-x, .shop-add, .shop-hidden { display: none; } }
