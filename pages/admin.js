@@ -231,7 +231,7 @@ export default function Admin() {
 
       <main className="admin-main">
         {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={settings.macros} />}
-        {tab === 'cook' && <CookTab orders={live} week={week} />}
+        {tab === 'cook' && <CookTab orders={live} week={week} settings={settings} save={saveSettings} />}
         {tab === 'pay' && <PayTab orders={live} patch={patch} settings={settings} />}
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
         {tab === 'regulars' && <RegularsTab week={week} weekOrders={orders} repeat={repeat} />}

@@ -7,6 +7,7 @@
 import { getSettings, reminderSubscribers, updateReminder, recentOrders, reviewedOrderIds, updateOrder } from '../../../lib/db';
 import { reminderMessage, sendText, smsStatus, waitingLine, rateLine } from '../../../lib/sms';
 import { orderToAsk } from '../../../lib/reviews';
+import { orderForAgain, againLine } from '../../../lib/again';
 import { cookDateFor, laNow, dateKey } from '../../../lib/menu';
 import { loyaltyState } from '../../../lib/loyalty';
 import { referralCredits, referralConfig } from '../../../lib/referral';
@@ -50,6 +51,11 @@ export default async function handler(req, res) {
     let extra = '';
     let ask = null;
     try { if (all) extra = waitingFor(r.phone_digits, all, today, s, r.lang); } catch {}
+    // "🔁 Same as last week? … tap to reorder" for people who ordered lately but not yet for this Sunday.
+    try {
+      const again = all ? orderForAgain(all.filter((o) => o.phone_digits === r.phone_digits), week) : null;
+      if (again && again.view_token) extra = [againLine(again, week, r.lang), extra].filter(Boolean).join(' ');
+    } catch {}
     try {
       if (all) ask = orderToAsk(all.filter((o) => o.phone_digits === r.phone_digits), reviewed, today, new Date().toISOString());
       if (ask) extra = [extra, rateLine(ask.view_token, r.lang)].filter(Boolean).join(' ');

@@ -1420,3 +1420,25 @@ label .input { margin-top: 6px; font-weight: 500; }
 .ph-admin .acts .btn { flex: 1; padding: 6px 0; min-width: 0; }
 .ph-progress { margin-top: 10px; font-weight: 700; color: var(--ember); }
 .ph-tile img, .ph-cell img, .ph-admin .pic img { position: absolute; inset: 0; }
+
+/* ---------- Shopping list on the cook sheet (lib/grocery.js) ---------- */
+.shop-box { border: 1.5px solid var(--ember); border-radius: 20px; background: linear-gradient(160deg, rgba(255,138,61,.10), rgba(255,138,61,.03)); padding: 16px 18px; margin: 4px 0 22px; }
+.shop-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.shop-h h3 { margin: 0; }
+.btn-cream { background: var(--cream); color: #121110; border: 1px solid var(--cream); }
+.shop-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 18px; }
+.shop-cols h4 { font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ember); margin: 8px 0 2px; }
+.shop-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07); cursor: pointer; user-select: none; }
+.shop-ck { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 2px solid #5a5149; display: grid; place-items: center; font-size: .75rem; font-weight: 900; color: #fff; }
+.shop-item.is-done .shop-ck { background: var(--green, #2f9e5f); border-color: var(--green, #2f9e5f); }
+.shop-item.is-done .shop-nm { text-decoration: line-through; opacity: .5; }
+.shop-nm { flex: 1; font-weight: 700; }
+.shop-nm small { display: block; color: var(--muted); font-weight: 500; font-size: .76rem; }
+.shop-q { font-family: var(--display); font-weight: 400; font-size: 1.35rem; white-space: nowrap; }
+.shop-foot { margin: 10px 0 0; }
+.shop-edit { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.shop-edit .input.sm { width: 74px; padding: 6px 8px; }
+@media print { .shop-box { border-color: #999; background: none; } .shop-h .row, .shop-edit, .shop-foot { display: none; } }
+
+.again-banner b { display: block; margin-bottom: 2px; }
+.again-warn { margin-top: 6px; color: #ffb36b; font-weight: 700; }
