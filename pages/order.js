@@ -25,7 +25,10 @@ import { useTrainerCredits } from '../lib/trainer';
 import { MONTHLY_SIZES, monthlyWeeks } from '../lib/monthly';
 import MonthlyBar from '../components/order/MonthlyBar';
 
-export async function getServerSideProps({ req, query }) {
+export async function getServerSideProps({ req, res, query }) {
+  // Customers: cached at the edge for 30 s (orders are re-checked live on submit). Kitchen "add order"
+  // mode (?admin=1) is never cached.
+  res.setHeader('Cache-Control', query.admin ? 'private, no-store' : 'public, s-maxage=30, stale-while-revalidate=120');
   const s = await getSettings();
   const adminMode = query.admin === '1' && isValidSession(req);
   const { reviewData } = await import('../lib/reviewsData');

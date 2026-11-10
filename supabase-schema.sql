@@ -140,3 +140,14 @@ alter table public.photos enable row level security;
 drop policy if exists "server only" on public.photos;
 create policy "server only" on public.photos for all to anon, authenticated using (private.dino_authorized()) with check (private.dino_authorized());
 create index if not exists photos_order_idx on public.photos (hidden, sort, created_at desc);
+
+-- Kitchen login lock (Nov 2026): 5 wrong passwords from one device lock it for 15 minutes (lib/loginGuard.js).
+create table if not exists public.login_guard (
+  key text primary key,                 -- hashed device IP, never the IP itself
+  fails int not null default 0,
+  last_fail_at timestamptz,
+  locked_until timestamptz,
+  updated_at timestamptz not null default now()
+);
+alter table public.login_guard enable row level security;
+create policy "server only" on public.login_guard for all to anon, authenticated using (private.dino_authorized()) with check (private.dino_authorized());
