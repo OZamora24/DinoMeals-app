@@ -10,7 +10,7 @@ import { referralCredits, referralConfig, referralsThisMonth } from '../lib/refe
 import { trainerConfig, cleanTrainerList, trainerCredits, clientsThisMonth } from '../lib/trainer';
 import { monthlyConfig, activeMonthly } from '../lib/monthly';
 import { keyLabel, MIN_MEAL_RATINGS } from '../lib/reviews';
-import { shoppingList, listText, groceryConfig, cleanGrocery, DEFAULT_YIELDS, BUY } from '../lib/grocery';
+import { shoppingList, listText, groceryConfig, cleanGrocery, weekList, DEFAULT_YIELDS, BUY, BASE_CATS } from '../lib/grocery';
 import { HOME_COUNT, captionFromFileName } from '../lib/photos';
 import { venmoLink, cardLinks } from '../lib/payLinks';
 import { Flame, Printer, Check, Repeat, Chat, Route, Camera } from './Icons';
@@ -47,7 +47,10 @@ const cookProtein = (item, flavor = '') => {
   return [item, flavor || ''];
 };
 // ---- Shopping list (lib/grocery.js): raw amounts to buy, on top of the cook sheet ----
+// Juan can add his own items (pick a category or make a new one, then the item and an optional amount;
+// every week or just this week) and take any line off the list (✕). Taken-off lines can be put back.
 const ITEM_NAMES = Object.fromEntries([...PROTEINS, ...CARBS, ...VEGGIES].map((x) => [x.id, x.name]));
+const NEW_CAT = '__new__';
 function ShoppingList({ byItem, containers, week, settings, save }) {
   const cfg = groceryConfig(settings);
   const [extra, setExtra] = useState(cfg.extra);
@@ -55,54 +58,87 @@ function ShoppingList({ byItem, containers, week, settings, save }) {
   const [edit, setEdit] = useState(false);
   const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ cat: 'Pantry / supplies', newCat: '', name: '', qty: '', thisWeek: false });
+  const [showHidden, setShowHidden] = useState(false);
   const ckKey = `dino_shop_${week}`;
   const [checked, setChecked] = useState({});
   useEffect(() => { try { setChecked(JSON.parse(localStorage.getItem(ckKey) || '{}')); } catch { setChecked({}); } }, [ckKey]);
   const toggle = (k) => setChecked((c) => { const n = { ...c, [k]: !c[k] }; try { localStorage.setItem(ckKey, JSON.stringify(n)); } catch {} return n; });
   const list = shoppingList(byItem, settings, ITEM_NAMES, extra);
-  const any = list.protein.length + list.carb.length + list.veg.length + list.other.length > 0;
-  const fmt = (n) => (n % 1 ? n.toFixed(1) : String(n));
-  const pantry = [...cfg.pantry, ...(containers ? [`Meal containers + lids — ${containers}`, `Label sheets — ${Math.ceil(containers / 10)}`] : [])];
-  const copy = () => {
-    const txt = listText(list, { week: prettyDate(week), pantry: cfg.pantry, containers });
-    try { navigator.clipboard.writeText(txt); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch {}
-  };
-  const startEdit = () => { setDraft({ yields: JSON.parse(JSON.stringify(cfg.yields)), pantry: cfg.pantry.join('\n') }); setEdit(true); };
-  const saveEdit = async () => {
+  const groups = weekList(list, cfg, { week, containers });
+  const cats = [...new Set([...BASE_CATS, ...cfg.custom.map((x) => x.cat)])];
+  const saveGrocery = async (patch) => {
     if (!save) return;
     setBusy(true);
-    try {
-      await save({ grocery: cleanGrocery({ extra, yields: draft.yields, pantry: draft.pantry.split('\n') }) });
-      setEdit(false);
-    } finally { setBusy(false); }
+    try { await save({ grocery: cleanGrocery({ extra: cfg.extra, yields: cfg.yields, custom: cfg.custom, hidden: cfg.hidden, ...patch }) }); } finally { setBusy(false); }
   };
+  const copy = () => {
+    try { navigator.clipboard.writeText(listText(groups, { week: prettyDate(week) })); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch {}
+  };
+  const addItem = async () => {
+    const cat = (form.cat === NEW_CAT ? form.newCat : form.cat).trim();
+    if (!form.name.trim() || !cat) return;
+    await saveGrocery({ custom: [...cfg.custom, { cat, name: form.name, qty: form.qty, ...(form.thisWeek ? { week } : {}) }] });
+    setForm((f) => ({ ...f, cat, newCat: '', name: '', qty: '', thisWeek: false }));
+  };
+  const removeRow = (r) => {
+    if (r.custom) {
+      if (window.confirm(`Take "${r.name}" off the list for good?`)) saveGrocery({ custom: cfg.custom.filter((x) => x.id !== r.key) });
+    } else saveGrocery({ hidden: [...cfg.hidden, r.key] });
+  };
+  const hiddenNames = cfg.hidden.map((k) => ({ k, name: (BUY[k] && BUY[k].en) || (k === 'containers' ? 'Meal containers + lids' : k === 'labels' ? 'Label sheets' : ITEM_NAMES[k.replace(/^item:/, '')] || k) }));
+  const startEdit = () => { setDraft({ yields: JSON.parse(JSON.stringify(cfg.yields)) }); setEdit(true); };
+  const saveEdit = async () => { await saveGrocery({ extra, yields: draft.yields }); setEdit(false); };
   const setY = (id, k, v) => setDraft((d) => ({ ...d, yields: { ...d.yields, [id]: { ...d.yields[id], [k]: v } } }));
-  const Row = ({ r }) => (
-    <div className={`shop-item ${checked[r.key] ? 'is-done' : ''}`} onClick={() => toggle(r.key)} role="checkbox" aria-checked={!!checked[r.key]}>
-      <span className="shop-ck">{checked[r.key] ? '✓' : ''}</span>
-      <span className="shop-nm">{r.label}<small>{fmt(r.cookedLb)} lb cooked{r.from.length > 1 ? ` · ${r.from.join(' + ')}` : ''}</small></span>
-      <b className="shop-q">{fmt(r.rawLb)} lb</b>
-    </div>
-  );
   return (
     <section className="shop-box">
       <div className="shop-h">
         <h3 className="display sm">🛒 Shopping list · raw, to buy</h3>
         <div className="row wrap">
           {[5, 10].map((p) => <button key={p} type="button" className={`btn btn-sm ${extra === p ? 'btn-cream' : 'btn-ghost'}`} onClick={() => setExtra(extra === p ? 0 : p)}>+{p}% extra</button>)}
-          <button type="button" className="btn btn-ghost btn-sm" disabled={!any} onClick={copy}>{copied ? '✓ Copied' : '📋 Copy list'}</button>
+          {save && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAdding((a) => !a)}>{adding ? 'Close' : '+ Add item'}</button>}
+          <button type="button" className="btn btn-ghost btn-sm" disabled={!groups.length} onClick={copy}>{copied ? '✓ Copied' : '📋 Copy list'}</button>
           {save && <button type="button" className="btn btn-ghost btn-sm" onClick={() => (edit ? setEdit(false) : startEdit())}>{edit ? 'Close' : 'Adjust shrink %'}</button>}
         </div>
       </div>
-      {!any ? <p className="muted small">Nothing to buy yet: the list fills in as orders come in.</p> : (
-        <div className="shop-cols">
-          {[['protein', 'Protein'], ['carb', 'Carbs'], ['veg', 'Veggies'], ['other', 'Other']].filter(([k]) => list[k].length).map(([k, title]) => (
-            <div key={k}><h4>{title}</h4>{list[k].map((r) => <Row key={r.key} r={r} />)}</div>
-          ))}
-          <div><h4>Pantry / supplies</h4>{pantry.map((x) => <div key={x} className={`shop-item ${checked[`p:${x}`] ? 'is-done' : ''}`} onClick={() => toggle(`p:${x}`)}><span className="shop-ck">{checked[`p:${x}`] ? '✓' : ''}</span><span className="shop-nm">{x}</span></div>)}</div>
+      {adding && (
+        <div className="shop-add">
+          <select className="input" aria-label="Category" value={form.cat} onChange={(e) => setForm((f) => ({ ...f, cat: e.target.value }))}>
+            {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+            <option value={NEW_CAT}>+ New category…</option>
+          </select>
+          {form.cat === NEW_CAT && <input className="input" placeholder="New category (e.g. Sauces)" maxLength={30} value={form.newCat} onChange={(e) => setForm((f) => ({ ...f, newCat: e.target.value }))} />}
+          <input className="input" placeholder="What is it? (e.g. Limes)" maxLength={60} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
+          <input className="input shop-qty" placeholder="Amount (optional)" maxLength={24} value={form.qty} onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
+          <label className="check small"><input type="checkbox" checked={form.thisWeek} onChange={(e) => setForm((f) => ({ ...f, thisWeek: e.target.checked }))} /> Only this week</label>
+          <button type="button" className="btn btn-red btn-sm" disabled={busy || !form.name.trim() || (form.cat === NEW_CAT && !form.newCat.trim())} onClick={addItem}>{busy ? 'Saving…' : 'Add'}</button>
         </div>
       )}
-      <p className="muted small shop-foot">Raw amounts use how much each food loses to trimming and cooking (tri-tip: about 20% trim + 30% on the smoker; dry rice about triples), plus the extra %, rounded up to the next ½ lb. Tap an item to check it off at the store (saved on this device for this week).</p>
+      {!groups.length ? <p className="muted small">Nothing to buy yet: the list fills in as orders come in.</p> : (
+        <div className="shop-cols">
+          {groups.map((g) => (
+            <div key={g.cat}>
+              <h4>{g.cat}</h4>
+              {g.rows.map((r) => (
+                <div key={r.key} className={`shop-item ${checked[r.key] ? 'is-done' : ''}`} onClick={() => toggle(r.key)} role="checkbox" aria-checked={!!checked[r.key]}>
+                  <span className="shop-ck">{checked[r.key] ? '✓' : ''}</span>
+                  <span className="shop-nm">{r.name}{r.note && <small>{r.note}</small>}</span>
+                  {r.amount && <b className={`shop-q ${r.custom ? 'sm' : ''}`}>{r.amount}</b>}
+                  {save && <button type="button" className="shop-x" aria-label={`Take ${r.name} off the list`} title="Take off the list" onClick={(e) => { e.stopPropagation(); removeRow(r); }}>✕</button>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      {hiddenNames.length > 0 && (
+        <p className="muted small shop-hidden">
+          {hiddenNames.length} taken off the list · <button type="button" className="link" onClick={() => setShowHidden((v) => !v)}>{showHidden ? 'hide' : 'show'}</button>
+          {showHidden && hiddenNames.map((h) => <span key={h.k} className="shop-chip">{h.name} <button type="button" className="link" onClick={() => saveGrocery({ hidden: cfg.hidden.filter((x) => x !== h.k) })}>put back</button></span>)}
+        </p>
+      )}
+      <p className="muted small shop-foot">Raw amounts use how much each food loses to trimming and cooking (tri-tip: about 20% trim + 30% on the smoker; dry rice about triples), plus the extra %, rounded up to the next ½ lb. Tap an item to check it off at the store (saved on this device for this week). ✕ takes a line off the list.</p>
       {edit && draft && (
         <div className="shop-edit">
           <p className="muted small">Change these to match what you actually see. Trim = what you cut off before cooking. Shrink = what cooking takes. Rice: cooked ÷ dry (2.8 = 1 lb dry makes 2.8 lb cooked).</p>
@@ -128,11 +164,9 @@ function ShoppingList({ byItem, containers, week, settings, save }) {
               })}
             </tbody>
           </table>
-          <label className="muted small" style={{ display: 'block', marginTop: 10 }}>Pantry list (one per line)</label>
-          <textarea className="input" rows={4} value={draft.pantry} onChange={(e) => setDraft((d) => ({ ...d, pantry: e.target.value }))} />
           <div className="row" style={{ marginTop: 10 }}>
             <button type="button" className="btn btn-red btn-sm" disabled={busy} onClick={saveEdit}>{busy ? 'Saving…' : 'Save'}</button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDraft({ yields: JSON.parse(JSON.stringify(groceryConfig({}).yields)), pantry: groceryConfig({}).pantry.join('\n') })}>Reset to defaults</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDraft({ yields: JSON.parse(JSON.stringify(groceryConfig({}).yields)) })}>Reset to defaults</button>
           </div>
         </div>
       )}
