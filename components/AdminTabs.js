@@ -10,6 +10,7 @@ import { referralCredits, referralConfig, referralsThisMonth } from '../lib/refe
 import { trainerConfig, cleanTrainerList, trainerCredits, clientsThisMonth } from '../lib/trainer';
 import { monthlyConfig, activeMonthly } from '../lib/monthly';
 import { keyLabel, MIN_MEAL_RATINGS } from '../lib/reviews';
+import { shoppingList, listText, groceryConfig, cleanGrocery, DEFAULT_YIELDS, BUY } from '../lib/grocery';
 import { HOME_COUNT, captionFromFileName } from '../lib/photos';
 import { venmoLink, cardLinks } from '../lib/payLinks';
 import { Flame, Printer, Check, Repeat, Chat, Route, Camera } from './Icons';
@@ -45,16 +46,113 @@ const cookProtein = (item, flavor = '') => {
   if (item === 'burgers' && flavor === 'smoked') return ['burgers', ''];
   return [item, flavor || ''];
 };
-export function CookTab({ orders, week }) {
+// ---- Shopping list (lib/grocery.js): raw amounts to buy, on top of the cook sheet ----
+const ITEM_NAMES = Object.fromEntries([...PROTEINS, ...CARBS, ...VEGGIES].map((x) => [x.id, x.name]));
+function ShoppingList({ byItem, containers, week, settings, save }) {
+  const cfg = groceryConfig(settings);
+  const [extra, setExtra] = useState(cfg.extra);
+  const [copied, setCopied] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const ckKey = `dino_shop_${week}`;
+  const [checked, setChecked] = useState({});
+  useEffect(() => { try { setChecked(JSON.parse(localStorage.getItem(ckKey) || '{}')); } catch { setChecked({}); } }, [ckKey]);
+  const toggle = (k) => setChecked((c) => { const n = { ...c, [k]: !c[k] }; try { localStorage.setItem(ckKey, JSON.stringify(n)); } catch {} return n; });
+  const list = shoppingList(byItem, settings, ITEM_NAMES, extra);
+  const any = list.protein.length + list.carb.length + list.veg.length + list.other.length > 0;
+  const fmt = (n) => (n % 1 ? n.toFixed(1) : String(n));
+  const pantry = [...cfg.pantry, ...(containers ? [`Meal containers + lids — ${containers}`, `Label sheets — ${Math.ceil(containers / 10)}`] : [])];
+  const copy = () => {
+    const txt = listText(list, { week: prettyDate(week), pantry: cfg.pantry, containers });
+    try { navigator.clipboard.writeText(txt); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch {}
+  };
+  const startEdit = () => { setDraft({ yields: JSON.parse(JSON.stringify(cfg.yields)), pantry: cfg.pantry.join('\n') }); setEdit(true); };
+  const saveEdit = async () => {
+    if (!save) return;
+    setBusy(true);
+    try {
+      await save({ grocery: cleanGrocery({ extra, yields: draft.yields, pantry: draft.pantry.split('\n') }) });
+      setEdit(false);
+    } finally { setBusy(false); }
+  };
+  const setY = (id, k, v) => setDraft((d) => ({ ...d, yields: { ...d.yields, [id]: { ...d.yields[id], [k]: v } } }));
+  const Row = ({ r }) => (
+    <div className={`shop-item ${checked[r.key] ? 'is-done' : ''}`} onClick={() => toggle(r.key)} role="checkbox" aria-checked={!!checked[r.key]}>
+      <span className="shop-ck">{checked[r.key] ? '✓' : ''}</span>
+      <span className="shop-nm">{r.label}<small>{fmt(r.cookedLb)} lb cooked{r.from.length > 1 ? ` · ${r.from.join(' + ')}` : ''}</small></span>
+      <b className="shop-q">{fmt(r.rawLb)} lb</b>
+    </div>
+  );
+  return (
+    <section className="shop-box">
+      <div className="shop-h">
+        <h3 className="display sm">🛒 Shopping list · raw, to buy</h3>
+        <div className="row wrap">
+          {[5, 10].map((p) => <button key={p} type="button" className={`btn btn-sm ${extra === p ? 'btn-cream' : 'btn-ghost'}`} onClick={() => setExtra(extra === p ? 0 : p)}>+{p}% extra</button>)}
+          <button type="button" className="btn btn-ghost btn-sm" disabled={!any} onClick={copy}>{copied ? '✓ Copied' : '📋 Copy list'}</button>
+          {save && <button type="button" className="btn btn-ghost btn-sm" onClick={() => (edit ? setEdit(false) : startEdit())}>{edit ? 'Close' : 'Adjust shrink %'}</button>}
+        </div>
+      </div>
+      {!any ? <p className="muted small">Nothing to buy yet: the list fills in as orders come in.</p> : (
+        <div className="shop-cols">
+          {[['protein', 'Protein'], ['carb', 'Carbs'], ['veg', 'Veggies'], ['other', 'Other']].filter(([k]) => list[k].length).map(([k, title]) => (
+            <div key={k}><h4>{title}</h4>{list[k].map((r) => <Row key={r.key} r={r} />)}</div>
+          ))}
+          <div><h4>Pantry / supplies</h4>{pantry.map((x) => <div key={x} className={`shop-item ${checked[`p:${x}`] ? 'is-done' : ''}`} onClick={() => toggle(`p:${x}`)}><span className="shop-ck">{checked[`p:${x}`] ? '✓' : ''}</span><span className="shop-nm">{x}</span></div>)}</div>
+        </div>
+      )}
+      <p className="muted small shop-foot">Raw amounts use how much each food loses to trimming and cooking (tri-tip: about 20% trim + 30% on the smoker; dry rice about triples), plus the extra %, rounded up to the next ½ lb. Tap an item to check it off at the store (saved on this device for this week).</p>
+      {edit && draft && (
+        <div className="shop-edit">
+          <p className="muted small">Change these to match what you actually see. Trim = what you cut off before cooking. Shrink = what cooking takes. Rice: cooked ÷ dry (2.8 = 1 lb dry makes 2.8 lb cooked).</p>
+          <table className="cook-table">
+            <thead><tr><th>Menu item</th><th>Buy as</th><th>Trim %</th><th>Shrink %</th></tr></thead>
+            <tbody>
+              {Object.keys(DEFAULT_YIELDS).map((id) => {
+                const y = draft.yields[id];
+                return (
+                  <tr key={id}>
+                    <td>{ITEM_NAMES[id] || id}</td>
+                    <td className="muted small">{BUY[y.buy].en}</td>
+                    {y.grow != null ? (
+                      <td colSpan={2}><input className="input sm" type="number" step="0.1" min="1" max="5" value={y.grow} onChange={(e) => setY(id, 'grow', e.target.value)} aria-label={`${id} cooked per dry`} /> × (cooked ÷ dry)</td>
+                    ) : (
+                      <>
+                        <td><input className="input sm" type="number" min="0" max="90" value={y.trim} onChange={(e) => setY(id, 'trim', e.target.value)} aria-label={`${id} trim %`} /></td>
+                        <td><input className="input sm" type="number" min="0" max="90" value={y.shrink} onChange={(e) => setY(id, 'shrink', e.target.value)} aria-label={`${id} shrink %`} /></td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <label className="muted small" style={{ display: 'block', marginTop: 10 }}>Pantry list (one per line)</label>
+          <textarea className="input" rows={4} value={draft.pantry} onChange={(e) => setDraft((d) => ({ ...d, pantry: e.target.value }))} />
+          <div className="row" style={{ marginTop: 10 }}>
+            <button type="button" className="btn btn-red btn-sm" disabled={busy} onClick={saveEdit}>{busy ? 'Saving…' : 'Save'}</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDraft({ yields: JSON.parse(JSON.stringify(groceryConfig({}).yields)), pantry: groceryConfig({}).pantry.join('\n') })}>Reset to defaults</button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function CookTab({ orders, week, settings = {}, save }) {
   const [paidOnly, setPaidOnly] = useState(false);
   const src = orders.filter((o) => !paidOnly || o.paid);
   const sheet = useMemo(() => {
     const groups = { protein: {}, carb: {}, veg: {} };
+    const byItem = {}; // cooked oz per menu item id, for the shopping list (lib/grocery.js)
     const add = (g, key, label, meals, oz, bulkLb) => {
       const r = (groups[g][key] ||= { label, meals: 0, oz: 0, bulk: 0 });
       r.meals += meals;
       r.oz += oz;
       r.bulk += bulkLb;
+      const id = String(key).split(':')[0];
+      byItem[id] = (byItem[id] || 0) + oz;
     };
     let containers = 0;
     for (const o of src) {
@@ -90,7 +188,7 @@ export function CookTab({ orders, week }) {
     const sort = (o) => Object.values(o).sort((a, b) => b.oz - a.oz);
     // Everything that gets packed and labeled: meals + bulk (1 per lb, a ½ lb gets its own) + extras.
     const total = src.reduce((n, o) => n + labelCount(o), 0);
-    return { protein: sort(groups.protein), carb: sort(groups.carb), veg: sort(groups.veg), containers, total, other: total - containers };
+    return { protein: sort(groups.protein), carb: sort(groups.carb), veg: sort(groups.veg), containers, total, other: total - containers, byItem };
   }, [src]);
   const lb = (oz) => (oz / 16).toFixed(oz % 16 === 0 ? 0 : 1);
   const totalOz = (g) => g.reduce((a, r) => a + r.oz, 0);
@@ -114,6 +212,7 @@ export function CookTab({ orders, week }) {
         <Stat label="Carbs" value={`${lb(totalOz(sheet.carb))} lb`} />
         <Stat label="Veggies" value={`${lb(totalOz(sheet.veg))} lb`} />
       </div>
+      <ShoppingList byItem={sheet.byItem} containers={sheet.total} week={week} settings={settings} save={save} />
       {[['protein', 'Proteins', Flame], ['carb', 'Carbs', null], ['veg', 'Veggies', null]].map(([k, title]) => (
         <section key={k} className="cook-group">
           <h3 className="menu-cat">{title}</h3>

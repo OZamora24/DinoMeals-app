@@ -77,6 +77,7 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
   const [refCode, setRefCode] = useState(''); // friend's referral code from ?ref= (kept on this phone)
   const [refState, setRefState] = useState(null); // { ok, name, pct, note }
   const [refBanner, setRefBanner] = useState(null); // shown at the top when a friend's link was opened
+  const [again, setAgain] = useState(null); // "Same as last week" link from the Thursday text (lib/again.js)
   useEffect(() => {
     if (!refCode || adminMode) { setRefBanner(null); return; }
     fetch(`/api/referral?code=${encodeURIComponent(refCode)}`).then((r) => r.json()).then(setRefBanner).catch(() => setRefBanner(null));
@@ -382,6 +383,35 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
     if (router.isReady && router.query.code) applyPromo(String(router.query.code), true);
   }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // "Same as last week?" link (dinomeals.app/again/<code> -> /order?again=<code>): load that order, ready
+  // to place. Customers only. If something had to be taken out, stay on the page so they see the note.
+  useEffect(() => {
+    if (!router.isReady || adminMode || !router.query.again) return;
+    let gone = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/again?token=${encodeURIComponent(String(router.query.again))}`);
+        if (!r.ok) return;
+        const j = await r.json();
+        if (gone) return;
+        const c = j.cart || {};
+        setMeals(c.meals || []);
+        const n = (c.meals || []).reduce((a, m) => a + mealLineCount(m), 0);
+        if (n) setPlanId(planForCount(n).id);
+        setLbs(c.lbs || []);
+        setExtras(c.extras || []);
+        setTab((c.meals || []).length ? 'meals' : 'lb');
+        setInfo((i) => ({ ...i, ...j.info, notes: '', sms_opt_in: false, reminder_opt_in: false }));
+        if (j.info?.phone) setUsualPhone(j.info.phone);
+        if (j.trainer) applyPromo(j.trainer, true);
+        const warn = (j.removed || []).length > 0 || (j.flavorReset || []).length > 0;
+        setAgain({ removed: j.removed || [], flavorReset: j.flavorReset || [] });
+        if (!warn && n + (c.lbs || []).length > 0) setTimeout(() => { setErr(''); setSheet(true); }, 400);
+      } catch {}
+    })();
+    return () => { gone = true; };
+  }, [router.isReady, router.query.again, adminMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- loyalty rewards: look up the phone typed at checkout ----
   const phoneDigits = String(info.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
   useEffect(() => {
@@ -527,6 +557,13 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
         <a href="/#reviews" className="rv-line">⭐ {reviews.summary.avg.toFixed(1)} · {t('rv_count', reviews.summary.count)}</a>
       )}
       {settings.announcement ? <div className="announce">{settings.announcement}</div> : null}
+      {again ? (
+        <div className="announce ref-banner again-banner">
+          <b>🔁 {t('again_title')}</b> <span>{t('again_sub')}</span>
+          {again.removed.length > 0 && <div className="again-warn">⚠ {t('again_removed', again.removed.join(', '))}</div>}
+          {again.flavorReset.length > 0 && <div className="again-warn">⚠ {t('again_flavor', again.flavorReset.join(', '))}</div>}
+        </div>
+      ) : null}
       {refBanner && refBanner.valid ? <div className="announce ref-banner">🤝 {t('ref_banner', refBanner.name, refBanner.pct || settings.referral_new_pct || 10)}</div> : null}
       {full && settings.ordering_open ? <div className="announce">{t('week_full_note')}</div> : null}
       {!closed && !adminMode && settings.spots_left ? <div className="announce spots-left">🔥 {t('spots_left', settings.spots_left)}</div> : null}
