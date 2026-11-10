@@ -12,7 +12,10 @@ import DinoScene from '../components/DinoScene';
 import ReviewsSection from '../components/ReviewsSection';
 import { PhotoStrip } from '../components/PhotoViewer';
 
-export async function getServerSideProps() {
+// Cached at Vercel's edge for 30 s (then refreshed in the background), so most visits don't wait on
+// the database. Orders are still checked live on submit (cutoff, sold out, spots left).
+export async function getServerSideProps({ res }) {
+  res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=120');
   const s = await getSettings();
   const { reviewProps } = await import('../lib/reviewsData');
   const { photoProps } = await import('../lib/photosData');

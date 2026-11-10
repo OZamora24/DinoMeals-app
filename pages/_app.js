@@ -20,12 +20,13 @@ import { reportClientError, isStaleAssetError, canAutoReload, reloadNow } from '
 //  - First visit: "Tap to enter" gate, then the full splash with the
 //    Sizzle Thunder Roar (phones block sound until a tap, so the tap starts both).
 //  - Opened from the home-screen app: full splash once per launch (sound if allowed).
-//  - Return visits: quick, silent ~1s splash.
+//  - Return visits: quick, silent splash once per visit (not again on refresh, and never on a
+//    private order page /o/… opened from a text).
 //  - Kitchen admin: no splash at all.
 //  - Mute choice is remembered.
 const TIMING = {
   full: { min: 2600, max: 4000 },
-  quick: { min: 950, max: 2200 },
+  quick: { min: 700, max: 2000 },
 };
 const FADE_MS = 700;
 const SOUND_SRC = '/sounds/splash.mp3';
@@ -98,6 +99,11 @@ export default function App({ Component, pageProps }) {
     }
     const isMuted = local.get('dino_sound') === 'off';
     setMuted(isMuted);
+    // A private order page opened from a text goes straight in (no gate, no splash).
+    if (router.pathname.startsWith('/o/')) {
+      setPhase('gone');
+      return;
+    }
     const seen = local.get('dino_seen') === '1';
     const standalone =
       safe(() => window.matchMedia('(display-mode: standalone)').matches, false) || window.navigator.standalone === true;
@@ -116,6 +122,13 @@ export default function App({ Component, pageProps }) {
       setPhase('visible');
       return;
     }
+    // Already saw the splash this visit (refresh, back from another site), or opening a private
+    // order page from a text: go straight in.
+    if (session.get('dino_splashed') === '1') {
+      setPhase('gone');
+      return;
+    }
+    session.set('dino_splashed', '1');
     setMode('quick');
     setPhase('visible');
     // eslint-disable-next-line react-hooks/exhaustive-deps
