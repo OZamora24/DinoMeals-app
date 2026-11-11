@@ -7,10 +7,11 @@ import { sendOrderText, progressLine } from '../../../lib/sms';
 import { upsertReminder, ordersByPhone, ordersByMonthly } from '../../../lib/db';
 import { publicOrder } from '../../../lib/orderView';
 import { cleanLabelLines } from '../../../lib/labelSpots';
-import { promoDiscount } from '../../../lib/promo';
+import { promoDiscount, adminPromo, normCode } from '../../../lib/promo';
+import { trainerConfig, findTrainer, trainerPct, trainerRow } from '../../../lib/trainer';
 import { PICK_MIN, PICK_MAX, loyaltyState, loyaltyConfig, qualifies } from '../../../lib/loyalty';
 import { dateKey, laNow } from '../../../lib/menu';
-import { allDiscounts, pctOff } from '../../../lib/referral';
+import { allDiscounts, pctOff, isNewCustomer } from '../../../lib/referral';
 
 // Sends one order-status text (if the customer opted in and texts are switched on)
 // and records it on the order so it never sends twice. Capped at 5s; never throws.
@@ -142,7 +143,34 @@ export default async function handler(req, res) {
         curM = { ...cur, reward: { ...cur.reward, value: n, picked: true } };
         patch.reward = curM.reward;
       }
-      const touchesMoney = 'cart' in p || patch.payment_method || patch.fulfillment || 'reward_pick' in p;
+      // Juan adding (or taking off) a promo or trainer code on an order that's already placed.
+      if ('promo_code' in p && !cur.monthly) {
+        const code = normCode(p.promo_code);
+        if (!code) {
+          curM = { ...curM, promo: null, trainer: null };
+          patch.promo = null;
+          patch.trainer = null;
+        } else {
+          const pr = adminPromo(settings.promo_codes, code);
+          if (pr) {
+            curM = { ...curM, promo: pr, trainer: null };
+            patch.promo = pr;
+            patch.trainer = null;
+          } else {
+            const tc = trainerConfig(settings);
+            const hit = tc.on ? findTrainer(settings.trainers, code) : null;
+            if (!hit) return res.status(400).json({ error: 'That code doesn’t exist. Check Menu & settings → Promo codes.' });
+            if (hit.phone === cur.phone_digits) return res.status(400).json({ error: 'That’s this customer’s own trainer code.' });
+            const before = (await ordersByPhone(cur.phone_digits, 500).catch(() => [])).filter((o) => o.id !== cur.id && String(o.created_at) < String(cur.created_at));
+            const first = isNewCustomer(before);
+            const tr = trainerRow(hit, trainerPct(tc, first), 0, first);
+            curM = { ...curM, trainer: tr, promo: null };
+            patch.trainer = tr;
+            patch.promo = null;
+          }
+        }
+      }
+      const touchesMoney = 'cart' in p || patch.payment_method || patch.fulfillment || 'reward_pick' in p || 'promo_code' in p;
       if ('total' in p) {
         patch.total = p.total === '' || p.total == null ? null : Math.max(0, Number(p.total) || 0);
         // Custom quote that saved a promo code and/or loyalty reward at checkout: the typed price is

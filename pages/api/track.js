@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   const tokens = String(req.query.t || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
   try {
     const rows = await ordersByTokens(tokens);
-    return res.status(200).json({ orders: rows.map((o) => ({ ...publicOrder(o), track: trackOf(o)?.key })) });
+    return res.status(200).json({ ok: true, orders: rows.map((o) => ({ ...publicOrder(o), track: trackOf(o)?.key })) });
   } catch (e) {
     console.error('track', e?.message);
     return res.status(200).json({ orders: [] });

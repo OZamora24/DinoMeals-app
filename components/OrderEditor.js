@@ -32,6 +32,8 @@ export default function OrderEditor({ order, onSave, onClose }) {
   const [lbs, setLbs] = useState(start.lbs);
   const [extras, setExtras] = useState(start.extras || []);
   const [total, setTotal] = useState('');
+  const startCode = (order.promo && order.promo.code) || (order.trainer && order.trainer.code) || '';
+  const [code, setCode] = useState(startCode);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
@@ -55,6 +57,7 @@ export default function OrderEditor({ order, onSave, onClose }) {
       if (String(f[k] ?? '') !== String(order[k] ?? '')) body[k] = f[k];
     }
     if (itemsChanged) body.cart = { meals: meals.filter((m) => m.count > 0), lbs: lbs.filter((l) => Number(l.lbs) > 0), extras: extras.filter((x) => Number(x.qty) > 0) };
+    if (code !== startCode && !order.monthly) body.promo_code = code;
     if (total !== '') body.total = total;
     if (Object.keys(body).length === 0) return onClose();
     setBusy(true);
@@ -175,6 +178,12 @@ export default function OrderEditor({ order, onSave, onClose }) {
                 <button key={k} className={`chip sm ${f.payment_method === k ? 'on' : ''}`} onClick={() => set('payment_method', k)}>{k[0].toUpperCase() + k.slice(1)}</button>
               ))}
             </div>
+            {!order.monthly && (
+              <label>Promo or trainer code (blank = none){startCode ? `, now ${startCode}` : ''}
+                <input className="input" value={code} maxLength={20} placeholder="FIRSTDINO" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} />
+                <small className="muted">The discount is figured for you (one-time and new-customer rules don't apply when you add it). The 20% max still applies.</small>
+              </label>
+            )}
             <label>Set the total by hand (optional — leave blank to auto-calculate{order.total != null ? `, now ${money(order.total)}` : ''})
               <input className="input" inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value.replace(/[^\d.]/g, ''))} placeholder="$" />
             </label>

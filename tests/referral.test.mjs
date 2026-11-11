@@ -26,10 +26,20 @@ test('new customer, monthly count, codes', () => {
   assert.equal(refKey('Marcus-7Q2K9'), '7Q2K9');
 });
 
-test('discounts: promo + loyalty capped at 20%, referral separate, never above the food', () => {
-  // LAUNCH10 + 20% loyalty → 20% cap; + 10% referral credits on top = 30%
-  assert.deepEqual(allDiscounts(100, { promoDisc: 10, reward: { kind: 'percent', value: 20 }, creditPct: 10 }), { promo: 10, reward: 10, referral: 0, credit: 10, total: 30 });
-  // new customer: 10% promo + 10% referral
-  assert.deepEqual(allDiscounts(112, { promoDisc: 11.2, refPct: 10 }), { promo: 11.2, reward: 0, referral: 11.2, credit: 0, total: 22.4 });
+test('discounts: ONE 20% max for everything; credits that do not fit wait (Juan, Nov 11)', () => {
+  // LAUNCH10 + 20% loyalty -> already at 20%: no credits used, they wait
+  assert.deepEqual(allDiscounts(100, { promoDisc: 10, reward: { kind: 'percent', value: 20 }, creditPct: 10 }), { promo: 10, reward: 10, referral: 0, credit: 0, creditPct: 0, total: 20 });
+  // 10% loyalty + 2 credits (10%) -> fits exactly: 20%
+  assert.deepEqual(allDiscounts(100, { reward: { kind: 'percent', value: 10 }, creditPct: 10 }), { promo: 0, reward: 10, referral: 0, credit: 10, creditPct: 10, total: 20 });
+  // 5% trainer + 2 credits -> room 15%: only 2 credits fit = 10% (whole credits only)
+  assert.equal(allDiscounts(100, { promoDisc: 5, creditPct: 10 }).creditPct, 10);
+  // 15% loyalty-ish + 2 credits -> room 5%: 1 credit used
+  assert.deepEqual(allDiscounts(100, { promoDisc: 15, creditPct: 10 }), { promo: 15, reward: 0, referral: 0, credit: 5, creditPct: 5, total: 20 });
+  // new customer: 10% trainer code + 10% friend's link = 20%
+  assert.equal(allDiscounts(112, { promoDisc: 11.2, refPct: 10 }).total, 22.4);
+  // a 15% promo + friend's 10% -> stops at 20%
+  assert.equal(allDiscounts(100, { promoDisc: 15, refPct: 10 }).total, 20);
+  // quote priced later keeps the credits for then
+  assert.equal(allDiscounts(0, { creditPct: 10 }).creditPct, 10);
   assert.equal(allDiscounts(10, { promoDisc: 10, refPct: 50 }).total, 10);
 });

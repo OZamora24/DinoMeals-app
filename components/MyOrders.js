@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { readMyOrders, VIEW_TXT } from '../lib/orderView';
+import { readMyOrders, forgetOrders, VIEW_TXT } from '../lib/orderView';
 import { prettyDate, money, addDays, dateKey, laNow } from '../lib/menu';
 
 const CHIP = { cooking: 'now', unpaid: 'wait', quote: 'wait', paid: 'ok', ready: 'go', picked_up: 'ok', delivered: 'ok', cancelled: 'off' };
@@ -38,7 +38,13 @@ export default function MyOrders({ lang = 'en' }) {
     let alive = true;
     fetch(`/api/track?t=${list.map((o) => o.token).join(',')}`)
       .then((r) => r.json())
-      .then((j) => alive && setLive(Object.fromEntries((j.orders || []).map((o) => [o.token, o]))))
+      .then((j) => {
+        if (!alive || !Array.isArray(j.orders)) return;
+        setLive(Object.fromEntries(j.orders.map((o) => [o.token, o])));
+        // Orders the kitchen deleted (test orders, duplicates) no longer exist: take them off this phone's list.
+        // Only when the lookup worked (a server problem returns an empty list with no ok flag).
+        if (j.ok) forgetOrders(list.map((o) => o.token).filter((tk) => !j.orders.some((x) => x.token === tk)));
+      })
       .catch(() => {});
     const onKey = (e) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', onKey);

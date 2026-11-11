@@ -826,7 +826,7 @@ function PromoCard({ settings, save }) {
   return (
     <section className="set-card wide">
       <h3>Promo codes</h3>
-      <p className="muted small">Customers type the code at checkout, or open your link with the code already applied. The discount comes off the food (not delivery or card fees). Codes are checked again when the order is placed, so a code you switch off stops working right away. The order, receipt and Excel show the code and the $ off. Start/end dates are Pacific days (both included).</p>
+      <p className="muted small">Customers type the code at checkout, or open your link with the code already applied. The discount comes off the food (not delivery or card fees). Codes are checked again when the order is placed, so a code you switch off stops working right away. The order, receipt and Excel show the code and the $ off. Start/end dates are Pacific days (both included). <b>New customers only</b> = only a phone number that never ordered (great for an always-on FIRSTDINO). <b>One time per customer</b> = each phone number can use it once. You can always add a code to an order yourself with <b>Edit</b> on the order.</p>
       {list.length === 0 && <p className="small">No codes yet.</p>}
       <div className="promo-list">
         {list.map((p, i) => (
@@ -843,6 +843,10 @@ function PromoCard({ settings, save }) {
               <label className="promo-end"><small>Starts (optional)</small><input className="input xs" type="date" value={p.starts || ''} onChange={(e) => upd(i, { starts: e.target.value })} /></label>
               <label className="promo-end"><small>Ends (optional)</small><input className="input xs" type="date" value={p.ends || ''} onChange={(e) => upd(i, { ends: e.target.value })} /></label>
             </span>
+            <span className="promo-rules">
+              <label className="check small"><input type="checkbox" checked={!!p.new_only} onChange={(e) => upd(i, { new_only: e.target.checked })} /> New customers only</label>
+              <label className="check small"><input type="checkbox" checked={!!p.once} onChange={(e) => upd(i, { once: e.target.checked })} /> One time per customer</label>
+            </span>
             <span className="promo-ctl">
               <button className={`switch sm ${p.active !== false ? 'on' : ''}`} onClick={() => upd(i, { active: p.active === false })} aria-label={p.active !== false ? 'On' : 'Off'} title={p.active !== false ? 'On' : 'Off'}><span /></button>
               <PromoStatus p={p} />
@@ -855,7 +859,7 @@ function PromoCard({ settings, save }) {
         ))}
       </div>
       <div className="promo-btns">
-        <button className="btn btn-ghost btn-sm" onClick={() => setList((l) => [...l, { code: '', type: 'percent', value: 10, active: true, starts: '', ends: '' }])}>+ Add code</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setList((l) => [...l, { code: '', type: 'percent', value: 10, active: true, starts: '', ends: '', once: false, new_only: false }])}>+ Add code</button>
         <button className="btn btn-red btn-sm" disabled={!dirty} onClick={() => save({ promo_codes: list })}>{dirty ? 'Save codes' : 'Saved'}</button>
       </div>
       {dirty && <p className="small warn-text">You have changes that aren't saved yet. Tap <b>Save codes</b>.</p>}

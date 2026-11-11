@@ -1451,3 +1451,6 @@ label .input { margin-top: 6px; font-weight: 500; }
 .shop-hidden { margin: 8px 0 0; }
 .shop-chip { display: inline-block; margin: 6px 6px 0 0; padding: 3px 10px; border-radius: 99px; background: var(--card-2); }
 @media print { .shop-x, .shop-add, .shop-hidden { display: none; } }
+
+.promo-rules { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.promo-rules .check { margin: 0; }

@@ -151,6 +151,9 @@ export default function CheckoutSheet({
               <PromoBox t={t} lang={lang} promo={promo} promoMsg={promoMsg} applyPromo={applyPromo} removePromo={removePromo} discount={discount} pending={!hasItems} trainerPct={trainerPct} />
             )}
             {(hasItems || custom.trim()) && refState && refState.name && <ReferralBox t={t} refState={refState} pending={!hasItems} refDisc={refDisc} />}
+            {(hasItems || custom.trim()) && !(refState && refState.ok) && credits && credits.pct === 0 && credits.available > 0 && (
+              <div className="loy-box ref"><div className="loy-head"><span>🤝</span><b>{t('ref_credit_wait', credits.available)}</b></div></div>
+            )}
             {(hasItems || custom.trim()) && !(refState && refState.ok) && credits && credits.pct > 0 && (
               <div className="loy-box on ref">
                 <div className="loy-head"><span>🤝</span><b>{t('ref_credit_t', credits.use)}</b><em>{credits.pct}% {t('off')}</em></div>
