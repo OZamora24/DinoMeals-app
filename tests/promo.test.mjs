@@ -33,3 +33,25 @@ test('promo on a custom quote: typed price is before the discount', async () => 
   assert.deepEqual(quotePrice({ type: 'amount', value: 5 }, '42.50'), { subtotal: 42.5, discount: 5, total: 37.5 });
   assert.deepEqual(quotePrice({ type: 'amount', value: 50 }, 20), { subtotal: 20, discount: 20, total: 0 });
 });
+
+import { promoBlock, adminPromo, findPromo as findPromo2, cleanPromo as cleanPromo2 } from '../lib/promo.js';
+test('FIRSTDINO: new customers only, one time per customer', () => {
+  const list = [{ code: 'FIRSTDINO', type: 'percent', value: 10, active: true, new_only: true }, { code: 'ONCE5', type: 'amount', value: 5, once: true }];
+  const first = findPromo2(list, 'firstdino', '2026-11-11');
+  assert.equal(first.new_only, true);
+  assert.equal(promoBlock(first, []), null);
+  assert.equal(promoBlock(first, [{ status: 'cancelled' }]), null);
+  assert.equal(promoBlock(first, [{ status: 'done' }]), 'promo_new_only');
+  const once = findPromo2(list, 'ONCE5', '2026-11-11');
+  assert.equal(promoBlock(once, [{ status: 'done', promo: { code: 'LAUNCH10' } }]), null);
+  assert.equal(promoBlock(once, [{ status: 'done', promo: { code: 'ONCE5' } }]), 'promo_used');
+  assert.equal(promoBlock(once, [{ status: 'cancelled', promo: { code: 'ONCE5' } }]), null);
+  assert.deepEqual(cleanPromo2({ code: 'x1', value: 10 }).once, false);
+});
+
+test('admin can add any saved code to a placed order, even off or expired', () => {
+  const list = [{ code: 'OLD10', type: 'percent', value: 10, active: false, ends: '2026-01-01' }];
+  assert.equal(findPromo2(list, 'OLD10', '2026-11-11'), null);
+  assert.deepEqual(adminPromo(list, 'old10'), { code: 'OLD10', type: 'percent', value: 10 });
+  assert.equal(adminPromo(list, 'NOPE'), null);
+});

@@ -149,7 +149,11 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
   const reward = !monthly && loyalty && loyalty.on && loyalty.available ? loyalty.available : null;
   const refPct = !monthly && refState && refState.ok && refState.pct ? refState.pct : 0;
   const creditPct = !monthly && !refPct && credits && credits.pct ? credits.pct : 0;
-  const parts = allDiscounts(hasItems ? subtotal : 0, { promoDisc: discount, reward, refPct, creditPct });
+  const parts = allDiscounts(hasItems ? subtotal : 0, { promoDisc: discount, reward, refPct, creditPct }, settings);
+  // Referral credits that fit under the 20% max this order (the rest wait for next time).
+  const creditsShown = credits && credits.pct > 0 && hasItems && parts.creditPct < credits.pct
+    ? { ...credits, use: Math.round(parts.creditPct / (credits.pct / credits.use)), pct: parts.creditPct }
+    : credits;
   const tcUse = !monthly && hasItems && tcredit && tcredit.available > 0
     ? useTrainerCredits(Array.from({ length: tcredit.available }, (_, i) => i), tcredit.each, subtotal - parts.total)
     : { ids: [], amount: 0 };
@@ -369,8 +373,10 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
     if (!code) return;
     setPromoMsg('');
     try {
-      const r = await fetch(`/api/promo-code?code=${encodeURIComponent(code)}`);
+      const ph = String(info.phone || '').replace(/\D/g, '');
+      const r = await fetch(`/api/promo-code?code=${encodeURIComponent(code)}${ph.length >= 10 ? `&phone=${ph}` : ''}`);
       const j = await r.json().catch(() => ({}));
+      if (r.status === 409 && (j.error === 'promo_used' || j.error === 'promo_new_only')) { setPromo(null); setPromoMsg(t(`err_${j.error}`)); return; }
       if (r.ok && j.promo) { setPromo(j.promo); return; }
       if (r.ok && j.trainer) { setPromo({ code: j.trainer.code, trainer: j.trainer }); return; }
       if (!quiet) setPromoMsg(r.status === 429 ? t('err_generic') : t('promo_bad'));
@@ -411,6 +417,13 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
     })();
     return () => { gone = true; };
   }, [router.isReady, router.query.again, adminMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A one-time / new-customers code (FIRSTDINO) applied before the phone was typed: check it once the phone is in.
+  const promoPhone = String(info.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  useEffect(() => {
+    if (adminMode || !promo || promo.trainer || !(promo.once || promo.new_only) || promoPhone.length !== 10) return;
+    applyPromo(promo.code, true);
+  }, [promoPhone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- loyalty rewards: look up the phone typed at checkout ----
   const phoneDigits = String(info.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
@@ -466,6 +479,7 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
       if (!r.ok) {
         if (j.error === 'promo_invalid') { setPromo(null); setPromoMsg(t('promo_bad')); }
         if (j.error === 'trainer_self') { setPromo(null); setPromoMsg(t('err_trainer_self')); }
+        if (j.error === 'promo_used' || j.error === 'promo_new_only') { setPromo(null); setPromoMsg(t(`err_${j.error}`)); }
         if (monthly && j.week && ['monthly_size', 'monthly_week_full'].includes(j.error)) { setErr(t(`err_${j.error}`, j.week)); return; }
         setErr(t(`err_${j.error}`) !== `err_${j.error}` ? t(`err_${j.error}`) : t('err_generic'));
         return;
@@ -726,7 +740,7 @@ export default function OrderPage({ settings, adminMode, reviews = null }) {
           rewardDisc={rewardDisc}
           refState={refState}
           refDisc={refDisc}
-          credits={monthly ? null : credits}
+          credits={monthly ? null : creditsShown}
           creditDisc={creditDisc}
           tcUse={tcUse}
           trainerPct={trainerShownPct}

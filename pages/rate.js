@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Seo from '../components/Seo';
 import SiteNav from '../components/SiteNav';
 import { useLang } from '../lib/i18n';
-import { readMyOrders } from '../lib/orderView';
+import { readMyOrders, forgetOrders } from '../lib/orderView';
 import { reviewOpensOn } from '../lib/reviews';
 
 export default function RatePage() {
@@ -13,11 +13,24 @@ export default function RatePage() {
   const [none, setNone] = useState(false);
   useEffect(() => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-    const o = readMyOrders()
+    const open = readMyOrders()
       .filter((x) => x.cook_date && reviewOpensOn(x.cook_date) <= today)
-      .sort((a, b) => String(b.cook_date).localeCompare(String(a.cook_date)))[0];
-    if (o) window.location.replace(`/o/${o.token}#review`);
-    else setNone(true);
+      .sort((a, b) => String(b.cook_date).localeCompare(String(a.cook_date)) || String(b.at || '').localeCompare(String(a.at || '')))
+      .slice(0, 10);
+    if (!open.length) { setNone(true); return; }
+    // Check the codes still exist first: an order the kitchen deleted (a test or a duplicate) would
+    // otherwise open "We couldn't find that order". Deleted ones are taken off this phone's list.
+    fetch(`/api/track?t=${open.map((x) => x.token).join(',')}`)
+      .then((r) => r.json())
+      .then((j) => {
+        const found = Array.isArray(j.orders) ? j.orders : null;
+        if (!found || !j.ok) { window.location.replace(`/o/${open[0].token}#review`); return; } // lookup failed: old behavior
+        forgetOrders(open.map((x) => x.token).filter((tk) => !found.some((o) => o.token === tk)));
+        const pick = open.find((x) => found.some((o) => o.token === x.token && o.status !== 'cancelled'));
+        if (pick) window.location.replace(`/o/${pick.token}#review`);
+        else setNone(true);
+      })
+      .catch(() => window.location.replace(`/o/${open[0].token}#review`));
   }, []);
   return (
     <div className="page order-page">
