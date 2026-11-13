@@ -418,6 +418,12 @@ function OrderCard({ o, patch, edit, remove, repeat, week, macros }) {
             {o.paid ? <><Check size={14} /> Paid</> : 'Unpaid'}
           </button>
           <div className="muted tiny">{o.payment_method}</div>
+          {o.stripe && (
+            <a className={`stripe-tag ${o.stripe.paid ? '' : 'warn'}`} target="_blank" rel="noreferrer"
+              href={o.stripe.payment_intent ? `https://dashboard.stripe.com/${o.stripe.livemode ? '' : 'test/'}payments/${o.stripe.payment_intent}` : 'https://dashboard.stripe.com/payments'}>
+              {o.stripe.paid ? `💳 Paid online ${money(o.stripe.amount)}` : `⚠ Paid ${money(o.stripe.amount)} online · ${money(o.stripe.short)} short`}
+            </a>
+          )}
         </div>
       </header>
 

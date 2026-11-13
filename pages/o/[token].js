@@ -1,7 +1,7 @@
 // The customer's private order page: dinomeals.app/o/<code> (linked from the
 // confirmation text, the confirmation screen and "My orders"). Shows the items,
 // total and live status — never the name, phone, address or notes.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import SiteNav from '../../components/SiteNav';
@@ -27,7 +27,8 @@ export async function getServerSideProps({ params, res }) {
       return { props: { order: null, pay: {} } };
     }
     const s = await getSettings();
-    const pay = { zelle_info: s.zelle_info || '', card_link: s.card_link || '', venmo_link: s.venmo_link || '', cashapp_link: s.cashapp_link || '', cash_info: s.cash_info || '' };
+    const { cardOnline } = await import('../../lib/stripePay');
+    const pay = { card_online: cardOnline(s), zelle_info: s.zelle_info || '', card_link: s.card_link || '', venmo_link: s.venmo_link || '', cashapp_link: s.cashapp_link || '', cash_info: s.cash_info || '' };
     const { codeFor } = await import('../../lib/referralCode');
     const { referralConfig } = await import('../../lib/referral');
     const rc = referralConfig(s);
@@ -53,6 +54,9 @@ export async function getServerSideProps({ params, res }) {
 export default function OrderPage({ order, pay, ref = null, review = null }) {
   const { lang, setLang, t } = useLang();
   const x = VIEW_TXT[lang] || VIEW_TXT.en;
+  // Back from Stripe (?paid=1): thank them; the webhook usually marks it paid within seconds.
+  const [backFromPay, setBackFromPay] = useState(false);
+  useEffect(() => { try { setBackFromPay(new URLSearchParams(window.location.search).get('paid') === '1'); } catch {} }, []);
   useEffect(() => {
     if (!order) return;
     rememberOrder(order);
@@ -81,7 +85,8 @@ export default function OrderPage({ order, pay, ref = null, review = null }) {
             <p className="done-no">{order.fulfillment === 'delivery' ? x.delivery : x.pickup} · {t('cook_day')} {prettyDate(order.cook_date, lang)}</p>
             <Tracker order={order} lang={lang} />
             <ReviewBox order={order} review={review} t={t} lang={lang} />
-            {!order.paid && order.total != null && order.status !== 'cancelled' && (
+            {backFromPay && !order.paid && order.status !== 'cancelled' && <div className="paid-banner">{t('paid_wait')}</div>}
+            {!order.paid && !backFromPay && order.total != null && order.status !== 'cancelled' && (
               <div className="pay-card">
                 <h3>{t('pay_now')}</h3>
                 <PayInfo order={order} settings={pay} lang={lang} t={t} />

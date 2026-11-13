@@ -95,6 +95,7 @@ create index if not exists orders_referral_by_idx on public.orders ((referral->>
 alter table public.orders add column if not exists trainer jsonb;         -- client's order: trainer code used { code, by, name, pct, first, discount }
 alter table public.orders add column if not exists trainer_credit jsonb;  -- trainer's own order: $ meal credits used { ids, amount }
 alter table public.orders add column if not exists monthly jsonb;         -- Monthly Plan week { id, week, of, pct, discount, plan_total }
+alter table public.orders add column if not exists stripe jsonb;          -- online payment { paid, amount, session, payment_intent, livemode, at, short? }
 create index if not exists orders_trainer_by_idx on public.orders ((trainer->>'by'));
 create index if not exists orders_monthly_id_idx on public.orders ((monthly->>'id'));
 

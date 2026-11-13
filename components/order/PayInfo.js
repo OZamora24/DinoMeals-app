@@ -26,7 +26,14 @@ export default function PayInfo({ order, settings = {}, lang, t }) {
         ) : (
           <div className="pay-line"><Card size={18} /><div>{t('venmo_tbd')}</div></div>
         ))}
-      {order.payment_method === 'card' &&
+      {order.payment_method === 'card' && settings.card_online && order.token ? (
+        <div className="pay-links">
+          <a className="btn btn-red btn-block pay-online" href={`/pay/${order.token}`}>
+            <Card size={18} /> {t('pay_online')} · {money(order.total)}
+          </a>
+          <span className="muted small">{t('pay_online_sub')} · {t('pay_online_note')}</span>
+        </div>
+      ) : order.payment_method === 'card' &&
         (links.length ? (
           <div className="pay-links">
             {links.map((l) => (
