@@ -24,7 +24,7 @@ export function Lightbox({ photos, index, onClose, onIndex, t }) {
   if (!p) return null;
   return (
     <div
-      className="lb"
+      className="photo-lb"
       role="dialog"
       aria-modal="true"
       aria-label={p.caption || t('ph_page')}
