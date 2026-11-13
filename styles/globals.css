@@ -1393,7 +1393,7 @@ label .input { margin-top: 6px; font-weight: 500; }
 .ph-cell { position: relative; aspect-ratio: 1; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--card); padding: 0; cursor: pointer; color: #fff; }
 .ph-cta { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 36px 0 10px; text-align: center; }
 .ph-cta .display { font-size: 2rem; text-transform: uppercase; }
-.lb { position: fixed; inset: 0; z-index: 200; background: rgba(8,7,6,.94); display: flex; align-items: center; justify-content: center; animation: lbIn .18s ease; touch-action: pan-y; }
+.photo-lb { position: fixed; inset: 0; z-index: 200; background: rgba(8,7,6,.94); display: flex; align-items: center; justify-content: center; animation: lbIn .18s ease; touch-action: pan-y; }
 @keyframes lbIn { from { opacity: 0; } }
 .lb-fig { margin: 0; max-width: min(96vw, 1100px); max-height: 92vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .lb-fig img { max-width: 100%; max-height: 80vh; width: auto; height: auto; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: lbImg .22s ease; }
