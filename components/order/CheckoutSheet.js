@@ -93,6 +93,7 @@ export default function CheckoutSheet({
               {[['zelle', Bolt], ['venmo', Card], ['card', Card], ['cash', Cash]].map(([k, I]) => (
                 <button key={k} className={`opt ${info.payment_method === k ? 'on' : ''}`} onClick={() => { setInfo({ ...info, payment_method: k }); if (k === 'cash') setCashPop(true); }}>
                   <I size={22} /><b>{t(k)}</b>
+                  {k === 'card' && settings.card_online && <span>{t('card_wallets')}</span>}
                   {k === 'card' && Number(settings.card_fee) > 0 && <span>+{money(settings.card_fee)} {t('fee')}</span>}
                 </button>
               ))}

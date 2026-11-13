@@ -1454,3 +1454,10 @@ label .input { margin-top: 6px; font-weight: 500; }
 
 .promo-rules { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .promo-rules .check { margin: 0; }
+
+/* Pay online (Stripe: card, Apple Pay, Google Pay) */
+.pay-online { font-size: 1.1rem; padding: 16px; }
+.paid-banner { margin: 14px 0; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--card); font-weight: 800; text-align: center; }
+.paid-banner.on { border-color: #2f9e5a; color: #7be0a2; }
+.stripe-tag { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(99, 91, 255, .18); color: #b5b0ff; font-size: .72rem; font-weight: 800; text-decoration: none; }
+.stripe-tag.warn { background: rgba(230, 160, 40, .18); color: #f0c060; }

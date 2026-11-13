@@ -489,6 +489,28 @@ export function RegularsTab({ week, weekOrders, repeat }) {
 }
 
 /* =========================== SETTINGS =========================== */
+// Card / Apple Pay / Google Pay with Stripe (lib/stripePay.js). Shows whether the keys are in Vercel
+// (never the keys) and the on/off switch.
+function StripeCard({ settings, save }) {
+  const st = settings._stripe || {};
+  const on = !!settings.stripe_on;
+  return (
+    <section className="set-card">
+      <h3>💳 Card, Apple Pay & Google Pay (Stripe)</h3>
+      <p className="muted small">When this is on, customers who pick Card get a <b>Pay now</b> button (on the confirmation screen, their order page and the texts). They pay with a card, Apple Pay or Google Pay on Stripe's secure page, and the order is marked <b>Paid</b> by itself. You get a 💳 notification. Stripe takes about 2.9% + 30¢ per payment. Refunds: in the Stripe dashboard. Money goes to your bank in about 2 business days.</p>
+      <ul className="muted small">
+        <li>Secret key: {st.key ? <b>✓ connected ({st.mode === 'live' ? 'LIVE' : 'test mode'})</b> : 'not set yet'}</li>
+        <li>Webhook: {st.webhook ? <b>✓ connected</b> : 'not set yet'}</li>
+      </ul>
+      {st.mode === 'test' && <p className="muted small">⚠ Test mode: no real money moves. Use Stripe's test card 4242 4242 4242 4242.</p>}
+      <label className="switch-row">
+        <input type="checkbox" checked={on} disabled={!st.ready && !on} onChange={(e) => save({ stripe_on: e.target.checked })} />
+        <span>{on ? (st.ready ? 'On: customers pay online' : 'On, but the keys are missing (customers see the card link instead)') : st.ready ? 'Off' : 'Off (add the Stripe keys in Vercel first)'}</span>
+      </label>
+    </section>
+  );
+}
+
 export function SettingsTab({ settings, save, week }) {
   const [s, setS] = useState(settings);
   const [copied, setCopied] = useState(false);
@@ -569,6 +591,8 @@ export function SettingsTab({ settings, save, week }) {
         <label>Card fee ($ added to the total when a customer pays by card)<input className="input" inputMode="decimal" value={s.card_fee} onChange={(e) => set('card_fee', e.target.value)} /></label>
         <button className="btn btn-red btn-sm" onClick={() => save({ zelle_info: s.zelle_info, venmo_link: s.venmo_link, card_link: s.card_link, cashapp_link: s.cashapp_link, cash_info: s.cash_info, card_fee: s.card_fee })}>Save</button>
       </section>
+
+      <StripeCard settings={settings} save={save} />
 
       <section className="set-card">
         <h3>Pickup & delivery</h3>
