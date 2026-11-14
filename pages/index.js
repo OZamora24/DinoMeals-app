@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import SiteNav from '../components/SiteNav';
 import Footer from '../components/Footer';
+import PayMarks from '../components/PayMarks';
 import { useLang } from '../lib/i18n';
 import { PROTEINS, CARBS, VEGGIES, nameOf, prettyDate, money, PORTIONS, activeFlavors } from '../lib/menu';
 import { getSettings } from '../lib/db';
@@ -124,7 +125,8 @@ export default function Home({ settings, reviews = null, photos = null }) {
               <div className="step-num">0{i + 1}</div>
               <div className="step-icon"><I size={26} /></div>
               <h3>{t(tt)}</h3>
-              <p>{t(d)}</p>
+              <p>{t(d === 'how_2_d' && settings.card_online ? 'how_2_d_wallet' : d)}</p>
+              {d === 'how_2_d' && <PayMarks settings={settings} t={t} />}
             </div>
           ))}
         </div>

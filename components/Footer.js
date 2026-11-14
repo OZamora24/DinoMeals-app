@@ -1,4 +1,5 @@
 import { Insta } from './Icons';
+import PayMarks from './PayMarks';
 
 export default function Footer({ t, settings = {} }) {
   return (
@@ -14,6 +15,7 @@ export default function Footer({ t, settings = {} }) {
       </div>
       <div className="footer-info">
         <p><b>{t('footer_pay')}</b></p>
+        <PayMarks settings={settings} t={t} small label />
         <p>{settings.pickup_window ? `${t('pickup')}: ${settings.pickup_window}` : t('footer_pickup')}</p>
         <p>{settings.delivery_window ? `${t('delivery')}: ${settings.delivery_window}${settings.delivery_fee_note ? ` · ${settings.delivery_fee_note}` : ''}` : t('footer_delivery')}</p>
       </div>
