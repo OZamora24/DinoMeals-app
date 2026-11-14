@@ -1487,3 +1487,9 @@ label .input { margin-top: 6px; font-weight: 500; }
 .pay-marks.sm .pm-stripe { font-size: .78rem; }
 .pay-marks .pm-stripe img { height: 27px; width: auto; display: block; }
 .pay-marks.sm .pm-stripe img { height: 24px; }
+
+/* Admin tabs: on computers, wrap onto a second row instead of hiding the last tabs (phones keep the swipe row). */
+@media (min-width: 900px) {
+  .admin-tabs { flex-wrap: wrap; justify-content: center; overflow: visible; max-width: 1400px; }
+  .admin-tabs button { padding: 9px 13px; }
+}
