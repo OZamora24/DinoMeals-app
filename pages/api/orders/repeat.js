@@ -1,6 +1,6 @@
 import { getOrder, insertOrder, getSettings } from '../../../lib/db';
 import { isValidSession } from '../../../lib/adminSession';
-import { priceCart, cookDateFor, laNow } from '../../../lib/menu';
+import { priceCart, cookDateFor, laNow, snapToCookDay } from '../../../lib/menu';
 import { linesToCart } from '../../../lib/cart';
 
 // Admin: copy one or more past orders into a cook week (default: the
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const settings = await getSettings();
     const ids = Array.isArray(req.body?.ids) ? req.body.ids : [req.body?.id].filter(Boolean);
     const cook_date = /^\d{4}-\d{2}-\d{2}$/.test(req.body?.cook_date || '')
-      ? req.body.cook_date
+      ? snapToCookDay(req.body.cook_date) // always a Sunday, same as new and edited orders
       : cookDateFor(laNow(), settings.cutoff_day, settings.cutoff_hour);
     const created = [];
     for (const id of ids) {
