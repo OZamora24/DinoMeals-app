@@ -12,6 +12,7 @@ import { mailStatus } from '../../lib/mailer';
 import { cleanGrocery } from '../../lib/grocery';
 import { countCustomerPush } from '../../lib/db';
 import { stripeStatus } from '../../lib/stripePay';
+import { cleanRank } from '../../lib/orderSort';
 
 export default async function handler(req, res) {
   try {
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
       }
       if ('grocery' in patch) patch.grocery = cleanGrocery(patch.grocery);
       if ('delivery_fee' in patch) patch.delivery_fee = Math.max(0, Number(patch.delivery_fee) || 0);
+      if ('order_rank' in patch) patch.order_rank = cleanRank(patch.order_rank);
       if ('stripe_on' in patch) patch.stripe_on = patch.stripe_on === true;
       if ('card_fee' in patch) patch.card_fee = Math.max(0, Number(patch.card_fee) || 0);
       if ('weekly_capacity' in patch) patch.weekly_capacity = Math.max(0, parseInt(patch.weekly_capacity, 10) || 0);

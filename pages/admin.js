@@ -16,6 +16,8 @@ import { promoLabel, promoDiscount } from '../lib/promo';
 import { rewardLabel, ordinal } from '../lib/loyalty';
 import { allDiscounts } from '../lib/referral';
 import { discountParts } from '../lib/orderView';
+import { applySort } from '../lib/orderSort';
+import useHoldDrag from '../components/useHoldDrag';
 import { List, Flame, Money, Route, Users, Gear, Check, Repeat, Plus, X, Bolt, Gift, Star, Camera } from '../components/Icons';
 import { api, smsHref, lineText, dietLabel, SOURCE_LABEL, Stat, CookTab, PayTab, RouteTab, RegularsTab, RewardsTab, ReviewsTab, PhotosTab, SettingsTab, MessagesTab } from '../components/AdminTabs';
 
@@ -155,6 +157,13 @@ export default function Admin() {
     say(`${j.orders.length} order${j.orders.length === 1 ? '' : 's'} added to ${prettyDate(toWeek)}`);
     if (toWeek === week) loadOrders();
   }
+  // "My order" sort: Juan's drag-and-drop order for one cook day.
+  async function saveRank(ids) {
+    const next = { ...(settings.order_rank || {}), [week]: ids };
+    setSettings((s) => ({ ...s, order_rank: next }));
+    try { const j = await api('/api/settings', { method: 'POST', body: { order_rank: next } }); setSettings((s) => ({ ...s, order_rank: j.settings.order_rank })); say('Order saved'); }
+    catch { say('Couldn\'t save the order'); }
+  }
   async function saveSettings(p) {
     const j = await api('/api/settings', { method: 'POST', body: p });
     setSettings((s) => ({ ...s, ...j.settings }));
@@ -230,7 +239,8 @@ export default function Admin() {
       </nav>
 
       <main className="admin-main">
-        {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={settings.macros} />}
+        {tab === 'orders' && <OrdersTab orders={orders} loading={loading} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={settings.macros}
+          rank={(settings.order_rank || {})[week] || []} saveRank={saveRank} prevWeek={() => setWeek(addDays(week, -7))} />}
         {tab === 'cook' && <CookTab orders={live} week={week} settings={settings} save={saveSettings} />}
         {tab === 'pay' && <PayTab orders={live} patch={patch} settings={settings} />}
         {tab === 'route' && <RouteTab orders={live} patch={patch} settings={settings} />}
@@ -253,7 +263,8 @@ export default function Admin() {
 const hasLb = (o) => (o.items || []).some((l) => l.type === 'lb') || (o.label_lines || []).some((l) => l.type === 'lb');
 const hasMeals = (o) => (o.items || []).some((l) => l.type === 'meal');
 const KINDS = [['all', 'All', '📋'], ['lb', 'By the lb', '⚖️'], ['custom', 'Custom', '📝'], ['meals', 'Meals', '🍱']];
-function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros }) {
+const SORT_OPTS = [['asc', '# Low → High'], ['desc', '# High → Low'], ['custom', '✋ My order']];
+function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros, rank = [], saveRank, prevWeek }) {
   const weekLabels = orders.filter((o) => o.status !== 'cancelled').reduce((n, o) => n + labelCount(o), 0);
   const [filter, setFilter] = useState('all');
   // Juan's prep order: by-the-lb first, then custom meals, then regular meals.
@@ -266,6 +277,10 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros 
     setKindOpen((v) => { if (v) setKind('all'); return !v; });
   };
   const [q, setQ] = useState('');
+  // Sort (kept on this device): low → high, high → low, or Juan's own drag order.
+  const [sort, setSortState] = useState('asc');
+  useEffect(() => { try { const v = localStorage.getItem('dino_sort'); if (v === 'desc' || v === 'custom') setSortState(v); } catch {} }, []);
+  const setSort = (v) => { setSortState(v); try { localStorage.setItem('dino_sort', v); } catch {} };
   const [doneOpen, setDoneOpen] = useState(false); // the Completed drop-down
   const [doneFlash, setDoneFlash] = useState(false);
   const live = orders.filter((o) => o.status !== 'cancelled');
@@ -299,10 +314,20 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros 
     if (kind === 'custom' && !isCustomOrder(o)) return false;
     if (kind === 'meals' && !hasMeals(o)) return false;
     return true;
-  }).sort((a, b) => (Number(a.order_no) || 0) - (Number(b.order_no) || 0)); // first order to last
+  });
   // Finished orders move into their own "Completed" drop-down automatically (status Done).
-  const active = shown.filter((o) => o.status !== 'done');
-  const completed = shown.filter((o) => o.status === 'done');
+  const sorted = applySort(shown, sort, rank);
+  const activeBase = sorted.filter((o) => o.status !== 'done');
+  const canDrag = sort === 'custom' && !q;
+  const { drag, bind, order } = useHoldDrag({
+    enabled: canDrag,
+    ids: activeBase.map((o) => o.id),
+    // keep every saved id that isn't on screen (filtered or done), so a filter never loses Juan's order
+    onDrop: (ids) => saveRank([...ids, ...rank.filter((id) => !ids.includes(id))]),
+  });
+  const byId = new Map(activeBase.map((o) => [o.id, o]));
+  const active = order.map((id) => byId.get(id)).filter(Boolean);
+  const completed = sorted.filter((o) => o.status === 'done');
   const prevDone = useRef(completed.length);
   useEffect(() => {
     if (completed.length > prevDone.current) {
@@ -314,7 +339,8 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros 
     prevDone.current = completed.length;
     return undefined;
   }, [completed.length]);
-  const showDone = doneOpen || (!!q && completed.length > 0); // searching opens it so a match is never hidden
+  // Searching opens it so a match is never hidden; when every order is done it opens by itself.
+  const showDone = doneOpen || (!!q && completed.length > 0) || (active.length === 0 && completed.length > 0);
 
   return (
     <>
@@ -365,15 +391,32 @@ function OrdersTab({ orders, loading, patch, edit, remove, repeat, week, macros 
               </button>
             ))}
           </div>
+          <div className="sort-row" role="radiogroup" aria-label="Sort orders">
+            <span>Sort</span>
+            {SORT_OPTS.map(([k, label]) => (
+              <button key={k} role="radio" tabIndex={kindOpen ? 0 : -1} aria-checked={sort === k} className={sort === k ? 'on' : ''} onClick={() => setSort(k)}>{label}</button>
+            ))}
+          </div>
         </div>
       </div>
+      {sort === 'custom' && active.length > 1 && (
+        <p className="drag-tip">{q ? 'Clear the search to move orders.' : <>✋ <b>Hold an order</b> for a second, then <b>drag it</b> where you want it. Saved for this cook day.</>}</p>
+      )}
       {loading && <p className="muted">Loading…</p>}
-      {!loading && shown.length === 0 && <p className="muted empty">{q || filter !== 'all' ? 'No orders match.' : 'No orders here yet.'}</p>}
-      {!loading && shown.length > 0 && active.length === 0 && <p className="muted empty">All caught up: every order here is completed.</p>}
+      {!loading && shown.length === 0 && (
+        <div className="muted empty caught">{q || filter !== 'all' ? 'No orders match.' : 'No orders for this cook day yet.'}
+          {!q && filter === 'all' && <button type="button" className="link" onClick={prevWeek}>‹ See last week's orders</button>}</div>
+      )}
+      {!loading && shown.length > 0 && active.length === 0 && (
+        <div className="muted empty caught">✅ All caught up: every order for this cook day is done. They're under <b>Completed</b> below.
+          <button type="button" className="link" onClick={prevWeek}>‹ See last week's orders</button></div>
+      )}
       {/* One list, first order to last (lowest # on top); the type tabs narrow it to By the lb / Custom / Meals. */}
-      <div className="order-cards">
+      <div className={`order-cards ${canDrag ? 'can-drag' : ''}`}>
         {active.map((o) => (
-          <OrderCard key={o.id} o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
+          <div key={o.id} className={`drag-wrap ${drag && drag.id === o.id ? 'lifted' : ''}`} {...bind(o.id)}>
+            <OrderCard o={o} patch={patch} edit={edit} remove={remove} repeat={repeat} week={week} macros={macros} />
+          </div>
         ))}
       </div>
       {completed.length > 0 && (
