@@ -10,7 +10,7 @@ import { cleanLabelLines } from '../../../lib/labelSpots';
 import { promoDiscount, adminPromo, normCode } from '../../../lib/promo';
 import { trainerConfig, findTrainer, trainerPct, trainerRow } from '../../../lib/trainer';
 import { PICK_MIN, PICK_MAX, loyaltyState, loyaltyConfig, qualifies } from '../../../lib/loyalty';
-import { dateKey, laNow } from '../../../lib/menu';
+import { dateKey, laNow, snapToCookDay } from '../../../lib/menu';
 import { allDiscounts, pctOff, isNewCustomer } from '../../../lib/referral';
 
 export default async function handler(req, res) {
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
       }
       if ('payment_method' in p && PAY.includes(p.payment_method)) patch.payment_method = p.payment_method;
       if ('notes' in p) patch.notes = clean(p.notes, 800);
-      if ('cook_date' in p && /^\d{4}-\d{2}-\d{2}$/.test(p.cook_date)) patch.cook_date = p.cook_date;
+      if ('cook_date' in p && /^\d{4}-\d{2}-\d{2}$/.test(p.cook_date)) patch.cook_date = snapToCookDay(p.cook_date); // always a Sunday
       if ('route_pos' in p) patch.route_pos = p.route_pos == null ? null : parseInt(p.route_pos, 10);
       if ('fulfillment' in p && ['pickup', 'delivery'].includes(p.fulfillment)) patch.fulfillment = p.fulfillment;
       if ('address' in p) patch.address = clean(p.address, 200);

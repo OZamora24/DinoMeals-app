@@ -27,3 +27,13 @@ test('cleanRank keeps real weeks and ids only', () => {
   const many = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [`2026-01-${String(i + 1).padStart(2, '0')}`, ['a']]));
   assert.equal(Object.keys(cleanRank(many)).length, 12);
 });
+
+import { snapToCookDay, cookDayChoices } from '../lib/menu.js';
+test('DM orders always land on a Sunday cook day', () => {
+  assert.equal(snapToCookDay('2026-11-14'), '2026-11-15'); // Saturday -> next Sunday
+  assert.equal(snapToCookDay('2026-11-22'), '2026-11-22'); // Sunday stays
+  assert.equal(snapToCookDay('2026-11-16'), '2026-11-22'); // Monday -> next Sunday
+  assert.equal(snapToCookDay('bad'), null);
+  const c = cookDayChoices('2026-11-22');
+  assert.equal(c[0], '2026-11-08'); assert.equal(c[2], '2026-11-22'); assert.equal(c.length, 9);
+});

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  PROTEINS, CARBS, VEGGIES, NONE, DIET_FLAGS, byId, flavorOf, activeFlavors, lineLabel, mealLineCount, mealUnitPrice, ozTag, priceCart, money,
+  PROTEINS, CARBS, VEGGIES, NONE, DIET_FLAGS, byId, flavorOf, activeFlavors, lineLabel, mealLineCount, mealUnitPrice, ozTag, priceCart, money, prettyDate, cookDayChoices, snapToCookDay,
 } from '../lib/menu';
 import { linesToCart, cartKey } from '../lib/cart';
 import { formatPhone } from '../lib/orderForm';
@@ -168,7 +168,11 @@ export default function OrderEditor({ order, onSave, onClose }) {
                 <label>Drop-off notes<input className="input" value={f.delivery_notes} onChange={(e) => set('delivery_notes', e.target.value)} /></label>
               </>
             )}
-            <label>Cook day<input className="input" type="date" value={f.cook_date} onChange={(e) => set('cook_date', e.target.value)} /></label>
+            <label>Cook day
+              <select className="input" value={f.cook_date} onChange={(e) => set('cook_date', e.target.value)}>
+                {[...new Set([...cookDayChoices(snapToCookDay(order.cook_date) || f.cook_date, 4, 4), f.cook_date])].sort().map((d) => <option key={d} value={d}>{prettyDate(d)}</option>)}
+              </select>
+            </label>
           </fieldset>
 
           <fieldset className="fs">

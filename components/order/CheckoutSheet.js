@@ -4,7 +4,7 @@ import { Truck, Pin, Card, Cash, Bolt } from '../../components/Icons';
 import { formatPhone, CONTACT_NAME, CONTACT_PHONE } from '../../lib/orderForm';
 import SmsConsent from '../SmsConsent';
 import { promoLabel } from '../../lib/promo';
-import { prettyDate } from '../../lib/menu';
+import { prettyDate, cookDayChoices } from '../../lib/menu';
 
 export default function CheckoutSheet({
   lang, t, settings, adminMode, adm, setAdm, info, setInfo, custom, priced,
@@ -41,8 +41,12 @@ export default function CheckoutSheet({
                     <option value="web">In person / other</option>
                   </select>
                 </label>
-                <label>Cook date (Sunday)
-                  <input className="input" type="date" value={adm.cook_date} onChange={(e) => setAdm({ ...adm, cook_date: e.target.value })} />
+                <label>Cook day (Sunday)
+                  <select className="input" value={adm.cook_date} onChange={(e) => setAdm({ ...adm, cook_date: e.target.value })}>
+                    {cookDayChoices(settings.cook_date).map((d) => (
+                      <option key={d} value={d}>{prettyDate(d)}{d === settings.cook_date ? ' (this week)' : d < settings.cook_date ? ' (past)' : ''}</option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <label className="check"><input type="checkbox" checked={adm.paid} onChange={(e) => setAdm({ ...adm, paid: e.target.checked })} /> Already paid</label>
