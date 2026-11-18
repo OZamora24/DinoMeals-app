@@ -36,6 +36,8 @@ export default async function handler(req, res) {
           total: hasItems ? priced.subtotal + fee + cFee : o.total,
           paid: false,
           paid_at: null,
+          stripe: null, // the old order's online-payment record belongs to that order, not the copy
+          review_asked_at: null, // the copy has not been asked for a review yet
           status: hasItems ? 'new' : 'quote',
           source: 'repeat',
           route_pos: null,
